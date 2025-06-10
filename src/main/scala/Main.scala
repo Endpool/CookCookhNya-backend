@@ -5,7 +5,7 @@ import zio.*
 import zio.http.*
 
 object Main extends ZIOAppDefault:
-  val swaggerEndpoints = ZioHttpInterpreter().toHttp(
+  val swaggerEndpoints: Routes[Any, Response] = ZioHttpInterpreter().toHttp(
     SwaggerInterpreter()
       .fromServerEndpoints(
         Endpoints.endpoints,
@@ -14,12 +14,12 @@ object Main extends ZIOAppDefault:
       )
   )
 
-  val endpoints = ZioHttpInterpreter().toHttp(
+  val endpoints: Routes[Any, Response] = ZioHttpInterpreter().toHttp(
     Endpoints.endpoints
   )
 
   val app = endpoints ++ swaggerEndpoints
-  override def run =
+  override def run: URIO[Any, ExitCode] =
     Server.serve(app)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
