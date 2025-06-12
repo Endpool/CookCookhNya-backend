@@ -1,9 +1,14 @@
-FROM sbtscala/scala-sbt:graalvm-ce-22.3.3-b1-java17_1.10.11_3.6.4 AS sbt
+FROM sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0 as sbt
 
 WORKDIR /app
 
 COPY . .
 
-EXPOSE 8080
+RUN sbt stage
 
-CMD ["sbt", "run"]
+WORKDIR ./target/universal/stage/bin
+
+RUN chmod +x ./cookcookhny-backend
+
+ENTRYPOINT ["./cookcookhny-backend"]
+
