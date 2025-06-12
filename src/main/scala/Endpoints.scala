@@ -6,6 +6,6 @@ object Endpoints:
     .get
     .in("hello")
     .out(stringBody)
-    .zServerLogic(_ => ZIO.succeed("Hello world!"))
+    .zServerLogic(_ => ZIO.succeed("Амирхан сосал"))
 
   val endpoints = List(helloWorld)
