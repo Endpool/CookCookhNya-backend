@@ -1,14 +1,22 @@
-FROM sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0 as sbt
+FROM sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0 AS builder
 
 WORKDIR /app
 
-COPY . .
+COPY build.sbt .
+COPY project/*.sbt project/*.scala ./project/
+RUN sbt update
 
+COPY src ./src
 RUN sbt stage
 
-WORKDIR ./target/universal/stage/bin
+FROM eclipse-temurin:17-jre-jammy
 
-RUN chmod +x ./cookcookhny-backend
+WORKDIR /app
 
-ENTRYPOINT ["./cookcookhny-backend"]
+COPY --from=builder /app/target/universal/stage .
 
+RUN useradd -m appuser &&     chown -R appuser:appuser /app
+
+USER appuser
+
+ENTRYPOINT ["./bin/cookcookhny-backend"]
