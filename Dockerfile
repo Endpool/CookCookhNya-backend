@@ -1,9 +1,24 @@
-FROM sbtscala/scala-sbt:graalvm-ce-22.3.3-b1-java17_1.10.11_3.6.4 AS sbt
+FROM sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0 AS builder
 
 WORKDIR /app
 
-COPY . .
+COPY build.sbt .
+COPY project/*.sbt project/*.scala ./project/
+RUN sbt update
+
+COPY src ./src
+RUN sbt stage
+
+FROM eclipse-temurin:17-jre-jammy
+
+WORKDIR /app
+
+COPY --from=builder /app/target/universal/stage .
+
+RUN useradd -m appuser &&     chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8080
 
-CMD ["sbt", "run"]
+ENTRYPOINT ["./bin/cookcookhny-backend"]
