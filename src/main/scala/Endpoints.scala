@@ -29,10 +29,28 @@ object Endpoints:
     .in("ingredients")
     .in(query[IngredientId]("id"))
     .out(statusCode(StatusCode.NoContent))
-    .out(stringBody)
+
+  private val addIngredientEndpoint = endpoint
+    .put
+    .in("my" / "ingredients" / path[IngredientId]("id"))
+    .out(statusCode(StatusCode.NoContent))
+
+  private val deleteMyIngredientEndpoint = endpoint
+    .delete
+    .in("my" / "ingredients" / path[IngredientId]("id"))
+    .out(statusCode(StatusCode.NoContent))
+
+  private val getAvailableIngredientsEndpoint = endpoint
+    .get
+    .in("my" / "index" / path[IngredientId]("id"))
+    .out(statusCode(StatusCode.Ok))
+    .out(jsonBody[Option[List[Ingredient]]])
 
   val endpoints: List[ZServerEndpoint[Any, Any]] =
-    createIngredientsEndpoint.zServerLogic(createIngredient)       ::
-    getIngredientEndpoint.zServerLogic(getIngredient)              ::
+    createIngredientsEndpoint.zServerLogic(createIngredient) ::
+    getIngredientEndpoint.zServerLogic(getIngredient) ::
     getAllIngredientsEndpoint.zServerLogic(_ => getAllIngredients) ::
-    deleteIngredientEndpoint.zServerLogic(deleteIngredient)        :: Nil
+    addIngredientEndpoint.zServerLogic(addIngredient) ::
+    deleteMyIngredientEndpoint.zServerLogic(deleteMyIngredient) ::
+    getAvailableIngredientsEndpoint.zServerLogic(getAvailableIngredients) ::
+    deleteIngredientEndpoint.zServerLogic(deleteIngredient) :: Nil
