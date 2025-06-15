@@ -1,3 +1,5 @@
+package backend
+
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
