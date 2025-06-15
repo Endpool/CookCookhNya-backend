@@ -1,6 +1,6 @@
 import zio.ZIO
 
-val createIngredient: Ingredient => ZIO[Any, Nothing, String] = _ => ZIO.succeed("OK")
+val createIngredient: Ingredient => ZIO[Any, Nothing, Unit] = _ => ZIO.succeed(())
 
 val getIngredient: IngredientId => ZIO[Any, Nothing, Option[Ingredient]] = _ => ZIO.succeed(None)
 

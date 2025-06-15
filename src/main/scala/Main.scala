@@ -14,9 +14,8 @@ object Main extends ZIOAppDefault:
       )
   )
 
-  private val endpoints: Routes[Any, Response] = ZioHttpInterpreter().toHttp(
-    Endpoints.endpoints
-  )
+  private val endpoints: Routes[Any, Response] =
+    ZioHttpInterpreter().toHttp(Endpoints.endpoints)
 
   private val app = endpoints ++ swaggerEndpoints
   override def run: URIO[Any, ExitCode] =
