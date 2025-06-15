@@ -1,11 +1,34 @@
 import sttp.tapir.ztapir.*
-import zio.ZIO
+import sttp.tapir.json.circe.*
+import sttp.tapir.generic.auto.*
+import io.circe.generic.auto.*
 
 object Endpoints:
-  val helloWorld: ZServerEndpoint[Any, Any] = endpoint
-    .get
-    .in("hello")
+  private val createIngredientsEndpoint = endpoint
+    .post
+    .in("ingredients")
+    .in(jsonBody[Ingredient])
     .out(stringBody)
-    .zServerLogic(_ => ZIO.succeed("Hello world!"))
 
-  val endpoints = List(helloWorld)
+  private val getIngredientEndpoint = endpoint
+    .get
+    .in("ingredients")
+    .in(query[IngredientId]("id"))
+    .out(jsonBody[Option[Ingredient]])
+
+  private val getAllIngredientsEndpoint = endpoint
+    .get
+    .in("ingredients")
+    .out(jsonBody[Option[List[Ingredient]]])
+
+  private val deleteIngredientEndpoint = endpoint
+    .delete
+    .in("ingredients")
+    .in(query[IngredientId]("id"))
+    .out(stringBody)
+
+  val endpoints: List[ZServerEndpoint[Any, Any]] =
+    createIngredientsEndpoint.zServerLogic(createIngredient) ::
+    getIngredientEndpoint.zServerLogic(getIngredient) ::
+    getAllIngredientsEndpoint.zServerLogic(_ => getAllIngredients) ::
+    deleteIngredientEndpoint.zServerLogic(deleteIngredient) :: Nil

@@ -8,16 +8,18 @@ val zioVersion = "2.1.19"
 val sttpVersion = "4.0.7"
 val tapirVersion = "1.11.33"
 val ironVersion = "3.0.0"
+val circeVersion = "0.14.14"
 
 lazy val root = (project in file("."))
   .settings(
     name := "CookCookHny-backend",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion,
-
       "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-core" % tapirVersion,
+      "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % tapirVersion,
+      "io.circe" %% "circe-generic" % circeVersion
     )
   )
