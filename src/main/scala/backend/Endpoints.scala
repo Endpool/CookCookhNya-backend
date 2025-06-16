@@ -13,8 +13,7 @@ object Endpoints:
   private def matchErrorWithStatusCode[T <: ErrorResponse: ClassTag](statusCode: StatusCode,
                                                                      output: EndpointOutput[ErrorResponse]) =
     oneOfVariantValueMatcher(statusCode, output) {
-      case e if implicitly[ClassTag[T]].runtimeClass.isInstance(e) => true
-      case _ => false
+      implicitly[ClassTag[T]].runtimeClass.isInstance(_)
     }
 
   private val createIngredientsEndpoint = endpoint
