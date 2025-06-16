@@ -6,7 +6,7 @@ val createIngredient: Ingredient => UIO[Unit] =
   case Ingredient(ingredientId, ingredientName) => ZIO.succeed(())
 
 val getIngredient: IngredientId => IO[IngredientError, Ingredient] =
-  ingredientId => ZIO.fail(IngredientNotFound())
+  id => ZIO.fail(IngredientNotFound(id))
 
 val getAllIngredients: UIO[List[Ingredient]] =
   ZIO.succeed(Nil)

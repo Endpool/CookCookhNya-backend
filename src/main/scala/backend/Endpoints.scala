@@ -2,11 +2,21 @@ package backend
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
+import sttp.tapir.EndpointOutput
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 
+import scala.reflect.ClassTag
+
 object Endpoints:
+  private def matchErrorWithStatusCode[T <: ErrorResponse: ClassTag](statusCode: StatusCode,
+                                                                     output: EndpointOutput[ErrorResponse]) =
+    oneOfVariantValueMatcher(statusCode, jsonBody[ErrorResponse]) {
+      case e if implicitly[ClassTag[T]].runtimeClass.isInstance(e) => true
+      case _ => false
+    }
+
   private val createIngredientsEndpoint = endpoint
     .post
     .in("ingredients")
@@ -19,8 +29,8 @@ object Endpoints:
     .out(statusCode(StatusCode.Ok))
     .out(jsonBody[Ingredient])
     .errorOut {
-      oneOf[IngredientError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf {
+        matchErrorWithStatusCode[IngredientNotFound](StatusCode.NotFound, jsonBody[ErrorResponse])
       }
     }
 
@@ -36,8 +46,8 @@ object Endpoints:
     .in(query[IngredientId]("id"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[IngredientError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf {
+        matchErrorWithStatusCode[IngredientNotFound](StatusCode.NotFound, jsonBody[ErrorResponse])
       }
     }
 
@@ -49,9 +59,9 @@ object Endpoints:
     .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[StorageError | IngredientError](
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound()),
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf(
+        matchErrorWithStatusCode[IngredientNotFound](StatusCode.NotFound, jsonBody[ErrorResponse]),
+        matchErrorWithStatusCode[StorageNotFound](StatusCode.NotFound, jsonBody[ErrorResponse])
       )
     }
 
@@ -60,9 +70,9 @@ object Endpoints:
     .in(path[Int]("storageId") / "ingredients" / path[IngredientId]("id"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[StorageError | IngredientError](
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound()),
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf(
+        matchErrorWithStatusCode[IngredientNotFound](StatusCode.NotFound, jsonBody[ErrorResponse]),
+        matchErrorWithStatusCode[StorageNotFound](StatusCode.NotFound, jsonBody[ErrorResponse])
       )
     }
 
@@ -72,8 +82,8 @@ object Endpoints:
     .out(statusCode(StatusCode.Ok))
     .out(jsonBody[List[Ingredient]])
     .errorOut {
-      oneOf[StorageError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound())
+      oneOf {
+        matchErrorWithStatusCode[StorageNotFound](StatusCode.NotFound, jsonBody[ErrorResponse])
       }
     }
 

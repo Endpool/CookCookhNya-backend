@@ -1,11 +1,20 @@
 package backend
 
-sealed abstract class ErrorResponse(message: String)
+import io.circe.{Decoder, Encoder}
+import io.circe.derivation.{ConfiguredEncoder, ConfiguredDecoder, Configuration}
 
-sealed case class StorageError(message: String) extends ErrorResponse(message)
-object StorageNotFound:
-  def apply(): StorageError = StorageError("Storage not found")
+given Configuration = Configuration.default.withDiscriminator("type")
+given Encoder[ErrorResponse] = ConfiguredEncoder.derived
+given Decoder[ErrorResponse] = ConfiguredDecoder.derived
 
-sealed case class IngredientError(message: String) extends ErrorResponse(message)
-object IngredientNotFound:
-  def apply(): IngredientError = IngredientError("Ingredient not found")
+sealed trait ErrorResponse:
+  def message: String
+
+sealed trait IngredientError extends ErrorResponse
+sealed trait StorageError extends ErrorResponse
+
+final case class IngredientNotFound(id: IngredientId) extends IngredientError:
+  override def message: String = s"Ingredient with id = $id is not found"
+
+final case class StorageNotFound(id: StorageId) extends StorageError:
+  override def message: String = s"Storage with id = $id is not found"
