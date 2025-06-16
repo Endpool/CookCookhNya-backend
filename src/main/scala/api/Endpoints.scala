@@ -1,3 +1,5 @@
+package api 
+
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
