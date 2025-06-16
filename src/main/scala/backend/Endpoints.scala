@@ -12,7 +12,7 @@ import scala.reflect.ClassTag
 object Endpoints:
   private def matchErrorWithStatusCode[T <: ErrorResponse: ClassTag](statusCode: StatusCode,
                                                                      output: EndpointOutput[ErrorResponse]) =
-    oneOfVariantValueMatcher(statusCode, jsonBody[ErrorResponse]) {
+    oneOfVariantValueMatcher(statusCode, output) {
       case e if implicitly[ClassTag[T]].runtimeClass.isInstance(e) => true
       case _ => false
     }
