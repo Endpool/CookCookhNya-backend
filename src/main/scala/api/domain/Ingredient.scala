@@ -1,3 +1,4 @@
+package api.domain
 
 import api.domain.IngredientId
 

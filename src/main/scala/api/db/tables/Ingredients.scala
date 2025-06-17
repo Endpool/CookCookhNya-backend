@@ -8,10 +8,10 @@ final case class Ingredients(
                               @Id ingredientId: IngredientId,
                               name: String
                             ) derives DbCodec:
-  val toDomain: Ingredient = Ingredient(name)
+  val toDomain: Ingredient = Ingredient(ingredientId, name)
 
 object Ingredients:
   val table = TableInfo[Ingredient, Ingredients, IngredientId]
 
-  def fromDomain(id: IngredientId, ingredient: Ingredient): Ingredients =
-    Ingredients(id, ingredient.name)
+  def fromDomain(ingredient: Ingredient): Ingredients =
+    Ingredients(ingredient.ingredientId, ingredient.name)
