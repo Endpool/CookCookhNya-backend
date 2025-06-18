@@ -67,7 +67,7 @@ object Endpoints:
   private val getStorageMembersEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "members")
-    .out(jsonBody[String])
+    .out(jsonBody[List[UserId]])
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageIngredientsEndpoint = myStoragesEndpoint
@@ -94,7 +94,11 @@ object Endpoints:
     getIngredientEndpoint.zServerLogic(getIngredient),
     getAllIngredientsEndpoint.zServerLogic(_ => getAllIngredients),
     deleteIngredientEndpoint.zServerLogic(deleteIngredient),
+    createStorageEndpoint.zServerLogic(createStorage),
+    deleteStorageEndpoint.zServerLogic(deleteStorage),
+    getStorageNameEndpoint.zServerLogic(getStorageName),
+    getStorageMembersEndpoint.zServerLogic(getStorageMembers),
+    getStorageIngredientsEndpoint.zServerLogic(getStorageIngredients),
     addIngredientToStorageEndpoint.zServerLogic(addIngredientToStorage),
     deleteIngredientFromStorageEndpoint.zServerLogic(deleteMyIngredientFromStorage),
-    getStorageIngredientsEndpoint.zServerLogic(getStorageIngredients)
   )
