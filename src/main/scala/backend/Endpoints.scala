@@ -7,6 +7,9 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 
 object Endpoints:
+  val ingredientNotFoundVariant = oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[IngredientError.IngredientNotFound]))
+  val storageNotFoundVariant = oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.StorageNotFound]))
+
   private val createIngredientsEndpoint = endpoint
     .post
     .in("ingredients")
@@ -15,13 +18,11 @@ object Endpoints:
 
   private val getIngredientEndpoint = endpoint
     .get
-    .in("ingredients" / path[IngredientId]("id"))
+    .in("ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.Ok))
     .out(jsonBody[Ingredient])
     .errorOut {
-      oneOf[IngredientError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
-      }
+      oneOf(ingredientNotFoundVariant)
     }
 
   private val getAllIngredientsEndpoint = endpoint
@@ -33,12 +34,10 @@ object Endpoints:
   private val deleteIngredientEndpoint = endpoint
     .delete
     .in("ingredients")
-    .in(query[IngredientId]("id"))
+    .in(query[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[IngredientError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
-      }
+      oneOf(ingredientNotFoundVariant)
     }
 
   private val myStoragesEndpoint = endpoint
@@ -49,34 +48,34 @@ object Endpoints:
     .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[StorageError | IngredientError](
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound()),
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf[ErrorResponse](
+        ingredientNotFoundVariant,
+        storageNotFoundVariant
       )
     }
 
   private val deleteIngredientFromStorageEndpoint = myStoragesEndpoint
     .delete
-    .in(path[Int]("storageId") / "ingredients" / path[IngredientId]("id"))
+    .in(path[Int]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut {
-      oneOf[StorageError | IngredientError](
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound()),
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(IngredientNotFound())
+      oneOf(
+        ingredientNotFoundVariant,
+        storageNotFoundVariant
       )
     }
 
   private val getAvailableIngredientsFromStorageEndpoint = myStoragesEndpoint
     .get
-    .in(path[Int]("storageId") / "ingredients" / path[IngredientId]("id"))
+    .in(path[Int]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.Ok))
     .out(jsonBody[List[Ingredient]])
     .errorOut {
-      oneOf[StorageError] {
-        oneOfVariantSingletonMatcher(StatusCode.NotFound)(StorageNotFound())
-      }
+      oneOf(
+        ingredientNotFoundVariant,
+        storageNotFoundVariant
+      )
     }
-
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     createIngredientsEndpoint.zServerLogic(createIngredient),
     getIngredientEndpoint.zServerLogic(getIngredient),
