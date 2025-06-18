@@ -45,6 +45,12 @@ object Endpoints:
   private val myStoragesEndpoint = endpoint
     .in("my" / "storages")
 
+  case class StorageSummary(storageId: StorageId, name: String)
+
+  private val getStoragesEndpoint = myStoragesEndpoint
+    .get
+    .out(jsonBody[List[StorageSummary]])
+
   case class CreateStorageReqBody(name: String)
 
   private val createStorageEndpoint = myStoragesEndpoint
@@ -94,11 +100,16 @@ object Endpoints:
     getIngredientEndpoint.zServerLogic(getIngredient),
     getAllIngredientsEndpoint.zServerLogic(_ => getAllIngredients),
     deleteIngredientEndpoint.zServerLogic(deleteIngredient),
+
+    getStoragesEndpoint.zServerLogic(_ => getStorages),
+
     createStorageEndpoint.zServerLogic(createStorage),
     deleteStorageEndpoint.zServerLogic(deleteStorage),
+
     getStorageNameEndpoint.zServerLogic(getStorageName),
     getStorageMembersEndpoint.zServerLogic(getStorageMembers),
     getStorageIngredientsEndpoint.zServerLogic(getStorageIngredients),
+
     addIngredientToStorageEndpoint.zServerLogic(addIngredientToStorage),
     deleteIngredientFromStorageEndpoint.zServerLogic(deleteMyIngredientFromStorage),
   )

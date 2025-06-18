@@ -4,6 +4,7 @@ import zio.{ZIO, IO, UIO}
 
 import api.domain.*
 import api.Endpoints.CreateStorageReqBody
+import api.Endpoints.StorageSummary
 
 val createIngredient: Ingredient => UIO[Unit] =
   case Ingredient(ingredientId, ingredientName) => ZIO.succeed(())
@@ -32,6 +33,10 @@ val deleteMyIngredientFromStorage:
 val getStorageIngredients:
   StorageId => IO[StorageError, List[IngredientId]] =
   storageId => ZIO.succeed(Nil)
+
+val getStorages:
+  UIO[List[StorageSummary]] =
+  ZIO.succeed(Nil)
 
 val createStorage:
   CreateStorageReqBody => UIO[Storage] =
