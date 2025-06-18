@@ -38,8 +38,7 @@ object Endpoints:
 
   private val deleteIngredientEndpoint = endpoint
     .delete
-    .in("ingredients")
-    .in(query[IngredientId]("ingredientId"))
+    .in("ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(ingredientNotFoundVariant))
 
