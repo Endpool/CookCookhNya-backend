@@ -1,6 +1,8 @@
-package backend
+package api
 
 import zio.{ZIO, IO, UIO}
+
+import api.domain.*
 
 val createIngredient: Ingredient => UIO[Unit] =
   case Ingredient(ingredientId, ingredientName) => ZIO.succeed(())

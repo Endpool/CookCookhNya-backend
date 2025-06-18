@@ -1,4 +1,4 @@
-package api 
+package api
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -16,9 +16,8 @@ object Main extends ZIOAppDefault:
       )
   )
 
-  val endpoints: Routes[Any, Response] = ZioHttpInterpreter().toHttp(
-    Endpoints.endpoints
-  )
+  val endpoints: Routes[Any, Response] =
+    ZioHttpInterpreter().toHttp(Endpoints.endpoints)
 
   val app = endpoints ++ swaggerEndpoints
   override def run: URIO[Any, ExitCode] =
