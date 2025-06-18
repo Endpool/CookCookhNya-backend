@@ -80,7 +80,7 @@ object Endpoints:
 
   private val getStorageIngredientsEndpoint = myStoragesEndpoint
     .get
-    .in(path[Long]("storageId") / "ingredients")
+    .in(path[StorageId]("storageId") / "ingredients")
     .out(statusCode(StatusCode.Ok))
     .out(jsonBody[List[IngredientId]])
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
@@ -93,7 +93,7 @@ object Endpoints:
 
   private val deleteIngredientFromStorageEndpoint = myStoragesEndpoint
     .delete
-    .in(path[Long]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
+    .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
