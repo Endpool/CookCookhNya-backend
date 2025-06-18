@@ -12,10 +12,10 @@ import api.domain.*
 
 object Endpoints:
   val ingredientNotFoundVariant =
-    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[IngredientError.IngredientNotFound]))
+    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[IngredientError.NotFound]))
 
   val storageNotFoundVariant =
-    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.StorageNotFound]))
+    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
 
   private val createIngredientsEndpoint = endpoint
     .post

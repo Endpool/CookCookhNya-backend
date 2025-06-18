@@ -8,14 +8,14 @@ val createIngredient: Ingredient => UIO[Unit] =
   case Ingredient(ingredientId, ingredientName) => ZIO.succeed(())
 
 val getIngredient:
-  IngredientId => IO[IngredientError.IngredientNotFound, Ingredient] =
-  ingredientId => ZIO.fail(IngredientError.IngredientNotFound(ingredientId))
+  IngredientId => IO[IngredientError.NotFound, Ingredient] =
+  ingredientId => ZIO.fail(IngredientError.NotFound(ingredientId))
 
 val getAllIngredients: UIO[List[Ingredient]] =
   ZIO.succeed(Nil)
 
 val deleteIngredient:
-  IngredientId => IO[IngredientError.IngredientNotFound, Unit] =
+  IngredientId => IO[IngredientError.NotFound, Unit] =
   ingredientId => ZIO.succeed(())
 
 val addIngredientToStorage:
@@ -24,8 +24,8 @@ val addIngredientToStorage:
 
 val deleteMyIngredientFromStorage:
   ((StorageId, IngredientId)) => IO[StorageError | IngredientError, Unit] =
-  case (2, _) => ZIO.fail(StorageError.StorageNotFound(2))
-  case (_, 4) => ZIO.fail(IngredientError.IngredientNotFound(4))
+  case (2, _) => ZIO.fail(StorageError.NotFound(2))
+  case (_, 4) => ZIO.fail(IngredientError.NotFound(4))
   case _ => ZIO.succeed(())
 
 val getAllIngredientsFromStorage:
