@@ -28,6 +28,6 @@ val deleteMyIngredientFromStorage:
   case (_, 4) => ZIO.fail(IngredientError.NotFound(4))
   case _ => ZIO.succeed(())
 
-val getAllIngredientsFromStorage:
+val getStorageIngredients:
   StorageId => IO[StorageError, List[IngredientId]] =
   storageId => ZIO.succeed(Nil)

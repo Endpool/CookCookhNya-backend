@@ -45,6 +45,38 @@ object Endpoints:
   private val myStoragesEndpoint = endpoint
     .in("my" / "storages")
 
+  case class CreateStorageReqBody(name: String)
+
+  private val createStorageEndpoint = myStoragesEndpoint
+    .post
+    .in(jsonBody[CreateStorageReqBody])
+    .out(jsonBody[Storage])
+
+  private val deleteStorageEndpoint = myStoragesEndpoint
+    .delete
+    .in(path[StorageId]("storageId"))
+    .out(statusCode(StatusCode.NoContent))
+    .errorOut(oneOf(storageNotFoundVariant))
+
+  private val getStorageNameEndpoint = myStoragesEndpoint
+    .get
+    .in(path[StorageId]("storageId") / "name")
+    .out(jsonBody[String])
+    .errorOut(oneOf(storageNotFoundVariant))
+
+  private val getStorageMembersEndpoint = myStoragesEndpoint
+    .get
+    .in(path[StorageId]("storageId") / "members")
+    .out(jsonBody[String])
+    .errorOut(oneOf(storageNotFoundVariant))
+
+  private val getStorageIngredientsEndpoint = myStoragesEndpoint
+    .get
+    .in(path[Long]("storageId") / "ingredients")
+    .out(statusCode(StatusCode.Ok))
+    .out(jsonBody[List[IngredientId]])
+    .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
+
   private val addIngredientToStorageEndpoint = myStoragesEndpoint
     .put
     .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
@@ -57,13 +89,6 @@ object Endpoints:
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
-  private val getAllIngredientsFromStorageEndpoint = myStoragesEndpoint
-    .get
-    .in(path[Long]("storageId") / "ingredients")
-    .out(statusCode(StatusCode.Ok))
-    .out(jsonBody[List[IngredientId]])
-    .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
-
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     createIngredientsEndpoint.zServerLogic(createIngredient),
     getIngredientEndpoint.zServerLogic(getIngredient),
@@ -71,5 +96,5 @@ object Endpoints:
     deleteIngredientEndpoint.zServerLogic(deleteIngredient),
     addIngredientToStorageEndpoint.zServerLogic(addIngredientToStorage),
     deleteIngredientFromStorageEndpoint.zServerLogic(deleteMyIngredientFromStorage),
-    getAllIngredientsFromStorageEndpoint.zServerLogic(getAllIngredientsFromStorage)
+    getStorageIngredientsEndpoint.zServerLogic(getStorageIngredients)
   )
