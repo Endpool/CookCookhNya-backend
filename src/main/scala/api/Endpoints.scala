@@ -9,6 +9,7 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 import api.domain.*
+import sttp.tapir.Endpoint
 
 object Endpoints:
   val ingredientNotFoundVariant =
@@ -44,6 +45,7 @@ object Endpoints:
 
   private val myStoragesEndpoint = endpoint
     .in("my" / "storages")
+    .securityIn(auth.bearer[UserId]())
 
   case class StorageSummary(storageId: StorageId, name: String)
 
@@ -95,21 +97,27 @@ object Endpoints:
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
+  extension[INPUT, ERROR, OUTPUT, R]
+    (endpoint: Endpoint[UserId, INPUT, ERROR, OUTPUT, R])
+    def zSecuredServerLogic[R0](
+      logic: UserId => INPUT => ZIO[R0, ERROR, OUTPUT]
+    ) = endpoint.zServerSecurityLogic[R, UserId](ZIO.succeed).serverLogic[R0](logic)
+
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     createIngredientsEndpoint.zServerLogic(createIngredient),
     getIngredientEndpoint.zServerLogic(getIngredient),
     getAllIngredientsEndpoint.zServerLogic(_ => getAllIngredients),
     deleteIngredientEndpoint.zServerLogic(deleteIngredient),
 
-    getStoragesEndpoint.zServerLogic(_ => getStorages),
+    getStoragesEndpoint.zSecuredServerLogic(getStorages),
 
-    createStorageEndpoint.zServerLogic(createStorage),
-    deleteStorageEndpoint.zServerLogic(deleteStorage),
+    createStorageEndpoint.zSecuredServerLogic(createStorage),
+    deleteStorageEndpoint.zSecuredServerLogic(deleteStorage),
 
-    getStorageNameEndpoint.zServerLogic(getStorageName),
-    getStorageMembersEndpoint.zServerLogic(getStorageMembers),
-    getStorageIngredientsEndpoint.zServerLogic(getStorageIngredients),
+    getStorageNameEndpoint.zSecuredServerLogic(getStorageName),
+    getStorageMembersEndpoint.zSecuredServerLogic(getStorageMembers),
+    getStorageIngredientsEndpoint.zSecuredServerLogic(getStorageIngredients),
 
-    addIngredientToStorageEndpoint.zServerLogic(addIngredientToStorage),
-    deleteIngredientFromStorageEndpoint.zServerLogic(deleteMyIngredientFromStorage),
+    addIngredientToStorageEndpoint.zSecuredServerLogic(addIngredientToStorage),
+    deleteIngredientFromStorageEndpoint.zSecuredServerLogic(deleteMyIngredientFromStorage),
   )
