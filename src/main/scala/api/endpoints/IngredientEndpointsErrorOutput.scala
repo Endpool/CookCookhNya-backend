@@ -7,8 +7,7 @@ import sttp.tapir.EndpointOutput
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.ZIO
 
 trait IngredientEndpointsErrorOutput:
-  val ingredientNotFoundVariant: EndpointOutput.OneOfVariant[IngredientError.NotFound] =
+  protected val ingredientNotFoundVariant: EndpointOutput.OneOfVariant[IngredientError.NotFound] =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[IngredientError.NotFound]))

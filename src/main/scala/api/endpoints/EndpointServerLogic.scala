@@ -2,14 +2,15 @@ package api.endpoints
 
 import api.db.repositories.*
 import api.domain.*
-import zio.{Exit, IO, RIO, UIO, URIO, ZIO}
+import api.endpoints.StorageEndpoints.CreateStorageReqBody
+import api.endpoints.StorageEndpoints.StorageSummary
+import zio.{IO, RIO, UIO, URIO, ZIO}
 
 val createIngredient: Ingredient => URIO[IngredientRepoInterface, Unit] =
   ingredient =>
     ZIO.serviceWithZIO[IngredientRepoInterface] {
       _.add(ingredient).catchAll(_ => ZIO.succeed(()))
     }
-  
     
 val getIngredient:
   IngredientId => ZIO[IngredientRepoInterface, IngredientError.NotFound, Ingredient] =
@@ -36,15 +37,38 @@ val deleteIngredient:
     }
 
 val addIngredientToStorage:
-  ((StorageId, IngredientId)) => IO[StorageError | IngredientError, Unit] =
-  case (storageId, ingredientId) => ZIO.succeed(())
+  UserId => ((StorageId, IngredientId)) => ZIO[IngredientRepoInterface, StorageError | IngredientError, Unit] =
+  userId =>
+    case (storageId, ingredientId) => ZIO.succeed(())
 
 val deleteMyIngredientFromStorage:
-  ((StorageId, IngredientId)) => IO[StorageError | IngredientError, Unit] =
-  case (2, _) => ZIO.fail(StorageError.NotFound(2))
-  case (_, 4) => ZIO.fail(IngredientError.NotFound(4))
-  case _ => ZIO.succeed(())
+  UserId => ((StorageId, IngredientId)) => IO[StorageError | IngredientError, Unit] =
+  userId =>
+    case (2, _) => ZIO.fail(StorageError.NotFound(2))
+    case (_, 4) => ZIO.fail(IngredientError.NotFound(4))
+    case _ => ZIO.unit
 
-val getAllIngredientsFromStorage:
-  StorageId => IO[StorageError, Seq[IngredientId]] =
-  storageId => ZIO.succeed(Nil)
+val getStorageIngredients:
+  UserId => StorageId => IO[StorageError, List[IngredientId]] =
+  userId => storageId => ZIO.succeed(Nil)
+
+val getStorages:
+  UserId => Unit => UIO[List[StorageSummary]] =
+  userId => unit => ZIO.succeed(Nil)
+
+val createStorage:
+  UserId => CreateStorageReqBody => UIO[Storage] =
+  userId =>
+    case CreateStorageReqBody(name) => ZIO.succeed(Storage(1, name, 2, Nil, Nil))
+
+val deleteStorage:
+  UserId => StorageId => IO[StorageError.NotFound, Unit] =
+  userId => storageId => ZIO.unit
+
+val getStorageName:
+  UserId => StorageId => IO[StorageError.NotFound, String] =
+  userId => storageId => ZIO.succeed("placeholder")
+
+val getStorageMembers:
+  UserId => StorageId => IO[StorageError.NotFound, List[UserId]] =
+  userId => storageId => ZIO.succeed(Nil)
