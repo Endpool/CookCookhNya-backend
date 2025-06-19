@@ -1,3 +1,3 @@
-package api.domain
+package domain
 
 type BaseId = Long

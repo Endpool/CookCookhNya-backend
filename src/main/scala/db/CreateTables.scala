@@ -1,7 +1,8 @@
-package api.db
+package db
+
+import db.tables.*
 
 import com.augustnagro.magnum.magzio.*
-import api.db.tables.*
 
 def createTables(xa: Transactor) = {
   xa.transact {

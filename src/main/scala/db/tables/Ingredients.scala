@@ -1,7 +1,7 @@
-package api.db.tables
+package db.tables
 
 import com.augustnagro.magnum.*
-import api.domain.{User, UserId, Storage, Ingredient, IngredientId}
+import domain.{User, UserId, Storage, Ingredient, IngredientId}
 
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 final case class Ingredients(

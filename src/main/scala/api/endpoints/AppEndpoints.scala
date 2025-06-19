@@ -1,8 +1,8 @@
 package api.endpoints
 
-import sttp.tapir.ztapir.ZServerEndpoint
-
 import api.AppEnv
+
+import sttp.tapir.ztapir.ZServerEndpoint
 
 object AppEndpoints:
   val endpoints: List[ZServerEndpoint[AppEnv, Any]] =

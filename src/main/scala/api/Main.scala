@@ -1,15 +1,14 @@
 package api
 
 import api.endpoints.AppEndpoints
-import api.db.dbLayer
-import api.AppEnv
-import api.db.repositories.*
+import db.dbLayer
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
+import db.repositories.IngredientRepo
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(

@@ -1,7 +1,7 @@
 package api.endpoints
 
-import api.domain.*
 import api.AppEnv
+import domain.*
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode

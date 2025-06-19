@@ -1,6 +1,7 @@
 package api.endpoints
 
-import api.domain.*
+import domain.*
+
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
 import sttp.tapir.EndpointOutput

@@ -1,4 +1,4 @@
-package api.domain
+package domain
 
 sealed trait ErrorResponse:
   val message: String

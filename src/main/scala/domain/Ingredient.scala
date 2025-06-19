@@ -1,6 +1,4 @@
-package api.domain
-
-import api.domain.IngredientId
+package domain
 
 type IngredientId = BaseId
 

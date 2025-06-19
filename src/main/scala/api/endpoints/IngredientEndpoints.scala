@@ -1,7 +1,7 @@
 package api.endpoints
 
 import api.AppEnv
-import api.domain.*
+import domain.{IngredientId, Ingredient}
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode

@@ -1,7 +1,8 @@
 package api.endpoints
 
-import api.db.repositories.*
-import api.domain.*
+import db.repositories.IngredientRepoInterface
+import domain.*
+
 import api.endpoints.StorageEndpoints.CreateStorageReqBody
 import api.endpoints.StorageEndpoints.StorageSummary
 import zio.{IO, RIO, UIO, URIO, ZIO}
@@ -11,7 +12,7 @@ val createIngredient: Ingredient => URIO[IngredientRepoInterface, Unit] =
     ZIO.serviceWithZIO[IngredientRepoInterface] {
       _.add(ingredient).catchAll(_ => ZIO.succeed(()))
     }
-    
+
 val getIngredient:
   IngredientId => ZIO[IngredientRepoInterface, IngredientError.NotFound, Ingredient] =
   ingredientId =>
@@ -31,7 +32,7 @@ val getAllIngredients: URIO[IngredientRepoInterface, Seq[Ingredient]] =
 
 val deleteIngredient:
   IngredientId => ZIO[IngredientRepoInterface, IngredientError.NotFound, Unit] =
-  ingredientId => 
+  ingredientId =>
     ZIO.serviceWithZIO[IngredientRepoInterface] {
       _.removeById(ingredientId).catchAll(_ => ZIO.fail(IngredientError.NotFound(ingredientId)))
     }

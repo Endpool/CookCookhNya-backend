@@ -1,4 +1,4 @@
-package api.db
+package db
 
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.HikariDataSource

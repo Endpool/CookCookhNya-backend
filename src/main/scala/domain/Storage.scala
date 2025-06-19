@@ -1,4 +1,4 @@
-package api.domain
+package domain
 
 type StorageId = BaseId
 

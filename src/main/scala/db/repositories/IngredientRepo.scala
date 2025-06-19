@@ -1,7 +1,7 @@
-package api.db.repositories
+package db.repositories
 
-import api.db.tables.Ingredients
-import api.domain.{Ingredient, IngredientId}
+import db.tables.Ingredients
+import domain.{Ingredient, IngredientId}
 import com.augustnagro.magnum.magzio.*
 import zio.{Task, ZLayer, RLayer}
 
