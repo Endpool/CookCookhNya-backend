@@ -14,15 +14,15 @@ import zio.ZIO
 object StorageEndpoints extends IngredientEndpointsErrorOutput:
   case class CreateStorageReqBody(name: String)
 
-  case class StorageSummary(storageId: StorageId, name: String)
-  
+  case class StorageSummary(id: StorageId, name: String)
+
   private val storageNotFoundVariant =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
 
   private val myStoragesEndpoint = endpoint
     .in("my" / "storages")
     .securityIn(auth.bearer[UserId]())
-  
+
   private val getStoragesEndpoint = myStoragesEndpoint
     .get
     .out(jsonBody[List[StorageSummary]])
@@ -38,10 +38,10 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(storageNotFoundVariant))
 
-  private val getStorageNameEndpoint = myStoragesEndpoint
+  private val getStorageSummaryEndpoint = myStoragesEndpoint
     .get
-    .in(path[StorageId]("storageId") / "name")
-    .out(jsonBody[String])
+    .in(path[StorageId]("storageId"))
+    .out(jsonBody[StorageSummary]())
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageMembersEndpoint = myStoragesEndpoint
@@ -53,7 +53,6 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
   private val getStorageIngredientsEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "ingredients")
-    .out(statusCode(StatusCode.Ok))
     .out(jsonBody[List[IngredientId]])
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
@@ -80,7 +79,9 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     getStoragesEndpoint.zSecuredServerLogic(getStorages),
     createStorageEndpoint.zSecuredServerLogic(createStorage),
     deleteStorageEndpoint.zSecuredServerLogic(deleteStorage),
-    getStorageNameEndpoint.zSecuredServerLogic(getStorageName),
+    getStorageSummaryEndpoint.zSecuredServerLogic(_ =>
+      storageId => ZIO.succeed(StorageSummary(storageId, "Storage"))
+    ),
     getStorageMembersEndpoint.zSecuredServerLogic(getStorageMembers),
     getStorageIngredientsEndpoint.zSecuredServerLogic(getStorageIngredients),
     addIngredientToStorageEndpoint.zSecuredServerLogic(addIngredientToStorage),
