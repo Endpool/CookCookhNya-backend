@@ -1,6 +1,6 @@
 package api.endpoints.storage
 
-import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
+import api.endpoints.zSecuredServerLogic
 import api.db.repositories.IStorageIngredientsRepo
 import api.domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
 import api.endpoints.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
