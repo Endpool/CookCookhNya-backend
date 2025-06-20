@@ -19,8 +19,8 @@ private case class StorageCreationEntity(name: String, ownerId: UserId)
 final case class StoragesRepoLive(xa: Transactor) extends Repo[StorageCreationEntity, Storages, StorageId] with StoragesRepo:
   override def createEmpty(name: String, ownerId: UserId): UIO[Storage] =
     xa.transact {
-      val Storages(insStorageId, insName, insOwnderId): Storages = insertReturning(StorageCreationEntity(name, ownerId))
-      Storage(insStorageId, insOwnderId, insName, Nil, Nil)
+      val Storages(insStorageId, insName, insOwnerId): Storages = insertReturning(StorageCreationEntity(name, ownerId))
+      Storage(insStorageId, insOwnerId, insName, Nil, Nil)
     }.catchAll(_ => ZIO.succeed(null))
 
   override def getStorageViewById(id: StorageId): IO[NotFound, StorageView] =
