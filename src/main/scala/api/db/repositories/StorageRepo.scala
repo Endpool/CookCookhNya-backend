@@ -8,13 +8,13 @@ import api.domain.{Storage, StorageError, StorageId, StorageView, UserId}
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
-trait StorageRepoInterface:
+trait IStorageRepo:
   def createEmpty(creationReq: CreationEntity): UIO[Storage]
   def removeById(id: StorageId): IO[NotFound, Unit]
   def getStorageViewById(id: StorageId): IO[NotFound, StorageView]
   def getAllStorageViews: UIO[Vector[StorageView]]
 
-final case class StorageRepo(xa: Transactor) extends Repo[CreationEntity, Storages, StorageId] with StorageRepoInterface:
+final case class StorageRepo(xa: Transactor) extends Repo[CreationEntity, Storages, StorageId] with IStorageRepo:
   override def createEmpty(creationReq: CreationEntity): UIO[Storage] =
     xa.transact {
       val newStorage: Storages = insertReturning(creationReq)
@@ -41,5 +41,5 @@ final case class StorageRepo(xa: Transactor) extends Repo[CreationEntity, Storag
     xa.transact(findAll.map(toDomain)).catchAll(_ => ZIO.succeed(Vector.empty))
 
 object StorageRepo:
-  val layer: RLayer[Transactor, StorageRepoInterface] =
+  val layer: RLayer[Transactor, IStorageRepo] =
     ZLayer.fromFunction(StorageRepo(_))

@@ -5,7 +5,7 @@ import api.domain.{IngredientId, StorageError, IngredientError, StorageId}
 import com.augustnagro.magnum.magzio.*
 import zio.{RLayer, Task, IO, ZIO, ZLayer}
 
-trait StorageIngredientsRepoInterface:
+trait IStorageIngredientsReopo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
     IO[StorageError.NotFound | IngredientError.NotFound, Unit]
 
@@ -16,7 +16,7 @@ trait StorageIngredientsRepoInterface:
     IO[StorageError.NotFound, Vector[IngredientId]]
 
 final case class StorageIngredientsRepo(xa: Transactor) extends Repo[StorageIngredients, StorageIngredients, Null]
-  with StorageIngredientsRepoInterface:
+  with IStorageIngredientsReopo:
   
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
   IO[StorageError.NotFound | IngredientError.NotFound, Unit] =
@@ -44,5 +44,5 @@ final case class StorageIngredientsRepo(xa: Transactor) extends Repo[StorageIngr
     }
 
 object StorageIngredientsRepo:
-  val layer: RLayer[Transactor, StorageIngredientsRepoInterface] =
+  val layer: RLayer[Transactor, IStorageIngredientsReopo] =
     ZLayer.fromFunction(StorageIngredientsRepo(_))

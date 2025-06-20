@@ -1,7 +1,7 @@
 package api.endpoints.storage
 
 import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
-import api.db.repositories.StorageRepoInterface
+import api.db.repositories.IStorageRepo
 import api.domain.{Storage, UserId}
 import api.AppEnv
 
@@ -20,7 +20,7 @@ val createStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(createStorage)
 
 private def createStorage(userId: UserId)(reqBody: CreateStorageReqBody):
-URIO[StorageRepoInterface, Storage] =
-  ZIO.serviceWithZIO[StorageRepoInterface] {
+URIO[IStorageRepo, Storage] =
+  ZIO.serviceWithZIO[IStorageRepo] {
     _.createEmpty(Storage.CreationEntity(reqBody.name, userId))
   }

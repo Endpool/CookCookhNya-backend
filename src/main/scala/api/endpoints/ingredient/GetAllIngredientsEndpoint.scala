@@ -1,6 +1,6 @@
 package api.endpoints.ingredient
 
-import api.db.repositories.IngredientRepoInterface
+import api.db.repositories.IIngredientRepo
 import api.domain.Ingredient
 import api.AppEnv
 
@@ -18,5 +18,5 @@ val getAllIngredientsEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
   .out(jsonBody[Seq[Ingredient]])
   .zServerLogic(_ => getAllIngredients)
 
-def getAllIngredients: URIO[IngredientRepoInterface, Seq[Ingredient]] =
-  ZIO.serviceWithZIO[IngredientRepoInterface](_.getAll)
+def getAllIngredients: URIO[IIngredientRepo, Seq[Ingredient]] =
+  ZIO.serviceWithZIO[IIngredientRepo](_.getAll)

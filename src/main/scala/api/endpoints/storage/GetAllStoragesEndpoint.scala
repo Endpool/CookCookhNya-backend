@@ -1,7 +1,7 @@
 package api.endpoints.storage
 
 import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
-import api.db.repositories.StorageRepoInterface
+import api.db.repositories.IStorageRepo
 import api.domain.{StorageView, UserId}
 import api.AppEnv
 
@@ -16,5 +16,5 @@ val getStoragesEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .out(jsonBody[Seq[StorageView]])
   .zSecuredServerLogic(getStorages)
 
-private def getStorages(userId: UserId): Unit => URIO[StorageRepoInterface, Seq[StorageView]] =
-  _ => ZIO.serviceWithZIO[StorageRepoInterface](_.getAllStorageViews)
+private def getStorages(userId: UserId): Unit => URIO[IStorageRepo, Seq[StorageView]] =
+  _ => ZIO.serviceWithZIO[IStorageRepo](_.getAllStorageViews)

@@ -1,6 +1,6 @@
 package api.endpoints.ingredient
 
-import api.db.repositories.IngredientRepoInterface
+import api.db.repositories.IIngredientRepo
 import api.domain.{IngredientError, IngredientId}
 import api.endpoints.GeneralEndpointData.ingredientNotFoundVariant
 import api.AppEnv
@@ -20,7 +20,7 @@ val deleteIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
   .zServerLogic(deleteIngredient)
 
 def deleteIngredient(ingredientId: IngredientId):
-ZIO[IngredientRepoInterface, IngredientError.NotFound, Unit] =
-  ZIO.serviceWithZIO[IngredientRepoInterface] {
+ZIO[IIngredientRepo, IngredientError.NotFound, Unit] =
+  ZIO.serviceWithZIO[IIngredientRepo] {
     _.removeById(ingredientId)
   }

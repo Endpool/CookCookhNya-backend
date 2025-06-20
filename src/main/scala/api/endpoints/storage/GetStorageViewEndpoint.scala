@@ -1,7 +1,7 @@
 package api.endpoints.storage
 
 import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
-import api.db.repositories.StorageRepoInterface
+import api.db.repositories.IStorageRepo
 import api.domain.{StorageError, StorageId, StorageView, UserId}
 import api.endpoints.GeneralEndpointData.storageNotFoundVariant
 import api.AppEnv
@@ -20,7 +20,7 @@ val getStorageViewEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(getStorageView)
 
 private def getStorageView(userId: UserId)(storageId: StorageId):
-ZIO[StorageRepoInterface, StorageError.NotFound, StorageView] =
-  ZIO.serviceWithZIO[StorageRepoInterface] {
+ZIO[IStorageRepo, StorageError.NotFound, StorageView] =
+  ZIO.serviceWithZIO[IStorageRepo] {
     _.getStorageViewById(storageId)
   }

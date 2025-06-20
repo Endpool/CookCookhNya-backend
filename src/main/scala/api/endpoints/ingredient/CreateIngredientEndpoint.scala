@@ -1,6 +1,6 @@
 package api.endpoints.ingredient
 
-import api.db.repositories.IngredientRepoInterface
+import api.db.repositories.IIngredientRepo
 import api.domain.Ingredient
 import api.AppEnv
 
@@ -19,7 +19,7 @@ val createIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
     .out(jsonBody[Ingredient])
     .zServerLogic(createIngredient)
 
-def createIngredient(reqBody: CreateIngredientReqBody): URIO[IngredientRepoInterface, Ingredient] =
-  ZIO.serviceWithZIO[IngredientRepoInterface] {
+def createIngredient(reqBody: CreateIngredientReqBody): URIO[IIngredientRepo, Ingredient] =
+  ZIO.serviceWithZIO[IIngredientRepo] {
     _.add(Ingredient.CreationEntity(reqBody.name))
   }

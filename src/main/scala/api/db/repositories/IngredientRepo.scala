@@ -8,13 +8,13 @@ import api.domain.IngredientError.NotFound
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
-trait IngredientRepoInterface:
+trait IIngredientRepo:
   def add(creationReq: CreationEntity): UIO[Ingredient]
   def getById(id: IngredientId): IO[NotFound, Ingredient]
   def removeById(id: IngredientId): IO[NotFound, Unit]
   def getAll: UIO[Vector[Ingredient]]
 
-final case class IngredientRepo(xa: Transactor) extends Repo[CreationEntity, Ingredients, IngredientId] with IngredientRepoInterface:
+final case class IngredientRepo(xa: Transactor) extends Repo[CreationEntity, Ingredients, IngredientId] with IIngredientRepo:
   override def add(creationReq: CreationEntity): UIO[Ingredient] =
     xa.transact {
       val newIngredient: Ingredients = insertReturning(creationReq)
@@ -38,5 +38,5 @@ final case class IngredientRepo(xa: Transactor) extends Repo[CreationEntity, Ing
     xa.transact(findAll.map(toDomain(_))).catchAll(_ => ZIO.succeed(Vector.empty))
 
 object IngredientRepo:
-  val layer: RLayer[Transactor, IngredientRepoInterface] =
+  val layer: RLayer[Transactor, IIngredientRepo] =
     ZLayer.fromFunction(IngredientRepo(_))

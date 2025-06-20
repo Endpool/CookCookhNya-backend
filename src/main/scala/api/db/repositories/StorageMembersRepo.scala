@@ -5,13 +5,13 @@ import api.domain.*
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
 
-trait StorageMembersRepoInterface:
+trait IStorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId): IO[StorageError.NotFound | UserError.NotFound, Unit]
   def removeMemberFromStorageById(storageId: StorageId, memberId: UserId): IO[StorageError.NotFound | UserError.NotFound, Unit]
   def getAllStorageMembers(storageId: StorageId): IO[StorageError.NotFound, Vector[UserId]]
 
 final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers, StorageMembers, Null]
-  with StorageMembersRepoInterface:
+  with IStorageMembersRepo:
   
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
   IO[StorageError.NotFound | UserError.NotFound, Unit] =
@@ -36,5 +36,5 @@ final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers,
     }.catchAll(_ => ZIO.fail(StorageError.NotFound(storageId)))
 
 object StorageMembersRepo:
-  val layer: RLayer[Transactor, StorageMembersRepoInterface] =
+  val layer: RLayer[Transactor, IStorageMembersRepo] =
     ZLayer.fromFunction(StorageMembersRepo(_))
