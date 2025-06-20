@@ -4,7 +4,7 @@ import _root_.db.repositories.{
   IIngredientsRepo,
   IStorageIngredientsRepo,
   IStorageMembersRepo,
-  IStoragesRepo,
+  StoragesRepo,
   UsersRepo
 }
 
@@ -12,5 +12,5 @@ type AppEnv
   = IIngredientsRepo
   & IStorageIngredientsRepo
   & IStorageMembersRepo
-  & IStoragesRepo
+  & StoragesRepo
   & UsersRepo

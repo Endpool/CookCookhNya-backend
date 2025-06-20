@@ -30,7 +30,7 @@ object Main extends ZIOAppDefault:
         dbLayer,
         IngredientsRepo.layer,
         UsersRepo.layer,
-        StoragesRepo.layer,
+        StoragesRepoLive.layer,
         StorageIngredientsRepo.layer,
         StorageMembersRepo.layer,
         Server.live
