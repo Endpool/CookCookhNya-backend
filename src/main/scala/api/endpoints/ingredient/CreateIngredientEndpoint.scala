@@ -12,12 +12,12 @@ import zio.{URIO, ZIO}
 
 case class CreateIngredientReqBody(name: String)
 
-val createIngredientEndpoint = endpoint
+val createIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
     .post
     .in("ingredients")
     .in(jsonBody[CreateIngredientReqBody])
     .out(jsonBody[Ingredient])
-    .zServerLogic[IngredientRepoInterface](createIngredient)
+    .zServerLogic(createIngredient)
 
 def createIngredient(reqBody: CreateIngredientReqBody): URIO[IngredientRepoInterface, Ingredient] =
   ZIO.serviceWithZIO[IngredientRepoInterface] {

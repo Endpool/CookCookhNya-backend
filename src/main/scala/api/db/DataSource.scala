@@ -6,9 +6,9 @@ import zio.ZLayer
 
 val dataSource = {
   val hikari = new HikariDataSource()
-  hikari.setJdbcUrl(sys.env("DB_URL"))
-  hikari.setUsername(sys.env("DB_USER"))
-  hikari.setPassword(sys.env("DB_PASSWORD"))
+  hikari.setJdbcUrl("jdbc:postgresql://localhost:5432/mydb")
+  hikari.setUsername("app_user")
+  hikari.setPassword("password")
   hikari.setDriverClassName("org.postgresql.Driver")
   hikari
 }

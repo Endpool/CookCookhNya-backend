@@ -3,6 +3,7 @@ package api.endpoints.storage
 import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
 import api.db.repositories.StorageRepoInterface
 import api.domain.{Storage, UserId}
+import api.AppEnv
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -12,7 +13,7 @@ import zio.{URIO, ZIO}
 
 case class CreateStorageReqBody(name: String)
 
-val createStorageEndpoint: ZServerEndpoint[StorageRepoInterface, Any] = myStoragesEndpoint
+val createStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
   .out(jsonBody[Storage])

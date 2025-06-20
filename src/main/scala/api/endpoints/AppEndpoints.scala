@@ -23,7 +23,7 @@ import sttp.tapir.ztapir.ZServerEndpoint
 import api.AppEnv
 
 object AppEndpoints:
-  val endpoints =
+  val endpoints: List[ZServerEndpoint[AppEnv, Any]] =
     List(
       createIngredientEndpoint,
       getIngredientEndpoint,

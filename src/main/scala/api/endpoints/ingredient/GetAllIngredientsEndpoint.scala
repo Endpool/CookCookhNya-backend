@@ -2,6 +2,7 @@ package api.endpoints.ingredient
 
 import api.db.repositories.IngredientRepoInterface
 import api.domain.Ingredient
+import api.AppEnv
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -10,7 +11,7 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{ZIO, URIO}
 
-val getAllIngredientsEndpoint = endpoint
+val getAllIngredientsEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
   .get
   .in("ingredients")
   .out(statusCode(StatusCode.Ok))

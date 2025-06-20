@@ -4,15 +4,13 @@ import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
 import api.db.repositories.StorageIngredientsRepoInterface
 import api.domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
 import api.endpoints.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.AppEnv
 
-import io.circe.generic.auto.*
 import sttp.model.StatusCode
-import sttp.tapir.generic.auto.*
-import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val deleteIngredientFromStorageEndpoint: ZServerEndpoint[StorageIngredientsRepoInterface, Any] = myStoragesEndpoint
+val deleteIngredientFromStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .delete
   .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))

@@ -4,12 +4,13 @@ import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
 import api.db.repositories.StorageIngredientsRepoInterface
 import api.domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
 import api.endpoints.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.AppEnv
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val addIngredientToStorageEndpoint: ZServerEndpoint[StorageIngredientsRepoInterface, Any] = myStoragesEndpoint
+val addIngredientToStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .put
   .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
