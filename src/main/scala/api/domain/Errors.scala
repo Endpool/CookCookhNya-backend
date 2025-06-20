@@ -8,3 +8,6 @@ enum IngredientError(val message: String) extends ErrorResponse:
 
 enum StorageError(val message: String) extends ErrorResponse:
   case NotFound(storageId: StorageId) extends StorageError(s"No storage with id $storageId")
+  
+enum UserError(val message: String) extends ErrorResponse:
+  case NotFound(userId: UserId) extends UserError(s"No user with id $userId")

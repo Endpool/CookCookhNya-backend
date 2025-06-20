@@ -13,8 +13,6 @@ import zio.ZIO
 
 object StorageEndpoints extends IngredientEndpointsErrorOutput:
   case class CreateStorageReqBody(name: String)
-
-  case class StorageSummary(storageId: StorageId, name: String)
   
   private val storageNotFoundVariant =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
@@ -25,7 +23,7 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
   
   private val getStoragesEndpoint = myStoragesEndpoint
     .get
-    .out(jsonBody[List[StorageSummary]])
+    .out(jsonBody[Seq[StorageView]])
 
   private val createStorageEndpoint = myStoragesEndpoint
     .post
@@ -47,14 +45,14 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
   private val getStorageMembersEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "members")
-    .out(jsonBody[List[UserId]])
+    .out(jsonBody[Seq[UserId]])
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageIngredientsEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "ingredients")
     .out(statusCode(StatusCode.Ok))
-    .out(jsonBody[List[IngredientId]])
+    .out(jsonBody[Seq[IngredientId]])
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
   private val addIngredientToStorageEndpoint = myStoragesEndpoint

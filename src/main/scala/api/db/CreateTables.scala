@@ -24,6 +24,7 @@ def createTables(xa: Transactor) = {
         CREATE TABLE IF NOT EXISTS ${Storages.table}(
           ${Storages.table.storageId} SERIAL PRIMARY KEY,
           ${Storages.table.ownerId} INT NOT NULL,
+          ${Storages.table.name} VARCHAR(255) NOT NULL,
           FOREIGN KEY (${Storages.table.ownerId}) REFERENCES ${Users.table}(${Users.table.userId}) ON DELETE CASCADE
         );
       """,
