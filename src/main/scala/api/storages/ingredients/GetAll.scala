@@ -3,7 +3,7 @@ package api.storages.ingredients
 import api.AppEnv
 import api.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
 import api.zSecuredServerLogic
-import db.repositories.IStorageIngredientsRepo
+import db.repositories.StorageIngredientsRepo
 import domain.{IngredientId, StorageError, StorageId, UserId}
 
 import sttp.model.StatusCode
@@ -20,7 +20,7 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(getAllHandler)
 
 private def getAllHandler(userId: UserId)(storageId: StorageId):
-  ZIO[IStorageIngredientsRepo, StorageError, Seq[IngredientId]] =
-  ZIO.serviceWithZIO[IStorageIngredientsRepo] {
+  ZIO[StorageIngredientsRepo, StorageError, Seq[IngredientId]] =
+  ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.getAllIngredientsFromStorage(storageId)
   }
