@@ -14,12 +14,12 @@ trait IStoragesRepo:
   def getStorageViewById(id: StorageId): IO[NotFound, StorageView]
   val getAllStorageViews: UIO[Vector[StorageView]]
 
-private final case class CreationEntity(name: String, ownerId: UserId)
+private case class StorageCreationEntity(name: String, ownerId: UserId)
 
-final case class StoragesRepo(xa: Transactor) extends Repo[CreationEntity, Storages, StorageId] with IStoragesRepo:
+final case class StoragesRepo(xa: Transactor) extends Repo[StorageCreationEntity, Storages, StorageId] with IStoragesRepo:
   override def createEmpty(name: String, ownerId: UserId): UIO[Storage] =
     xa.transact {
-      val Storages(insStorageId, insName, insOwnderId): Storages = insertReturning(CreationEntity(name, ownerId))
+      val Storages(insStorageId, insName, insOwnderId): Storages = insertReturning(StorageCreationEntity(name, ownerId))
       Storage(insStorageId, insOwnderId, insName, Nil, Nil)
     }.catchAll(_ => ZIO.succeed(null))
 

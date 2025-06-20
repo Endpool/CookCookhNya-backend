@@ -8,6 +8,3 @@ case class Ingredient(
                      ingredientId: IngredientId,
                      name: String
                      )
-
-object Ingredient:
-  final case class CreationEntity(name: String)

@@ -21,5 +21,5 @@ val createIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
 
 def createIngredient(reqBody: CreateIngredientReqBody): URIO[IIngredientsRepo, Ingredient] =
   ZIO.serviceWithZIO[IIngredientsRepo] {
-    _.add(Ingredient.CreationEntity(reqBody.name))
+    _.add(reqBody.name)
   }

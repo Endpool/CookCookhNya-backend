@@ -2,7 +2,6 @@ package api.db.repositories
 
 import api.db.tables.Ingredients
 import api.db.tables.Ingredients.toDomain
-import api.domain.Ingredient.CreationEntity
 import api.domain.{Ingredient, IngredientId}
 import api.domain.IngredientError.NotFound
 
@@ -15,12 +14,12 @@ trait IIngredientsRepo:
   def removeById(id: IngredientId): IO[NotFound, Unit]
   def getAll: UIO[Vector[Ingredient]]
 
-private final case class CreationEntity(name: String)
+private final case class IngredientCreationEntity(name: String)
 
-final case class IngredientsRepo(xa: Transactor) extends Repo[CreationEntity, Ingredients, IngredientId] with IIngredientsRepo:
+final case class IngredientsRepo(xa: Transactor) extends Repo[IngredientCreationEntity, Ingredients, IngredientId] with IIngredientsRepo:
   override def add(name: String): UIO[Ingredient] =
     xa.transact {
-      val newIngredient: Ingredients = insertReturning(CreationEntity(name))
+      val newIngredient: Ingredients = insertReturning(IngredientCreationEntity(name))
       toDomain(newIngredient)
     }.catchAll(_ => ZIO.succeed(null))
 
