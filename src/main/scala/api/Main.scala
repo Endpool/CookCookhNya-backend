@@ -30,7 +30,7 @@ object Main extends ZIOAppDefault:
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         dbLayer,
-        IngredientRepo.layer,
+        IngredientsRepo.layer,
         StoragesRepo.layer,
         StorageIngredientsRepo.layer,
         StorageMembersRepo.layer,
