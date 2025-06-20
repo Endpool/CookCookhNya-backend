@@ -78,9 +78,7 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     getStoragesEndpoint.zSecuredServerLogic(getStorages),
     createStorageEndpoint.zSecuredServerLogic(createStorage),
     deleteStorageEndpoint.zSecuredServerLogic(deleteStorage),
-    getStorageViewEndpoint.zSecuredServerLogic(userId =>
-      storageId => ZIO.succeed(StorageView(storageId, "placeholder", userId))
-    ),
+    getStorageViewEndpoint.zSecuredServerLogic(getStorageView),
     getStorageMembersEndpoint.zSecuredServerLogic(getStorageMembers),
     getStorageIngredientsEndpoint.zSecuredServerLogic(getStorageIngredients),
     addIngredientToStorageEndpoint.zSecuredServerLogic(addIngredientToStorage),

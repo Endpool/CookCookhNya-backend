@@ -74,12 +74,12 @@ val deleteStorage:
   UserId => StorageId => ZIO[StorageRepoInterface, StorageError.NotFound, Unit] =
   userId => storageId => ZIO.serviceWithZIO[StorageRepoInterface](_.removeById(storageId))
 
-val getStorageName:
-  UserId => StorageId => ZIO[StorageRepoInterface, StorageError.NotFound, String] =
+val getStorageView:
+  UserId => StorageId => ZIO[StorageRepoInterface, StorageError.NotFound, StorageView] =
   userId => storageId =>
     ZIO.serviceWithZIO[StorageRepoInterface] {
       _.getStorageViewById(storageId)
-    }.map(_.name)
+    }
 
 val getStorageMembers:
   UserId => StorageId => ZIO[StorageMembersRepoInterface, StorageError.NotFound, Seq[UserId]] =
