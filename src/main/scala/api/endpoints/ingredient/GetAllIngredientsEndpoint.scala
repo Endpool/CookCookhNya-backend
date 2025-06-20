@@ -1,0 +1,21 @@
+package api.endpoints.ingredient
+
+import api.db.repositories.IngredientRepoInterface
+import api.domain.Ingredient
+
+import io.circe.generic.auto.*
+import sttp.model.StatusCode
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.ztapir.*
+import zio.{ZIO, URIO}
+
+val getAllIngredientsEndpoint = endpoint
+  .get
+  .in("ingredients")
+  .out(statusCode(StatusCode.Ok))
+  .out(jsonBody[Seq[Ingredient]])
+  .zServerLogic(_ => getAllIngredients)
+
+def getAllIngredients: URIO[IngredientRepoInterface, Seq[Ingredient]] =
+  ZIO.serviceWithZIO[IngredientRepoInterface](_.getAll)

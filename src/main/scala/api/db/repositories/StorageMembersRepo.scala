@@ -12,6 +12,7 @@ trait StorageMembersRepoInterface:
 
 final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers, StorageMembers, Null]
   with StorageMembersRepoInterface:
+  
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
   IO[StorageError.NotFound | UserError.NotFound, Unit] =
     xa.transact(insert(StorageMembers(storageId, memberId))).catchAll {

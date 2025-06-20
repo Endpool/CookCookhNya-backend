@@ -3,31 +3,35 @@ package api.db.repositories
 import api.db.tables.StorageIngredients
 import api.domain.{IngredientId, StorageError, IngredientError, StorageId}
 import com.augustnagro.magnum.magzio.*
-import zio.{Exit, RLayer, Task, IO, ZIO, ZLayer}
+import zio.{RLayer, Task, IO, ZIO, ZLayer}
 
 trait StorageIngredientsRepoInterface:
-  def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId): IO[StorageError | IngredientError, Unit]
+  def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
+    IO[StorageError.NotFound | IngredientError.NotFound, Unit]
+
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError | IngredientError, Unit]
+    IO[StorageError.NotFound | IngredientError.NotFound, Unit]
+
   def getAllIngredientsFromStorage(storageId: StorageId):
-    IO[StorageError, Vector[IngredientId]]
+    IO[StorageError.NotFound, Vector[IngredientId]]
 
 final case class StorageIngredientsRepo(xa: Transactor) extends Repo[StorageIngredients, StorageIngredients, Null]
   with StorageIngredientsRepoInterface:
+  
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-  IO[StorageError | IngredientError, Unit] =
+  IO[StorageError.NotFound | IngredientError.NotFound, Unit] =
     xa.transact(insert(StorageIngredients(storageId, ingredientId))).catchAll {
       _ => ZIO.fail(StorageError.NotFound(storageId))
     }
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-  IO[StorageError | IngredientError, Unit] =
+  IO[StorageError.NotFound | IngredientError.NotFound, Unit] =
     xa.transact(delete(StorageIngredients(storageId, ingredientId))).catchAll {
       _ => ZIO.fail(StorageError.NotFound(storageId))
     }
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
-  IO[StorageError, Vector[IngredientId]] =
+  IO[StorageError.NotFound, Vector[IngredientId]] =
     xa.transact {
       val s =
         sql"""

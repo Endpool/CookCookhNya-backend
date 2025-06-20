@@ -1,29 +1,32 @@
 package api.db.repositories
 
-import api.db.tables.{StorageCreationEntity, Storages}
+import api.db.tables.Storages
 import api.db.tables.Storages.toDomain
+import api.domain.Storage.CreationEntity
 import api.domain.StorageError.NotFound
-import api.domain.{Storage, StorageError, StorageId, StorageView, UserError, UserId}
+import api.domain.{Storage, StorageError, StorageId, StorageView, UserId}
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
 trait StorageRepoInterface:
-  def createEmpty(name: String, ownerId: UserId): UIO[Storage]
-  def removeById(id: StorageId): IO[StorageError.NotFound, Unit]
-  def getStorageViewById(id: StorageId): IO[StorageError.NotFound, StorageView]
+  def createEmpty(creationReq: CreationEntity): UIO[Storage]
+  def removeById(id: StorageId): IO[NotFound, Unit]
+  def getStorageViewById(id: StorageId): IO[NotFound, StorageView]
   def getAllStorageViews: UIO[Vector[StorageView]]
 
-final case class StorageRepo(xa: Transactor) extends Repo[StorageCreationEntity, Storages, StorageId] with StorageRepoInterface:
-  override def createEmpty(name: String, ownerId: UserId): UIO[Storage] =
+final case class StorageRepo(xa: Transactor) extends Repo[CreationEntity, Storages, StorageId] with StorageRepoInterface:
+  override def createEmpty(creationReq: CreationEntity): UIO[Storage] =
     xa.transact {
-      val newStorage: Storages = insertReturning(StorageCreationEntity(name, ownerId))
-      Storage(newStorage.storageId, name, ownerId, Nil, Nil)
+      val newStorage: Storages = insertReturning(creationReq)
+      newStorage match
+        case Storages(storageId, ownerId, name) =>
+          Storage(storageId, name, ownerId, Nil, Nil)
     }.catchAll(_ => ZIO.succeed(null))
 
-  override def removeById(id: StorageId): IO[StorageError.NotFound, Unit] =
+  override def removeById(id: StorageId): IO[NotFound, Unit] =
     xa.transact(deleteById(id)).catchAll(_ => ZIO.unit)
 
-  override def getStorageViewById(id: StorageId): IO[StorageError.NotFound, StorageView] =
+  override def getStorageViewById(id: StorageId): IO[NotFound, StorageView] =
     val transaction: IO[StorageError.NotFound, Option[Storages]] =
       xa.transact[Option[Storages]](findById(id)).catchAll {
         _ => ZIO.fail(StorageError.NotFound(id))
