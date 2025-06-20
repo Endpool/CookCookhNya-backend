@@ -6,10 +6,12 @@ import db.tables.*
 def createTables(xa: Transactor) = {
   xa.transact {
     val tableList = List(
+      // alias cannot be referenced with magnum DDL due to its option type
       sql"""
         CREATE TABLE IF NOT EXISTS ${Users.table}(
-          ${Users.table.id} SERIAL PRIMARY KEY,
-          ${Users.table.username} VARCHAR(255) UNIQUE NOT NULL
+          ${Users.table.id} BIGINT PRIMARY KEY,
+          alias VARCHAR(255),
+          ${Users.table.fullName} VARCHAR(255) NOT NULL
         );
       """,
 
