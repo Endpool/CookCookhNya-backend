@@ -1,9 +1,8 @@
 package api
 
 import api.AppEnv
-import api.db.dbLayer
-import api.db.repositories.*
-import api.endpoints.AppEndpoints
+import db.dbLayer
+import db.repositories.*
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -31,8 +30,8 @@ object Main extends ZIOAppDefault:
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         dbLayer,
-        IngredientRepo.layer,
-        StorageRepo.layer,
+        IngredientsRepo.layer,
+        StoragesRepo.layer,
         StorageIngredientsRepo.layer,
         StorageMembersRepo.layer,
         Server.live
