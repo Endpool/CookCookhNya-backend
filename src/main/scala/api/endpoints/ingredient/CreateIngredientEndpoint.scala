@@ -1,8 +1,8 @@
 package api.endpoints.ingredient
 
+import api.AppEnv
 import api.db.repositories.IIngredientsRepo
 import api.domain.Ingredient
-import api.AppEnv
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*

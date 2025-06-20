@@ -1,8 +1,8 @@
 package api.endpoints.ingredient
 
+import api.AppEnv
 import api.db.repositories.IIngredientsRepo
 import api.domain.Ingredient
-import api.AppEnv
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -18,5 +18,5 @@ val getAllIngredientsEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
   .out(jsonBody[Seq[Ingredient]])
   .zServerLogic(_ => getAllIngredients)
 
-def getAllIngredients: URIO[IIngredientsRepo, Seq[Ingredient]] =
+val getAllIngredients: URIO[IIngredientsRepo, Seq[Ingredient]] =
   ZIO.serviceWithZIO[IIngredientsRepo](_.getAll)

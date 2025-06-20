@@ -1,9 +1,9 @@
 package api.endpoints.ingredient
 
+import api.AppEnv
 import api.db.repositories.IIngredientsRepo
 import api.domain.{Ingredient, IngredientError, IngredientId}
 import api.endpoints.GeneralEndpointData.ingredientNotFoundVariant
-import api.AppEnv
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -21,5 +21,5 @@ val getIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
   .zServerLogic(getIngredient)
 
 def getIngredient(ingredientId: IngredientId):
-ZIO[IIngredientsRepo, IngredientError.NotFound, Ingredient] =
+  ZIO[IIngredientsRepo, IngredientError.NotFound, Ingredient] =
   ZIO.serviceWithZIO[IIngredientsRepo](_.getById(ingredientId))
