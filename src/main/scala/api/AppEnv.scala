@@ -7,7 +7,8 @@ import db.repositories.{
   IStoragesRepo
 }
 
-type AppEnv = IIngredientsRepo &
-              IStorageIngredientsRepo &
-              IStorageMembersRepo &
-              IStoragesRepo
+type AppEnv
+  = IIngredientsRepo
+  & IStorageIngredientsRepo
+  & IStorageMembersRepo
+  & IStoragesRepo

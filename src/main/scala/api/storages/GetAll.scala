@@ -11,10 +11,11 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{URIO, ZIO}
 
-val getStoragesEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
+private val getAll: ZServerEndpoint[AppEnv, Any] =
+  storagesEndpoint
   .get
   .out(jsonBody[Seq[StorageView]])
-  .zSecuredServerLogic(getStorages)
+  .zSecuredServerLogic(getAllHandler)
 
-private def getStorages(userId: UserId)(u : Unit) : URIO[IStoragesRepo, Seq[StorageView]] =
+private def getAllHandler(userId: UserId)(u : Unit) : URIO[IStoragesRepo, Seq[StorageView]] =
   ZIO.serviceWithZIO[IStoragesRepo](_.getAllStorageViews)

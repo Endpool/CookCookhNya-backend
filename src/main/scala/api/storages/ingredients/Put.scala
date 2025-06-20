@@ -10,17 +10,16 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-import api.storages.myStoragesEndpoint
-
-val deleteIngredientFromStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
-  .delete
-  .in(path[StorageId]("storageId") / "ingredients" / path[IngredientId]("ingredientId"))
+val put: ZServerEndpoint[AppEnv, Any] =
+  storagesIngredientsEndpoint
+  .put
+  .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
-  .zSecuredServerLogic(deleteMyIngredientFromStorage)
+  .zSecuredServerLogic(putHandler)
 
-private def deleteMyIngredientFromStorage(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
+private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
   ZIO[IStorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
   ZIO.serviceWithZIO[IStorageIngredientsRepo] {
-    _.removeIngredientFromStorageById(storageId, ingredientId)
+    _.addIngredientToStorage(storageId, ingredientId)
   }

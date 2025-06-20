@@ -11,17 +11,15 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-import api.storages.myStoragesEndpoint
-
-val getStorageIngredientsEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
+private val getAll: ZServerEndpoint[AppEnv, Any] =
+  storagesIngredientsEndpoint
   .get
-  .in(path[StorageId]("storageId") / "ingredients")
   .out(statusCode(StatusCode.Ok))
   .out(jsonBody[Seq[IngredientId]])
   .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
-  .zSecuredServerLogic(getStorageIngredients)
+  .zSecuredServerLogic(getAllHandler)
 
-private def getStorageIngredients(userId: UserId)(storageId: StorageId):
+private def getAllHandler(userId: UserId)(storageId: StorageId):
   ZIO[IStorageIngredientsRepo, StorageError, Seq[IngredientId]] =
   ZIO.serviceWithZIO[IStorageIngredientsRepo] {
     _.getAllIngredientsFromStorage(storageId)

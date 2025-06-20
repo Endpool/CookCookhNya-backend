@@ -11,12 +11,12 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{ZIO, URIO}
 
-val getAllIngredientsEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
+val getAll: ZServerEndpoint[AppEnv, Any] =
+  ingredientsEndpoint
   .get
-  .in("ingredients")
-  .out(statusCode(StatusCode.Ok))
   .out(jsonBody[Seq[Ingredient]])
-  .zServerLogic(_ => getAllIngredients)
+  .out(statusCode(StatusCode.Ok))
+  .zServerLogic(_ => getAllHandler)
 
-val getAllIngredients: URIO[IIngredientsRepo, Seq[Ingredient]] =
+val getAllHandler: URIO[IIngredientsRepo, Seq[Ingredient]] =
   ZIO.serviceWithZIO[IIngredientsRepo](_.getAll)

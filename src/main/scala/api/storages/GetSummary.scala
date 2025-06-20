@@ -12,7 +12,8 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val getStorageViewEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
+private val getSummary: ZServerEndpoint[AppEnv, Any] =
+  storagesEndpoint
   .get
   .in(path[StorageId]("storageId"))
   .out(jsonBody[StorageView])

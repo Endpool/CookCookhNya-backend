@@ -13,13 +13,14 @@ import zio.{URIO, ZIO}
 
 final case class CreateStorageReqBody(name: String)
 
-val createStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
+val create: ZServerEndpoint[AppEnv, Any] =
+  storagesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
   .out(jsonBody[Storage])
-  .zSecuredServerLogic(createStorage)
+  .zSecuredServerLogic(createHandler)
 
-private def createStorage(userId: UserId)(reqBody: CreateStorageReqBody):
+private def createHandler(userId: UserId)(reqBody: CreateStorageReqBody):
   URIO[IStoragesRepo, Storage] =
   ZIO.serviceWithZIO[IStoragesRepo] {
     _.createEmpty(reqBody.name, userId)

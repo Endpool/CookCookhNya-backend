@@ -1,9 +1,9 @@
 package api.ingredients
 
 import api.AppEnv
+import api.GeneralEndpointData.ingredientNotFoundVariant
 import db.repositories.IIngredientsRepo
 import domain.{IngredientError, IngredientId}
-import api.GeneralEndpointData.ingredientNotFoundVariant
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -12,14 +12,15 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val deleteIngredientEndpoint: ZServerEndpoint[AppEnv, Any] = endpoint
+private val delete: ZServerEndpoint[AppEnv, Any] =
+  ingredientsEndpoint
   .delete
-  .in("ingredients" / path[IngredientId]("ingredientId"))
+  .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(ingredientNotFoundVariant))
-  .zServerLogic(deleteIngredient)
+  .zServerLogic(deleteHandler)
 
-def deleteIngredient(ingredientId: IngredientId):
+private def deleteHandler(ingredientId: IngredientId):
   ZIO[IIngredientsRepo, IngredientError.NotFound, Unit] =
   ZIO.serviceWithZIO[IIngredientsRepo] {
     _.removeById(ingredientId)

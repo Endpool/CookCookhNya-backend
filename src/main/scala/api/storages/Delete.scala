@@ -1,22 +1,23 @@
 package api.storages
 
 import api.AppEnv
-import db.repositories.IStoragesRepo
-import domain.{StorageError, StorageId, UserId}
 import api.GeneralEndpointData.storageNotFoundVariant
 import api.zSecuredServerLogic
+import db.repositories.IStoragesRepo
+import domain.{StorageError, StorageId, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val deleteStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
+private val delete: ZServerEndpoint[AppEnv, Any] =
+  storagesEndpoint
   .delete
   .in(path[StorageId]("storageId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(storageNotFoundVariant))
-  .zSecuredServerLogic(deleteStorage)
+  .zSecuredServerLogic(deleteHandler)
 
-private def deleteStorage(userId: UserId)(storageId: StorageId):
+private def deleteHandler(userId: UserId)(storageId: StorageId):
   ZIO[IStoragesRepo, StorageError.NotFound, Unit] =
   ZIO.serviceWithZIO[IStoragesRepo](_.removeById(storageId))
