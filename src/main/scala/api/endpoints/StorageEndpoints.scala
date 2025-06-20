@@ -13,14 +13,14 @@ import zio.ZIO
 
 object StorageEndpoints extends IngredientEndpointsErrorOutput:
   case class CreateStorageReqBody(name: String)
-  
+
   private val storageNotFoundVariant =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
 
   private val myStoragesEndpoint = endpoint
     .in("my" / "storages")
     .securityIn(auth.bearer[UserId]())
-  
+
   private val getStoragesEndpoint = myStoragesEndpoint
     .get
     .out(jsonBody[Seq[StorageView]])
@@ -36,10 +36,10 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(storageNotFoundVariant))
 
-  private val getStorageNameEndpoint = myStoragesEndpoint
+  private val getStorageViewEndpoint = myStoragesEndpoint
     .get
-    .in(path[StorageId]("storageId") / "name")
-    .out(jsonBody[String])
+    .in(path[StorageId]("storageId"))
+    .out(jsonBody[StorageView])
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageMembersEndpoint = myStoragesEndpoint
@@ -78,7 +78,9 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     getStoragesEndpoint.zSecuredServerLogic(getStorages),
     createStorageEndpoint.zSecuredServerLogic(createStorage),
     deleteStorageEndpoint.zSecuredServerLogic(deleteStorage),
-    getStorageNameEndpoint.zSecuredServerLogic(getStorageName),
+    getStorageViewEndpoint.zSecuredServerLogic(_ =>
+      storageId => ZIO.succeed(StorageView(storageId, "placeholder"))
+    ),
     getStorageMembersEndpoint.zSecuredServerLogic(getStorageMembers),
     getStorageIngredientsEndpoint.zSecuredServerLogic(getStorageIngredients),
     addIngredientToStorageEndpoint.zSecuredServerLogic(addIngredientToStorage),
