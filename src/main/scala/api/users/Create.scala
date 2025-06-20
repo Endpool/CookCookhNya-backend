@@ -6,7 +6,7 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import zio.{URIO, ZIO}
 
-import api.GeneralEndpointData.serverErrorVariant
+import api.EndpointErrorVariants.serverErrorVariant
 import api.AppEnv
 import db.repositories.UsersRepo
 import domain.{DbError, UserId}

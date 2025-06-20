@@ -3,7 +3,7 @@ package api.storages
 import api.AppEnv
 import db.repositories.StoragesRepo
 import domain.{StorageError, StorageId, StorageView, UserId}
-import api.GeneralEndpointData.storageNotFoundVariant
+import api.EndpointErrorVariants.storageNotFoundVariant
 import api.zSecuredServerLogic
 
 import io.circe.generic.auto.*

@@ -1,7 +1,7 @@
 package api.storages
 
 import api.AppEnv
-import api.GeneralEndpointData.storageNotFoundVariant
+import api.EndpointErrorVariants.storageNotFoundVariant
 import api.zSecuredServerLogic
 import db.repositories.StoragesRepo
 import domain.{StorageError, StorageId, UserId}

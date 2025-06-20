@@ -1,7 +1,7 @@
 package api.storages.ingredients
 
 import api.AppEnv
-import api.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.EndpointErrorVariants.{ingredientNotFoundVariant, storageNotFoundVariant}
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientId, StorageError, StorageId, UserId}

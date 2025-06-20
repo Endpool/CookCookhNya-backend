@@ -1,7 +1,7 @@
 package api.ingredients
 
 import api.AppEnv
-import api.GeneralEndpointData.ingredientNotFoundVariant
+import api.EndpointErrorVariants.ingredientNotFoundVariant
 import db.repositories.IngredientsRepo
 import domain.{IngredientError, IngredientId}
 
