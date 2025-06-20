@@ -1,10 +1,11 @@
 package api
 
-import db.repositories.{
+import _root_.db.repositories.{
   IIngredientsRepo,
   IStorageIngredientsRepo,
   IStorageMembersRepo,
-  IStoragesRepo
+  IStoragesRepo,
+  UsersRepo
 }
 
 type AppEnv
@@ -12,3 +13,4 @@ type AppEnv
   & IStorageIngredientsRepo
   & IStorageMembersRepo
   & IStoragesRepo
+  & UsersRepo
