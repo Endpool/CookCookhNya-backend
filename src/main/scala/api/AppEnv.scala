@@ -1,6 +1,6 @@
 package api
 
-import api.db.repositories.{
+import db.repositories.{
   IIngredientsRepo,
   IStorageIngredientsRepo,
   IStorageMembersRepo,

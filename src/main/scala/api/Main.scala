@@ -1,9 +1,7 @@
 package api
 
-import api.endpoints.AppEndpoints
-import api.db.dbLayer
-import api.AppEnv
-import api.db.repositories.*
+import db.dbLayer
+import db.repositories.*
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
