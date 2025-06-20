@@ -6,7 +6,8 @@ import domain.{User, UserId, Storage, Ingredient, IngredientId}
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 final case class Users(
                         @Id id: UserId,
-                        username: String,
+                        alias: Option[String],
+                        fullName: String
                       ) derives DbCodec
 
 object Users:
