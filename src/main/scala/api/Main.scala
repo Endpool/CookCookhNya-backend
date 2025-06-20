@@ -35,4 +35,3 @@ object Main extends ZIOAppDefault:
         StorageMembersRepoLive.layer,
         Server.live
       )
-      .exitCode
