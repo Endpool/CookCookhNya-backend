@@ -1,0 +1,45 @@
+package api.db.repositories
+
+import api.db.tables.Storages
+import api.db.tables.Storages.toDomain
+import api.domain.StorageError.NotFound
+import api.domain.{Storage, StorageError, StorageId, StorageView, UserId}
+
+import com.augustnagro.magnum.magzio.*
+import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+
+trait IStoragesRepo:
+  def createEmpty(name: String, ownerId: UserId): UIO[Storage]
+  def removeById(id: StorageId): IO[NotFound, Unit]
+  def getStorageViewById(id: StorageId): IO[NotFound, StorageView]
+  val getAllStorageViews: UIO[Vector[StorageView]]
+
+private final case class CreationEntity(name: String, ownerId: UserId)
+
+final case class StoragesRepo(xa: Transactor) extends Repo[CreationEntity, Storages, StorageId] with IStoragesRepo:
+  override def createEmpty(name: String, ownerId: UserId): UIO[Storage] =
+    xa.transact {
+      val Storages(insStorageId, insName, insOwnderId): Storages = insertReturning(CreationEntity(name, ownerId))
+      Storage(insStorageId, insOwnderId, insName, Nil, Nil)
+    }.catchAll(_ => ZIO.succeed(null))
+
+  override def getStorageViewById(id: StorageId): IO[NotFound, StorageView] =
+    val transaction: IO[StorageError.NotFound, Option[Storages]] =
+      xa.transact(findById(id)).catchAll {
+        _ => ZIO.fail(StorageError.NotFound(id))
+      }
+
+    transaction.flatMap {
+      case Some(s) => ZIO.succeed(toDomain(s))
+      case None    => ZIO.fail(StorageError.NotFound(id))
+    }
+
+  override val getAllStorageViews: UIO[Vector[StorageView]] =
+    xa.transact(findAll.map(toDomain)).catchAll(_ => ZIO.succeed(Vector.empty))
+
+  override def removeById(id: StorageId): IO[NotFound, Unit] =
+    xa.transact(deleteById(id)).catchAll(_ => ZIO.unit)
+
+object StoragesRepo:
+  val layer: RLayer[Transactor, IStoragesRepo] =
+    ZLayer.fromFunction(StoragesRepo(_))

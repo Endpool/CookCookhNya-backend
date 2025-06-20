@@ -1,7 +1,7 @@
 package api.endpoints.storage
 
 import api.endpoints.SecureEndpointLogicProvider.zSecuredServerLogic
-import api.db.repositories.IStorageRepo
+import api.db.repositories.IStoragesRepo
 import api.domain.{StorageError, StorageId, UserId}
 import api.endpoints.GeneralEndpointData.storageNotFoundVariant
 import api.AppEnv
@@ -18,5 +18,5 @@ val deleteStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(deleteStorage)
 
 private def deleteStorage(userId: UserId)(storageId: StorageId):
-ZIO[IStorageRepo, StorageError.NotFound, Unit] =
-  ZIO.serviceWithZIO[IStorageRepo](_.removeById(storageId))
+ZIO[IStoragesRepo, StorageError.NotFound, Unit] =
+  ZIO.serviceWithZIO[IStoragesRepo](_.removeById(storageId))
