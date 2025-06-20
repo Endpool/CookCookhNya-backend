@@ -32,7 +32,7 @@ object Main extends ZIOAppDefault:
         UsersRepo.layer,
         StoragesRepoLive.layer,
         StorageIngredientsRepo.layer,
-        StorageMembersRepo.layer,
+        StorageMembersRepoLive.layer,
         Server.live
       )
       .exitCode
