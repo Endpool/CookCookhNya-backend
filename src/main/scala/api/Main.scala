@@ -1,9 +1,9 @@
 package api
 
-import api.endpoints.AppEndpoints
-import api.db.dbLayer
 import api.AppEnv
+import api.db.dbLayer
 import api.db.repositories.*
+import api.endpoints.AppEndpoints
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -25,6 +25,7 @@ object Main extends ZIOAppDefault:
     ZioHttpInterpreter().toHttp(AppEndpoints.endpoints)
 
   val app = endpoints ++ swaggerEndpoints
+
   override def run =
     Server.serve(app)
       .provide(
@@ -36,4 +37,3 @@ object Main extends ZIOAppDefault:
         StorageMembersRepo.layer,
         Server.live
       )
-      .exitCode
