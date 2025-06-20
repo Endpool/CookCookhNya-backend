@@ -8,7 +8,7 @@ import domain.IngredientError.NotFound
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
-trait IIngredientsRepo:
+trait IngredientsRepo:
   def add(name: String): UIO[Ingredient]
   def getById(id: IngredientId): IO[NotFound, Ingredient]
   def removeById(id: IngredientId): IO[NotFound, Unit]
@@ -16,7 +16,7 @@ trait IIngredientsRepo:
 
 private final case class IngredientCreationEntity(name: String)
 
-final case class IngredientsRepo(xa: Transactor) extends Repo[IngredientCreationEntity, Ingredients, IngredientId] with IIngredientsRepo:
+final case class IngredientsRepoLive(xa: Transactor) extends Repo[IngredientCreationEntity, Ingredients, IngredientId] with IngredientsRepo:
   override def add(name: String): UIO[Ingredient] =
     xa.transact {
       val newIngredient: Ingredients = insertReturning(IngredientCreationEntity(name))
@@ -39,6 +39,6 @@ final case class IngredientsRepo(xa: Transactor) extends Repo[IngredientCreation
   override def getAll: UIO[Vector[Ingredient]] =
     xa.transact(findAll.map(toDomain(_))).catchAll(_ => ZIO.succeed(Vector.empty))
 
-object IngredientsRepo:
-  val layer: RLayer[Transactor, IIngredientsRepo] =
-    ZLayer.fromFunction(IngredientsRepo(_))
+object IngredientsRepoLive:
+  val layer: RLayer[Transactor, IngredientsRepo] =
+    ZLayer.fromFunction(IngredientsRepoLive(_))

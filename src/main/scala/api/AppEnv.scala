@@ -1,7 +1,7 @@
 package api
 
 import _root_.db.repositories.{
-  IIngredientsRepo,
+  IngredientsRepo,
   StorageIngredientsRepo,
   StorageMembersRepo,
   StoragesRepo,
@@ -9,7 +9,7 @@ import _root_.db.repositories.{
 }
 
 type AppEnv
-  = IIngredientsRepo
+  = IngredientsRepo
   & StorageIngredientsRepo
   & StorageMembersRepo
   & StoragesRepo

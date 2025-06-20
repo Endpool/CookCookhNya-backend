@@ -2,7 +2,7 @@ package api.ingredients
 
 import api.AppEnv
 import api.GeneralEndpointData.ingredientNotFoundVariant
-import db.repositories.IIngredientsRepo
+import db.repositories.IngredientsRepo
 import domain.{IngredientError, IngredientId}
 
 import io.circe.generic.auto.*
@@ -21,7 +21,7 @@ private val delete: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(deleteHandler)
 
 private def deleteHandler(ingredientId: IngredientId):
-  ZIO[IIngredientsRepo, IngredientError.NotFound, Unit] =
-  ZIO.serviceWithZIO[IIngredientsRepo] {
+  ZIO[IngredientsRepo, IngredientError.NotFound, Unit] =
+  ZIO.serviceWithZIO[IngredientsRepo] {
     _.removeById(ingredientId)
   }

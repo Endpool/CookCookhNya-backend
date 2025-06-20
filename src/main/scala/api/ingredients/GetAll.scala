@@ -1,7 +1,7 @@
 package api.ingredients
 
 import api.AppEnv
-import db.repositories.IIngredientsRepo
+import db.repositories.IngredientsRepo
 import domain.Ingredient
 
 import io.circe.generic.auto.*
@@ -18,5 +18,5 @@ val getAll: ZServerEndpoint[AppEnv, Any] =
   .out(statusCode(StatusCode.Ok))
   .zServerLogic(_ => getAllHandler)
 
-val getAllHandler: URIO[IIngredientsRepo, Seq[Ingredient]] =
-  ZIO.serviceWithZIO[IIngredientsRepo](_.getAll)
+val getAllHandler: URIO[IngredientsRepo, Seq[Ingredient]] =
+  ZIO.serviceWithZIO[IngredientsRepo](_.getAll)

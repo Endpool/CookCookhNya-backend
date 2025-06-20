@@ -28,7 +28,7 @@ object Main extends ZIOAppDefault:
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
         dbLayer,
-        IngredientsRepo.layer,
+        IngredientsRepoLive.layer,
         UsersRepo.layer,
         StoragesRepoLive.layer,
         StorageIngredientsRepoLive.layer,

@@ -1,7 +1,7 @@
 package api.ingredients
 
 import api.AppEnv
-import db.repositories.IIngredientsRepo
+import db.repositories.IngredientsRepo
 import domain.Ingredient
 
 import io.circe.generic.auto.*
@@ -21,7 +21,7 @@ private val create: ZServerEndpoint[AppEnv, Any] =
   .out(statusCode(StatusCode.Created))
   .zServerLogic(createHandler)
 
-private def createHandler(reqBody: CreateIngredientReqBody): URIO[IIngredientsRepo, Ingredient] =
-  ZIO.serviceWithZIO[IIngredientsRepo] {
+private def createHandler(reqBody: CreateIngredientReqBody): URIO[IngredientsRepo, Ingredient] =
+  ZIO.serviceWithZIO[IngredientsRepo] {
     _.add(reqBody.name)
   }
