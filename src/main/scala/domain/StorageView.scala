@@ -1,7 +1,7 @@
 package domain
 
 case class StorageView(
-                    storageId: StorageId,
+                    id: StorageId,
                     name: String,
                     ownerId: UserId,
                   )

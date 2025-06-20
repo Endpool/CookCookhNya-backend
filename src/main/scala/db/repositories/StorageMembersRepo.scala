@@ -22,15 +22,15 @@ final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers,
 
   override def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
     IO[StorageError.NotFound | UserError.NotFound, Unit] =
-    xa.transact(delete(StorageMembers(storageId, memberId))).catchAll(
+    xa.transact(delete(StorageMembers(storageId, memberId))).catchAll {
       _ => ZIO.fail(StorageError.NotFound(storageId))
-    )
+    }
 
   override def getAllStorageMembers(storageId: StorageId): IO[StorageError.NotFound, Vector[UserId]] =
     xa.transact {
       val s =
         sql"""
-          select ${StorageMembers.table.ownerId} from ${StorageMembers.table}
+          select ${StorageMembers.table.memberId} from ${StorageMembers.table}
           where ${StorageMembers.table.storageId} = $storageId
         """
       s.query[UserId].run()

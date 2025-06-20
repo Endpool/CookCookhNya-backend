@@ -6,7 +6,7 @@ import domain.{StorageId, UserId, StorageView}
 
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 final case class Storages(
-                         @Id storageId: StorageId,
+                         @Id id: StorageId,
                          ownerId: UserId,
                          name: String
                          ) derives DbCodec
@@ -14,4 +14,4 @@ final case class Storages(
 object Storages:
   val table = TableInfo[Storages, Storages, StorageId]
   def toDomain(storage: Storages): StorageView = storage match
-    case Storages(storageId, ownerId, name) => StorageView(storageId, name, ownerId)
+    case Storages(id, ownerId, name) => StorageView(id, name, ownerId)

@@ -5,7 +5,7 @@ import domain.{Ingredient, IngredientId}
 
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 final case class Ingredients(
-                              @Id ingredientId: IngredientId,
+                              @Id id: IngredientId,
                               name: String
                             ) derives DbCodec
 

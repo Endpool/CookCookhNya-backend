@@ -6,7 +6,7 @@ import domain.{UserId, StorageId}
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 case class StorageMembers(
                          storageId: StorageId,
-                         ownerId: UserId
+                         memberId: UserId
                          ) derives DbCodec
 
 object StorageMembers:
