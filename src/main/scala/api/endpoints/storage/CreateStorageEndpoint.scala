@@ -11,7 +11,7 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{URIO, ZIO}
 
-case class CreateStorageReqBody(name: String)
+final case class CreateStorageReqBody(name: String)
 
 val createStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .post
@@ -20,7 +20,7 @@ val createStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(createStorage)
 
 private def createStorage(userId: UserId)(reqBody: CreateStorageReqBody):
-URIO[IStoragesRepo, Storage] =
+  URIO[IStoragesRepo, Storage] =
   ZIO.serviceWithZIO[IStoragesRepo] {
-    _.createEmpty(IStoragesRepo.CreationEntity(reqBody.name, userId))
+    _.createEmpty(reqBody.name, userId)
   }
