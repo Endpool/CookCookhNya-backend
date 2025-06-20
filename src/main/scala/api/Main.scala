@@ -1,5 +1,6 @@
 package api
 
+import api.AppEnv
 import db.dbLayer
 import db.repositories.*
 
@@ -23,6 +24,7 @@ object Main extends ZIOAppDefault:
     ZioHttpInterpreter().toHttp(AppEndpoints.endpoints)
 
   val app = endpoints ++ swaggerEndpoints
+
   override def run =
     Server.serve(app)
       .provide(
@@ -34,4 +36,3 @@ object Main extends ZIOAppDefault:
         StorageMembersRepo.layer,
         Server.live
       )
-      .exitCode
