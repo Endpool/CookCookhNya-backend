@@ -14,8 +14,6 @@ import zio.ZIO
 object StorageEndpoints extends IngredientEndpointsErrorOutput:
   case class CreateStorageReqBody(name: String)
 
-  case class StorageSummary(id: StorageId, name: String)
-
   private val storageNotFoundVariant =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
 
@@ -25,7 +23,7 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
 
   private val getStoragesEndpoint = myStoragesEndpoint
     .get
-    .out(jsonBody[List[StorageSummary]])
+    .out(jsonBody[Seq[StorageView]])
 
   private val createStorageEndpoint = myStoragesEndpoint
     .post
@@ -38,22 +36,23 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(storageNotFoundVariant))
 
-  private val getStorageSummaryEndpoint = myStoragesEndpoint
+  private val getStorageViewEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId"))
-    .out(jsonBody[StorageSummary]())
+    .out(jsonBody[StorageView])
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageMembersEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "members")
-    .out(jsonBody[List[UserId]])
+    .out(jsonBody[Seq[UserId]])
     .errorOut(oneOf(storageNotFoundVariant))
 
   private val getStorageIngredientsEndpoint = myStoragesEndpoint
     .get
     .in(path[StorageId]("storageId") / "ingredients")
-    .out(jsonBody[List[IngredientId]])
+    .out(statusCode(StatusCode.Ok))
+    .out(jsonBody[Seq[IngredientId]])
     .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
 
   private val addIngredientToStorageEndpoint = myStoragesEndpoint
@@ -79,8 +78,8 @@ object StorageEndpoints extends IngredientEndpointsErrorOutput:
     getStoragesEndpoint.zSecuredServerLogic(getStorages),
     createStorageEndpoint.zSecuredServerLogic(createStorage),
     deleteStorageEndpoint.zSecuredServerLogic(deleteStorage),
-    getStorageSummaryEndpoint.zSecuredServerLogic(_ =>
-      storageId => ZIO.succeed(StorageSummary(storageId, "Storage"))
+    getStorageViewEndpoint.zSecuredServerLogic(_ =>
+      storageId => ZIO.succeed(StorageView(storageId, "placeholder"))
     ),
     getStorageMembersEndpoint.zSecuredServerLogic(getStorageMembers),
     getStorageIngredientsEndpoint.zSecuredServerLogic(getStorageIngredients),

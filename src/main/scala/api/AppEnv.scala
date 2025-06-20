@@ -1,5 +1,13 @@
 package api
 
-import api.db.repositories.IngredientRepoInterface
+import api.db.repositories.{
+  IngredientRepoInterface,
+  StorageIngredientsRepoInterface,
+  StorageMembersRepoInterface,
+  StorageRepoInterface
+}
 
-type AppEnv = IngredientRepoInterface
+type AppEnv = IngredientRepoInterface & 
+              StorageIngredientsRepoInterface & 
+              StorageMembersRepoInterface & 
+              StorageRepoInterface

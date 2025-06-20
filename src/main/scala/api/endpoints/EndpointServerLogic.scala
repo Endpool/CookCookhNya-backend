@@ -3,7 +3,8 @@ package api.endpoints
 import api.db.repositories.*
 import api.domain.*
 import api.endpoints.StorageEndpoints.CreateStorageReqBody
-import api.endpoints.StorageEndpoints.StorageSummary
+import api.AppEnv
+
 import zio.{IO, RIO, UIO, URIO, ZIO}
 
 val createIngredient: Ingredient => URIO[IngredientRepoInterface, Unit] =
@@ -37,38 +38,52 @@ val deleteIngredient:
     }
 
 val addIngredientToStorage:
-  UserId => ((StorageId, IngredientId)) => ZIO[IngredientRepoInterface, StorageError | IngredientError, Unit] =
+  UserId => ((StorageId, IngredientId)) => ZIO[StorageIngredientsRepoInterface, StorageError | IngredientError, Unit] =
   userId =>
-    case (storageId, ingredientId) => ZIO.succeed(())
+    case (storageId, ingredientId) =>
+      ZIO.serviceWithZIO[StorageIngredientsRepoInterface] {
+        _.addIngredientToStorage(storageId, ingredientId)
+      }
 
 val deleteMyIngredientFromStorage:
-  UserId => ((StorageId, IngredientId)) => IO[StorageError | IngredientError, Unit] =
+  UserId => ((StorageId, IngredientId)) => ZIO[StorageIngredientsRepoInterface, StorageError | IngredientError, Unit] =
   userId =>
-    case (2, _) => ZIO.fail(StorageError.NotFound(2))
-    case (_, 4) => ZIO.fail(IngredientError.NotFound(4))
-    case _ => ZIO.unit
+    case (storageId, ingredientId) =>
+      ZIO.serviceWithZIO[StorageIngredientsRepoInterface] {
+        _.removeIngredientFromStorageById(storageId, ingredientId)
+      }
 
 val getStorageIngredients:
-  UserId => StorageId => IO[StorageError, List[IngredientId]] =
-  userId => storageId => ZIO.succeed(Nil)
+  UserId => StorageId => ZIO[StorageIngredientsRepoInterface, StorageError, Seq[IngredientId]] =
+  userId => storageId =>
+    ZIO.serviceWithZIO[StorageIngredientsRepoInterface] {
+      _.getAllIngredientsFromStorage(storageId)
+    }
 
 val getStorages:
-  UserId => Unit => UIO[List[StorageSummary]] =
-  userId => unit => ZIO.succeed(Nil)
+  UserId => Unit => URIO[StorageRepoInterface, Seq[StorageView]] =
+  userId => unit => ZIO.serviceWithZIO[StorageRepoInterface](_.getAllStorageViews)
 
 val createStorage:
-  UserId => CreateStorageReqBody => UIO[Storage] =
+  UserId => CreateStorageReqBody => URIO[StorageRepoInterface, Storage] =
   userId =>
-    case CreateStorageReqBody(name) => ZIO.succeed(Storage(1, name, 2, Nil, Nil))
+    case CreateStorageReqBody(name) =>
+      ZIO.serviceWithZIO[StorageRepoInterface](_.createEmpty(name, userId))
 
 val deleteStorage:
-  UserId => StorageId => IO[StorageError.NotFound, Unit] =
-  userId => storageId => ZIO.unit
+  UserId => StorageId => ZIO[StorageRepoInterface, StorageError.NotFound, Unit] =
+  userId => storageId => ZIO.serviceWithZIO[StorageRepoInterface](_.removeById(storageId))
 
 val getStorageName:
-  UserId => StorageId => IO[StorageError.NotFound, String] =
-  userId => storageId => ZIO.succeed("placeholder")
+  UserId => StorageId => ZIO[StorageRepoInterface, StorageError.NotFound, String] =
+  userId => storageId =>
+    ZIO.serviceWithZIO[StorageRepoInterface] {
+      _.getStorageViewById(storageId)
+    }.map(_.name)
 
 val getStorageMembers:
-  UserId => StorageId => IO[StorageError.NotFound, List[UserId]] =
-  userId => storageId => ZIO.succeed(Nil)
+  UserId => StorageId => ZIO[StorageMembersRepoInterface, StorageError.NotFound, Seq[UserId]] =
+  userId => storageId =>
+    ZIO.serviceWithZIO[StorageMembersRepoInterface] {
+      _.getAllStorageMembers(storageId)
+    }

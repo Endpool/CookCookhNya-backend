@@ -31,6 +31,9 @@ object Main extends ZIOAppDefault:
         ZLayer.succeed(Server.Config.default.port(8080)),
         dbLayer,
         IngredientRepo.layer,
+        StorageRepo.layer,
+        StorageIngredientsRepo.layer,
+        StorageMembersRepo.layer,
         Server.live
       )
       .exitCode
