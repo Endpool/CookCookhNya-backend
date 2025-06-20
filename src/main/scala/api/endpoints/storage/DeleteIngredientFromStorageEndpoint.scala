@@ -17,11 +17,8 @@ val deleteIngredientFromStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStorag
   .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
   .zSecuredServerLogic(deleteMyIngredientFromStorage)
 
-private def deleteMyIngredientFromStorage(userId: UserId):
-  ((StorageId, IngredientId)) => ZIO[IStorageIngredientsRepo,
-                                     StorageError.NotFound | IngredientError.NotFound,
-                                     Unit] =
-  case (storageId, ingredientId) =>
-    ZIO.serviceWithZIO[IStorageIngredientsRepo] {
-      _.removeIngredientFromStorageById(storageId, ingredientId)
-    }
+private def deleteMyIngredientFromStorage(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
+  ZIO[IStorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
+  ZIO.serviceWithZIO[IStorageIngredientsRepo] {
+    _.removeIngredientFromStorageById(storageId, ingredientId)
+  }

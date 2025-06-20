@@ -20,7 +20,7 @@ val getStorageViewEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(getStorageView)
 
 private def getStorageView(userId: UserId)(storageId: StorageId):
-ZIO[IStoragesRepo, StorageError.NotFound, StorageView] =
+  ZIO[IStoragesRepo, StorageError.NotFound, StorageView] =
   ZIO.serviceWithZIO[IStoragesRepo] {
     _.getStorageViewById(storageId)
   }

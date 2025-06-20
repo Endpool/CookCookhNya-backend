@@ -18,5 +18,5 @@ val deleteStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .zSecuredServerLogic(deleteStorage)
 
 private def deleteStorage(userId: UserId)(storageId: StorageId):
-ZIO[IStoragesRepo, StorageError.NotFound, Unit] =
+  ZIO[IStoragesRepo, StorageError.NotFound, Unit] =
   ZIO.serviceWithZIO[IStoragesRepo](_.removeById(storageId))

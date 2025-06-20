@@ -16,5 +16,5 @@ val getStoragesEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEndpoint
   .out(jsonBody[Seq[StorageView]])
   .zSecuredServerLogic(getStorages)
 
-private def getStorages(userId: UserId): Unit => URIO[IStoragesRepo, Seq[StorageView]] =
-  _ => ZIO.serviceWithZIO[IStoragesRepo](_.getAllStorageViews)
+private def getStorages(userId: UserId)(u : Unit) : URIO[IStoragesRepo, Seq[StorageView]] =
+  ZIO.serviceWithZIO[IStoragesRepo](_.getAllStorageViews)

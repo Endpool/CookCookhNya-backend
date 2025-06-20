@@ -17,11 +17,8 @@ val addIngredientToStorageEndpoint: ZServerEndpoint[AppEnv, Any] = myStoragesEnd
   .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
   .zSecuredServerLogic(addIngredientToStorage)
 
-private def addIngredientToStorage(userId: UserId):
-((StorageId, IngredientId)) => ZIO[IStorageIngredientsRepo,
-  StorageError.NotFound | IngredientError.NotFound,
-  Unit] =
-  case (storageId, ingredientId) =>
-    ZIO.serviceWithZIO[IStorageIngredientsRepo] {
-      _.addIngredientToStorage(storageId, ingredientId)
-    }
+private def addIngredientToStorage(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
+  ZIO[IStorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
+  ZIO.serviceWithZIO[IStorageIngredientsRepo] {
+    _.addIngredientToStorage(storageId, ingredientId)
+  }
