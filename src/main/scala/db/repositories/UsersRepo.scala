@@ -6,19 +6,18 @@ import domain.{UserId, DbError}
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
-case class UserCreationEntity(username: String)
-
 trait UsersRepo:
-  def addUserIfNotExists(username: String): IO[DbError.UnexpectedDbError, UserId]
+  def saveUser(userId: UserId, alias: Option[String], fullName: String): IO[DbError.UnexpectedDbError, Unit]
 
-final case class UsersRepoLive(xa: Transactor) extends Repo[UserCreationEntity, Users, UserId] with UsersRepo:
-  def addUserIfNotExists(username: String): IO[DbError.UnexpectedDbError, UserId] =
+final case class UsersRepoLive(xa: Transactor) extends Repo[Users, Users, UserId] with UsersRepo:
+  def saveUser(userId: UserId, alias: Option[String], fullName: String): IO[DbError.UnexpectedDbError, Unit] =
+    val user = Users(userId, alias, fullName)
     xa.transact {
       val existent: Vector[Users] = findAll(Spec[Users]
-        .where(sql"${Users.table.username} = $username")
+        .where(sql"${Users.table.id} = ${user.id}")
         .limit(1)
       )
-      if existent.isEmpty then insertReturning(UserCreationEntity(username)).id else existent.head.id
+      if existent.isEmpty then insert(user) else update(user)
 
     }.catchAll(e => ZIO.fail(DbError.UnexpectedDbError(e.getMessage)))
 
