@@ -30,8 +30,8 @@ val dataSource: IO[RuntimeException, DataSource] =
 
 private def mkDataSource(url: String, username: String, password: String) =
   val hikari = new HikariDataSource()
-  hikari.setJdbcUrl("jdbc:postgresql://localhost:5432/mydb")
-  hikari.setUsername("app_user")
-  hikari.setPassword("password")
+  hikari.setJdbcUrl(url)
+  hikari.setUsername(username)
+  hikari.setPassword(password)
   hikari.setDriverClassName("org.postgresql.Driver")
   hikari
