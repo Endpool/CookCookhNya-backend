@@ -1,9 +1,9 @@
 package api.storages.ingredients
 
 import api.AppEnv
-import api.GeneralEndpointData.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.EndpointErrorVariants.{ingredientNotFoundVariant, storageNotFoundVariant}
 import api.zSecuredServerLogic
-import db.repositories.IStorageIngredientsRepo
+import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
 
 import sttp.model.StatusCode
@@ -19,7 +19,7 @@ val put: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(putHandler)
 
 private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[IStorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
-  ZIO.serviceWithZIO[IStorageIngredientsRepo] {
+  ZIO[StorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
+  ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.addIngredientToStorage(storageId, ingredientId)
   }

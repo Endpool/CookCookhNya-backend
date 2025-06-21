@@ -2,7 +2,7 @@ package api.storages
 
 import api.AppEnv
 import api.zSecuredServerLogic
-import db.repositories.IStoragesRepo
+import db.repositories.StoragesRepo
 import domain.{Storage, UserId}
 
 import io.circe.generic.auto.*
@@ -21,7 +21,7 @@ val create: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(createHandler)
 
 private def createHandler(userId: UserId)(reqBody: CreateStorageReqBody):
-  URIO[IStoragesRepo, Storage] =
-  ZIO.serviceWithZIO[IStoragesRepo] {
+  URIO[StoragesRepo, Storage] =
+  ZIO.serviceWithZIO[StoragesRepo] {
     _.createEmpty(reqBody.name, userId)
   }

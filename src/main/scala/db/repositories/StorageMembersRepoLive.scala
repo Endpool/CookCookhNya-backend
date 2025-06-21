@@ -6,13 +6,13 @@ import domain.*
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
 
-trait IStorageMembersRepo:
+trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId): IO[StorageError.NotFound | UserError.NotFound, Unit]
   def removeMemberFromStorageById(storageId: StorageId, memberId: UserId): IO[StorageError.NotFound | UserError.NotFound, Unit]
   def getAllStorageMembers(storageId: StorageId): IO[StorageError.NotFound, Vector[UserId]]
 
-final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers, StorageMembers, Null]
-  with IStorageMembersRepo:
+final case class StorageMembersRepoLive(xa: Transactor) extends Repo[StorageMembers, StorageMembers, Null]
+  with StorageMembersRepo:
 
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
     IO[StorageError.NotFound | UserError.NotFound, Unit] =
@@ -36,6 +36,6 @@ final case class StorageMembersRepo(xa: Transactor) extends Repo[StorageMembers,
       s.query[UserId].run()
     }.catchAll(_ => ZIO.fail(StorageError.NotFound(storageId)))
 
-object StorageMembersRepo:
-  val layer: RLayer[Transactor, IStorageMembersRepo] =
-    ZLayer.fromFunction(StorageMembersRepo(_))
+object StorageMembersRepoLive:
+  val layer: RLayer[Transactor, StorageMembersRepo] =
+    ZLayer.fromFunction(StorageMembersRepoLive(_))

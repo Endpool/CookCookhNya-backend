@@ -1,8 +1,8 @@
 package api.ingredients
 
 import api.AppEnv
-import api.GeneralEndpointData.ingredientNotFoundVariant
-import db.repositories.IIngredientsRepo
+import api.EndpointErrorVariants.ingredientNotFoundVariant
+import db.repositories.IngredientsRepo
 import domain.{Ingredient, IngredientError, IngredientId}
 
 import io.circe.generic.auto.*
@@ -22,5 +22,5 @@ private val get: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(getHandler)
 
 private def getHandler(ingredientId: IngredientId):
-  ZIO[IIngredientsRepo, IngredientError.NotFound, Ingredient] =
-  ZIO.serviceWithZIO[IIngredientsRepo](_.getById(ingredientId))
+  ZIO[IngredientsRepo, IngredientError.NotFound, Ingredient] =
+  ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))
