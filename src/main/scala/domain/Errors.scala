@@ -14,3 +14,5 @@ enum UserError(val message: String) extends ErrorResponse:
 
 enum DbError(val message: String) extends ErrorResponse:
   case UnexpectedDbError(msg: String) extends DbError(s"Something went wrong with the db: $msg")
+  case FailedDbQuery(msg: String) extends DbError(s"Failed to execute DB query: $msg")
+  case DbNotRespondingError(msg: String) extends DbError(s"DB connection failed: $msg")
