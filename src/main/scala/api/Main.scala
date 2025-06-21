@@ -23,6 +23,7 @@ object Main extends ZIOAppDefault:
     ZioHttpInterpreter().toHttp(AppEndpoints.endpoints)
 
   val app = endpoints ++ swaggerEndpoints
+
   override def run =
     Server.serve(app)
       .provide(
