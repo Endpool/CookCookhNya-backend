@@ -1,25 +1,25 @@
 package api.users
 
-import sttp.tapir.ztapir.*
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
-import sttp.tapir.json.circe.jsonBody
-import zio.{URIO, ZIO}
+import sttp.tapir.json.circe.*
+import sttp.tapir.ztapir.*
+import zio.ZIO
 
+import api.zSecuredServerLogic
 import api.EndpointErrorVariants.serverErrorVariant
 import api.AppEnv
 import db.repositories.UsersRepo
 import domain.{DbError, UserId}
 
-final case class CreateUserReqBody(username: String)
+final case class CreateUserReqBody(alias: Option[String], fullName: String)
 
 val create: ZServerEndpoint[AppEnv, Any] =
   usersEndpoint
-    .post
+    .put
     .in(jsonBody[CreateUserReqBody])
-    .out(plainBody[UserId])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(createHandler)
-  
-private def createHandler(reqBody: CreateUserReqBody): ZIO[UsersRepo, DbError.UnexpectedDbError, UserId] =
-  ZIO.serviceWithZIO[UsersRepo](_.addUserIfNotExists(reqBody.username))
+    .zSecuredServerLogic(createHandler)
+
+private def createHandler(userId: UserId)(reqBody: CreateUserReqBody): ZIO[UsersRepo, DbError.UnexpectedDbError, Unit] =
+  ZIO.serviceWithZIO[UsersRepo](_.saveUser(userId, reqBody.alias, reqBody.fullName))
