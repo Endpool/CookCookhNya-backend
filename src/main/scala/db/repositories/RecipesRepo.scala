@@ -21,11 +21,11 @@ final case class RecipesRepoLive(xa: Transactor) extends Repo[Recipes, Recipes, 
     for
       ingredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.getAllIngredients(recipeId))
       recipeTableRowOption <- xa.transact {
-       findById(recipeId)
+        findById(recipeId)
       }.catchAllAsDbError
-      recipe = recipeTableRowOption.map(recipeTableRow =>
+      recipe = recipeTableRowOption.map{ recipeTableRow =>
         Recipe(recipeId, recipeTableRow.name, ingredients, recipeTableRow.sourceLink)
-      )
+      }
     yield recipe
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Unit] =
