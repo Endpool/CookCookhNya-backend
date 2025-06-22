@@ -8,5 +8,5 @@ case class RecipeIngredients(
                                recipeId: RecipeId, 
                                ingredientId: IngredientId
                              ) derives DbCodec
-object StorageIngredients:
+object RecipeIngredients:
   val table = TableInfo[RecipeIngredients, RecipeIngredients, RecipeId & IngredientId]
