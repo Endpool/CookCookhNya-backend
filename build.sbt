@@ -28,6 +28,8 @@ lazy val root = (project in file("."))
       "com.zaxxer"    % "HikariCP"    % "6.3.0", // connection pool
       "org.postgresql" % "postgresql" % "42.7.7",
 
-      "io.circe" %% "circe-generic" % circeVersion
+      "io.circe" %% "circe-generic" % circeVersion,
+
+      "ch.qos.logback" % "logback-classic" % "1.4.14"
     )
   )
