@@ -10,7 +10,6 @@ trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[Err, Vector[IngredientId]]
   def addIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit]
   def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit]
-  def deleteRecipe(recipeId: RecipeId): IO[Err, Unit]
 
 final case class RecipeIngredientsRepoLive(xa: Transactor)
   extends Repo[RecipeIngredients, RecipeIngredients, (RecipeId, IngredientId)] with RecipeIngredientsRepo:
@@ -31,13 +30,4 @@ final case class RecipeIngredientsRepoLive(xa: Transactor)
   override def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit] =
     xa.transact {
       delete(RecipeIngredients(recipeId, ingredientId))
-    }.catchAllAsDbError
-
-  override def deleteRecipe(recipeId: RecipeId): IO[Err, Unit] =
-    xa.transact {
-      val toDeleteSpec = Spec[RecipeIngredients]
-        .where(sql"${RecipeIngredients.table.recipeId} = $recipeId")
-      val toDelete: Vector[RecipeIngredients] = findAll(toDeleteSpec)
-      toDelete.map(td => deleteById((td.recipeId, td.ingredientId)))
-      ()
     }.catchAllAsDbError
