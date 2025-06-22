@@ -5,6 +5,6 @@ type RecipeId = BaseId
 case class Recipe(
                  id: RecipeId,
                  name: String,
-                 ingredients: List[IngredientId],
+                 ingredients: Vector[IngredientId],
                  sourceLink: String
                  )
