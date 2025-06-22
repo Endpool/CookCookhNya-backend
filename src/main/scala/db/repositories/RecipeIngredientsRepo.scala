@@ -8,7 +8,7 @@ import zio.IO
 
 trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[Err, Vector[IngredientId]]
-  def addIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit]
+  def addIngredients(recipeId: RecipeId, ingredientIds: Vector[IngredientId]): IO[Err, Unit]
   def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit]
 
 final case class RecipeIngredientsRepoLive(xa: Transactor)
@@ -22,9 +22,9 @@ final case class RecipeIngredientsRepoLive(xa: Transactor)
       """.query[IngredientId].run()
     }.catchAllAsDbError
 
-  override def addIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit] =
+  override def addIngredients(recipeId: RecipeId, ingredientIds: Vector[IngredientId]): IO[Err, Unit] =
     xa.transact {
-      insert(RecipeIngredients(recipeId, ingredientId))
+      insertAll(ingredientIds.map(RecipeIngredients(recipeId, _)))
     }.catchAllAsDbError
 
   override def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit] =
