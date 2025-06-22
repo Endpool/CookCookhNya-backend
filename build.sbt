@@ -15,14 +15,19 @@ lazy val root = (project in file("."))
     name := "CookCookHny-backend",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion,
+
+      // tapir
       "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-core" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-netty-server-zio" % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % tapirVersion,
+
+      // db
       "com.augustnagro" %% "magnumzio" % "2.0.0-M1",
       "com.zaxxer"    % "HikariCP"    % "6.3.0", // connection pool
       "org.postgresql" % "postgresql" % "42.7.7",
+
       "io.circe" %% "circe-generic" % circeVersion
     )
   )
