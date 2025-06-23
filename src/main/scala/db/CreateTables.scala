@@ -23,11 +23,11 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Storages.table}(
-          ${Storages.table.id} SERIAL PRIMARY KEY,
-          ${Storages.table.ownerId} BIGINT NOT NULL,
-          ${Storages.table.name} VARCHAR(255) NOT NULL,
-          FOREIGN KEY (${Storages.table.ownerId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storagesTable}(
+          ${storagesTable.id} SERIAL PRIMARY KEY,
+          ${storagesTable.ownerId} BIGINT NOT NULL,
+          ${storagesTable.name} VARCHAR(255) NOT NULL,
+          FOREIGN KEY (${storagesTable.ownerId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
         );
       """,
 
@@ -36,7 +36,7 @@ def createTables(xa: Transactor) = {
           ${StorageMembers.table.storageId} INT NOT NULL,
           ${StorageMembers.table.memberId} BIGINT NOT NULL,
           PRIMARY KEY (${StorageMembers.table.storageId}, ${StorageMembers.table.memberId}),
-          FOREIGN KEY (${StorageMembers.table.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${StorageMembers.table.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
           FOREIGN KEY (${StorageMembers.table.memberId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
         );
       """,
@@ -46,7 +46,7 @@ def createTables(xa: Transactor) = {
           ${storageIngredientsTable.storageId} INT NOT NULL,
           ${storageIngredientsTable.ingredientId} INT NOT NULL,
           PRIMARY KEY (${storageIngredientsTable.storageId}, ${storageIngredientsTable.ingredientId}),
-          FOREIGN KEY (${storageIngredientsTable.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${storageIngredientsTable.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
           FOREIGN KEY (${storageIngredientsTable.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
         );
       """
