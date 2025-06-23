@@ -12,5 +12,7 @@ final case class DbIngredient(
 ) derives DbCodec:
   def toDomain = Ingredient(id, name)
 
+final case class DbIngredientCreator(name: String)
+
 object DbIngredient:
-  val table = TableInfo[Ingredient, DbIngredient, IngredientId]
+  val table = TableInfo[DbIngredientCreator, DbIngredient, IngredientId]

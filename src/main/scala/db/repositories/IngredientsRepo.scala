@@ -1,6 +1,6 @@
 package db.repositories
 
-import db.tables.DbIngredient
+import db.tables.{DbIngredient, DbIngredientCreator}
 import domain.DbError
 import domain.{IngredientId}
 import domain.IngredientError.NotFound
@@ -14,12 +14,10 @@ trait IngredientsRepo:
   def removeById(id: IngredientId): IO[DbError, Unit]
   def getAll: IO[DbError, Vector[DbIngredient]]
 
-private final case class IngredientCreator(name: String)
-
 final case class IngredientsRepoLive(xa: Transactor)
-  extends Repo[IngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
+  extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
   override def add(name: String): IO[DbError, DbIngredient] =
-    xa.transact(insertReturning(IngredientCreator(name))).catchAll { e =>
+    xa.transact(insertReturning(DbIngredientCreator(name))).catchAll { e =>
       ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
     }
 
