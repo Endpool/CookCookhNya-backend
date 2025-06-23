@@ -23,5 +23,5 @@ private val delete: ZServerEndpoint[AppEnv, Any] =
 private def deleteHandler(ingredientId: IngredientId):
   ZIO[IngredientsRepo, IngredientError.NotFound, Unit] =
   ZIO.serviceWithZIO[IngredientsRepo] {
-    _.removeById(ingredientId)
+    _.removeById(ingredientId).catchAll(???)
   }

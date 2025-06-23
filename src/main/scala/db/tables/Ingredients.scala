@@ -5,12 +5,10 @@ import domain.{Ingredient, IngredientId}
 
 @Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
 final case class Ingredients(
-                              @Id id: IngredientId,
-                              name: String
-                            ) derives DbCodec
+  @Id id: IngredientId,
+  name: String
+) derives DbCodec:
+  def toDomain = Ingredient(id, name)
 
 object Ingredients:
   val table = TableInfo[Ingredient, Ingredients, IngredientId]
-
-  def toDomain(ingredient: Ingredients): Ingredient = ingredient match
-    case Ingredients(ingredientId, name) => Ingredient(ingredientId, name)
