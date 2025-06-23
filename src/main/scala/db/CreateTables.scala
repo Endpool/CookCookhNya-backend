@@ -1,17 +1,18 @@
 package db
 
-import com.augustnagro.magnum.magzio.*
 import db.tables.*
+
+import com.augustnagro.magnum.magzio.*
 
 def createTables(xa: Transactor) = {
   xa.transact {
     val tableList = List(
       // alias cannot be referenced with magnum DDL due to its option type
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Users.table}(
-          ${Users.table.id} BIGINT PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS ${usersTable}(
+          ${usersTable.id} BIGINT PRIMARY KEY,
           alias VARCHAR(255),
-          ${Users.table.fullName} VARCHAR(255) NOT NULL
+          ${usersTable.fullName} VARCHAR(255) NOT NULL
         );
       """,
 
@@ -27,7 +28,7 @@ def createTables(xa: Transactor) = {
           ${storagesTable.id} SERIAL PRIMARY KEY,
           ${storagesTable.ownerId} BIGINT NOT NULL,
           ${storagesTable.name} VARCHAR(255) NOT NULL,
-          FOREIGN KEY (${storagesTable.ownerId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+          FOREIGN KEY (${storagesTable.ownerId}) REFERENCES ${usersTable}(${usersTable.id}) ON DELETE CASCADE
         );
       """,
 
@@ -37,7 +38,7 @@ def createTables(xa: Transactor) = {
           ${storageMembersTable.memberId} BIGINT NOT NULL,
           PRIMARY KEY (${storageMembersTable.storageId}, ${storageMembersTable.memberId}),
           FOREIGN KEY (${storageMembersTable.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${storageMembersTable.memberId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+          FOREIGN KEY (${storageMembersTable.memberId}) REFERENCES ${usersTable}(${usersTable.id}) ON DELETE CASCADE
         );
       """,
 
