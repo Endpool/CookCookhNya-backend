@@ -26,4 +26,4 @@ private def getSummaryHandler(userId: UserId)(storageId: StorageId):
       .catchAll { e => ??? } // TODO handle error
     storage  <- ZIO.fromOption(mStorage)
       .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
-  yield ???
+  yield dbToResp(storage)
