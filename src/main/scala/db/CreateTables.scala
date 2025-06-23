@@ -32,12 +32,12 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${StorageMembers.table}(
-          ${StorageMembers.table.storageId} INT NOT NULL,
-          ${StorageMembers.table.memberId} BIGINT NOT NULL,
-          PRIMARY KEY (${StorageMembers.table.storageId}, ${StorageMembers.table.memberId}),
-          FOREIGN KEY (${StorageMembers.table.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${StorageMembers.table.memberId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storageMembersTable}(
+          ${storageMembersTable.storageId} INT NOT NULL,
+          ${storageMembersTable.memberId} BIGINT NOT NULL,
+          PRIMARY KEY (${storageMembersTable.storageId}, ${storageMembersTable.memberId}),
+          FOREIGN KEY (${storageMembersTable.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${storageMembersTable.memberId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
         );
       """,
 

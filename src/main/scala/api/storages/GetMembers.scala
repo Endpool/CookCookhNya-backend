@@ -1,10 +1,10 @@
 package api.storages
 
 import api.AppEnv
-import api.EndpointErrorVariants.storageNotFoundVariant
+import api.EndpointErrorVariants.serverErrorVariant
 import api.zSecuredServerLogic
 import db.repositories.StorageMembersRepo
-import domain.{StorageError, StorageId, UserId}
+import domain.{StorageError, StorageId, UserId, DbError}
 
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
@@ -15,11 +15,11 @@ private val getMembers: ZServerEndpoint[AppEnv, Any] =
   .get
   .in(path[StorageId]("storageId") / "members")
   .out(jsonBody[Seq[UserId]])
-  .errorOut(oneOf(storageNotFoundVariant))
+  .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(getMembersHandler)
 
 private def getMembersHandler(userId: UserId)(storageId: StorageId):
-  ZIO[StorageMembersRepo, StorageError.NotFound, Seq[UserId]] =
+  ZIO[StorageMembersRepo, DbError.UnexpectedDbError, Seq[UserId]] =
   ZIO.serviceWithZIO[StorageMembersRepo] {
     _.getAllStorageMembers(storageId)
   }
