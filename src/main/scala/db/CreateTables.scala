@@ -16,9 +16,9 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${DbIngredient.table}(
-          ${DbIngredient.table.id} SERIAL PRIMARY KEY,
-          ${DbIngredient.table.name} VARCHAR(255) NOT NULL
+        CREATE TABLE IF NOT EXISTS ${ingredientsTable}(
+          ${ingredientsTable.id} SERIAL PRIMARY KEY,
+          ${ingredientsTable.name} VARCHAR(255) NOT NULL
         );
       """,
 
@@ -42,12 +42,12 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${StorageIngredients.table}(
-          ${StorageIngredients.table.storageId} INT NOT NULL,
-          ${StorageIngredients.table.ingredientId} INT NOT NULL,
-          PRIMARY KEY (${StorageIngredients.table.storageId}, ${StorageIngredients.table.ingredientId}),
-          FOREIGN KEY (${StorageIngredients.table.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${StorageIngredients.table.ingredientId}) REFERENCES ${DbIngredient.table}(${DbIngredient.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storageIngredientsTable}(
+          ${storageIngredientsTable.storageId} INT NOT NULL,
+          ${storageIngredientsTable.ingredientId} INT NOT NULL,
+          PRIMARY KEY (${storageIngredientsTable.storageId}, ${storageIngredientsTable.ingredientId}),
+          FOREIGN KEY (${storageIngredientsTable.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${storageIngredientsTable.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
         );
       """
     )

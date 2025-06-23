@@ -14,5 +14,4 @@ final case class DbIngredient(
 
 final case class DbIngredientCreator(name: String)
 
-object DbIngredient:
-  val table = TableInfo[DbIngredientCreator, DbIngredient, IngredientId]
+val ingredientsTable = TableInfo[DbIngredientCreator, DbIngredient, IngredientId]
