@@ -16,9 +16,9 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Ingredients.table}(
-          ${Ingredients.table.id} SERIAL PRIMARY KEY,
-          ${Ingredients.table.name} VARCHAR(255) NOT NULL
+        CREATE TABLE IF NOT EXISTS ${DbIngredient.table}(
+          ${DbIngredient.table.id} SERIAL PRIMARY KEY,
+          ${DbIngredient.table.name} VARCHAR(255) NOT NULL
         );
       """,
 
@@ -47,7 +47,7 @@ def createTables(xa: Transactor) = {
           ${StorageIngredients.table.ingredientId} INT NOT NULL,
           PRIMARY KEY (${StorageIngredients.table.storageId}, ${StorageIngredients.table.ingredientId}),
           FOREIGN KEY (${StorageIngredients.table.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${StorageIngredients.table.ingredientId}) REFERENCES ${Ingredients.table}(${Ingredients.table.id}) ON DELETE CASCADE
+          FOREIGN KEY (${StorageIngredients.table.ingredientId}) REFERENCES ${DbIngredient.table}(${DbIngredient.table.id}) ON DELETE CASCADE
         );
       """
     )
