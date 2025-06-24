@@ -22,5 +22,10 @@ private val get: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(getHandler)
 
 private def getHandler(ingredientId: IngredientId):
-  ZIO[IngredientsRepo, IngredientError.NotFound, Ingredient] =
-  ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))
+  ZIO[IngredientsRepo, IngredientError.NotFound, Ingredient] = for
+    mIngredient <- ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))
+      .catchAll { e => ??? } // TODO handle errors
+    ingredient  <- ZIO.fromOption(mIngredient)
+      .orElseFail[IngredientError.NotFound](IngredientError.NotFound(ingredientId))
+  yield ingredient.toDomain
+

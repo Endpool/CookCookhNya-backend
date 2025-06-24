@@ -1,53 +1,54 @@
 package db
 
-import com.augustnagro.magnum.magzio.*
 import db.tables.*
+
+import com.augustnagro.magnum.magzio.*
 
 def createTables(xa: Transactor) = {
   xa.transact {
     val tableList = List(
       // alias cannot be referenced with magnum DDL due to its option type
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Users.table}(
-          ${Users.table.id} BIGINT PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS ${usersTable}(
+          ${usersTable.id} BIGINT PRIMARY KEY,
           alias VARCHAR(255),
-          ${Users.table.fullName} VARCHAR(255) NOT NULL
+          ${usersTable.fullName} VARCHAR(255) NOT NULL
         );
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Ingredients.table}(
-          ${Ingredients.table.id} SERIAL PRIMARY KEY,
-          ${Ingredients.table.name} VARCHAR(255) NOT NULL
+        CREATE TABLE IF NOT EXISTS ${ingredientsTable}(
+          ${ingredientsTable.id} SERIAL PRIMARY KEY,
+          ${ingredientsTable.name} VARCHAR(255) NOT NULL
         );
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Storages.table}(
-          ${Storages.table.id} SERIAL PRIMARY KEY,
-          ${Storages.table.ownerId} INT NOT NULL,
-          ${Storages.table.name} VARCHAR(255) NOT NULL,
-          FOREIGN KEY (${Storages.table.ownerId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storagesTable}(
+          ${storagesTable.id} SERIAL PRIMARY KEY,
+          ${storagesTable.ownerId} BIGINT NOT NULL,
+          ${storagesTable.name} VARCHAR(255) NOT NULL,
+          FOREIGN KEY (${storagesTable.ownerId}) REFERENCES ${usersTable}(${usersTable.id}) ON DELETE CASCADE
         );
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${StorageMembers.table}(
-          ${StorageMembers.table.storageId} INT NOT NULL,
-          ${StorageMembers.table.memberId} INT NOT NULL,
-          PRIMARY KEY (${StorageMembers.table.storageId}, ${StorageMembers.table.memberId}),
-          FOREIGN KEY (${StorageMembers.table.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${StorageMembers.table.memberId}) REFERENCES ${Users.table}(${Users.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storageMembersTable}(
+          ${storageMembersTable.storageId} INT NOT NULL,
+          ${storageMembersTable.memberId} BIGINT NOT NULL,
+          PRIMARY KEY (${storageMembersTable.storageId}, ${storageMembersTable.memberId}),
+          FOREIGN KEY (${storageMembersTable.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${storageMembersTable.memberId}) REFERENCES ${usersTable}(${usersTable.id}) ON DELETE CASCADE
         );
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${StorageIngredients.table}(
-          ${StorageIngredients.table.storageId} INT NOT NULL,
-          ${StorageIngredients.table.ingredientId} INT NOT NULL,
-          PRIMARY KEY (${StorageIngredients.table.storageId}, ${StorageIngredients.table.ingredientId}),
-          FOREIGN KEY (${StorageIngredients.table.storageId}) REFERENCES ${Storages.table}(${Storages.table.id}) ON DELETE CASCADE,
-          FOREIGN KEY (${StorageIngredients.table.ingredientId}) REFERENCES ${Ingredients.table}(${Ingredients.table.id}) ON DELETE CASCADE
+        CREATE TABLE IF NOT EXISTS ${storageIngredientsTable}(
+          ${storageIngredientsTable.storageId} INT NOT NULL,
+          ${storageIngredientsTable.ingredientId} INT NOT NULL,
+          PRIMARY KEY (${storageIngredientsTable.storageId}, ${storageIngredientsTable.ingredientId}),
+          FOREIGN KEY (${storageIngredientsTable.storageId}) REFERENCES ${storagesTable}(${storagesTable.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${storageIngredientsTable.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
         );
       """
     )
