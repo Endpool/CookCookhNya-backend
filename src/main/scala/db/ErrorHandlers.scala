@@ -2,7 +2,7 @@ package db
 
 import domain.DbError
 
-def defaultErrorHandler(error: Throwable): DbError =
+def handleDbError(error: Throwable): DbError =
   val errorCause = error.getCause
   val errorMessage = error.getCause.getMessage
   

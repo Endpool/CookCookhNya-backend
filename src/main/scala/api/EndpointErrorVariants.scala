@@ -15,5 +15,8 @@ object EndpointErrorVariants:
   val storageNotFoundVariant =
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[StorageError.NotFound]))
 
-  val serverErrorVariant =
+  val serverUnexpectedErrorVariant =
     oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DbError.UnexpectedDbError]))
+
+  val databaseFailureErrorVariant =
+    oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DbError.DbNotRespondingError]))

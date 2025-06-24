@@ -1,10 +1,16 @@
 package api.storages.ingredients
 
 import api.AppEnv
-import api.EndpointErrorVariants.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.EndpointErrorVariants.{
+  databaseFailureErrorVariant,
+  ingredientNotFoundVariant,
+  serverUnexpectedErrorVariant,
+  storageNotFoundVariant
+}
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
+import domain.DbError.{UnexpectedDbError, DbNotRespondingError}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
@@ -15,11 +21,18 @@ val put: ZServerEndpoint[AppEnv, Any] =
   .put
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
-  .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
+  .errorOut(oneOf(
+    serverUnexpectedErrorVariant,
+    databaseFailureErrorVariant,
+    ingredientNotFoundVariant,
+    storageNotFoundVariant,
+  ))
   .zSecuredServerLogic(putHandler)
 
 private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[StorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
+  ZIO[StorageIngredientsRepo,
+     UnexpectedDbError | DbNotRespondingError | IngredientError.NotFound | StorageError.NotFound,
+     Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.addIngredientToStorage(storageId, ingredientId)
   }
