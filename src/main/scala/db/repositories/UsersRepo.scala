@@ -1,7 +1,7 @@
 package db.repositories
 
 import db.tables.{DbUser, usersTable}
-import db.handleDbError
+import db.{handleDbError, handleUnfailableQuery}
 import domain.UserId
 import domain.DbError.{UnexpectedDbError, DbNotRespondingError, FailedDbQuery}
 
@@ -20,11 +20,7 @@ final case class UsersRepoLive(xa: Transactor) extends Repo[DbUser, DbUser, User
       if existsById(user.id)
         then insert(user)
         else update(user)
-    }.mapError {
-      handleDbError(_) match
-        case FailedDbQuery(msg) => UnexpectedDbError(msg)
-        case error: (UnexpectedDbError | DbNotRespondingError) => error
-    }
+    }.mapError(e => handleUnfailableQuery(handleDbError(e)))
 
 object UsersRepo:
   val layer = ZLayer.fromFunction(UsersRepoLive(_))
