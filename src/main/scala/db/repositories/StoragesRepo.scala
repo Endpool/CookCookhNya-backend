@@ -29,7 +29,7 @@ final case class StoragesRepoLive(xa: Transactor)
       storage.id
     }.mapError {
       handleDbError(_) match
-        case FailedDbQuery(msg) => UnexpectedDbError(msg)
+        case FailedDbQuery(exc) => UnexpectedDbError(exc.getMessage)
         case error: (UnexpectedDbError | DbNotRespondingError) => error
     }
 
