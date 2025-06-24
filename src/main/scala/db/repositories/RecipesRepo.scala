@@ -1,10 +1,9 @@
 package db.repositories
 
 import db.tables.Recipes
-import domain.{RecipeId, IngredientId, Recipe, RecipeError}
-
+import domain.{IngredientId, Recipe, RecipeError, RecipeId}
 import com.augustnagro.magnum.magzio.*
-import zio.ZIO
+import zio.{ZIO, ZLayer}
 import db.tables.RecipeIngredients
 
 trait RecipesRepo:
@@ -42,3 +41,5 @@ final case class RecipesRepoLive(xa: Transactor) extends Repo[RecipeCreationEnti
       deleteById(recipeId)
     }.catchAllAsDbError
 
+object RecipesRepo:
+  val layer = ZLayer.fromFunction(RecipesRepoLive(_))
