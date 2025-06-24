@@ -27,7 +27,5 @@ private val getMembers: ZServerEndpoint[AppEnv, Any] =
 private def getMembersHandler(userId: UserId)(storageId: StorageId):
   ZIO[StorageMembersRepo, UnexpectedDbError | DbNotRespondingError | NotFound, Seq[UserId]] =
   ZIO.serviceWithZIO[StorageMembersRepo] {
-    _.getAllStorageMembers(storageId).mapError {
-      e => ???
-    }
+    _.getAllStorageMembers(storageId)
   }
