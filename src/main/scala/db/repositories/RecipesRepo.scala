@@ -1,7 +1,7 @@
 package db.repositories
 
-import db.tables.{DbRecipeIngredient, DbRecipe, DbRecipeCreator}
-import domain.{IngredientId, Recipe, RecipeError, RecipeId}
+import db.tables.{DbRecipe, DbRecipeCreator}
+import domain.{IngredientId, Recipe, RecipeId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
@@ -12,7 +12,7 @@ trait RecipesRepo:
   def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Option[Recipe]]
   def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Unit]
 
-final case class RecipesRepoLive(xa: Transactor)
+private final case class RecipesRepoLive(xa: Transactor)
   extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
 
   override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):

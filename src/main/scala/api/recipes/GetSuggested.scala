@@ -2,8 +2,8 @@ package api.recipes
 
 import api.AppEnv
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
-import db.repositories.{RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo}
-import domain.{DbError, IngredientId, RecipeId, StorageError, StorageId}
+import db.repositories.RecipeIngredientsRepo
+import domain.{DbError, RecipeId, StorageError, StorageId}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*

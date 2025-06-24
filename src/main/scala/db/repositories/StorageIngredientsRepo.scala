@@ -4,7 +4,7 @@ import db.tables.{DbStorageIngredient, storageIngredientsTable}
 import domain.{IngredientId, StorageError, IngredientError, StorageId, DbError}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{RLayer, Task, IO, ZIO, ZLayer}
+import zio.{RLayer,  IO, ZLayer}
 
 trait StorageIngredientsRepo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
@@ -16,7 +16,7 @@ trait StorageIngredientsRepo:
   def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError.UnexpectedDbError, Vector[IngredientId]]
 
-final case class StorageIngredientsRepoLive(xa: Transactor)
+private final case class StorageIngredientsRepoLive(xa: Transactor)
   extends Repo[DbStorageIngredient, DbStorageIngredient, Null] with StorageIngredientsRepo:
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):

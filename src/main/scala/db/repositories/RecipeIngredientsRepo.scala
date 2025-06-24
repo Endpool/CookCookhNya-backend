@@ -17,7 +17,7 @@ trait RecipeIngredientsRepo:
     storageIds: Vector[StorageId]
   ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]]
 
-final case class RecipeIngredientsRepoLive(xa: Transactor)
+private final case class RecipeIngredientsRepoLive(xa: Transactor)
   extends Repo[DbRecipeIngredient, DbRecipeIngredient, (RecipeId, IngredientId)]
   with RecipeIngredientsRepo:
 
