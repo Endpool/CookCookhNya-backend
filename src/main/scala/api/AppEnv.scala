@@ -7,8 +7,7 @@ import _root_.db.repositories.{
   StoragesRepo,
   UsersRepo,
   RecipeIngredientsRepo,
-  RecipesRepo,
-  RecipesDomainRepo
+  RecipesRepo
 }
 
 type AppEnv
@@ -19,4 +18,3 @@ type AppEnv
   & UsersRepo
   & RecipeIngredientsRepo
   & RecipesRepo
-  & RecipesDomainRepo
