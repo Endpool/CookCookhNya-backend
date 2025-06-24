@@ -1,7 +1,8 @@
 package db.repositories
 
-import db.tables.{RecipeIngredients, Recipes}
+import db.tables.{DbRecipeIngredient, recipeIngredientsTable, DbRecipe, recipesTable}
 import domain.{DbError, StorageError, IngredientId, RecipeId, StorageId}
+
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, ZIO, ZLayer}
 
@@ -9,8 +10,8 @@ trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[Err, Vector[IngredientId]]
   def addIngredients(recipeId: RecipeId, ingredientIds: Vector[IngredientId]): IO[Err, Unit]
   def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit]
- 
-private final case class RecipeIngredientsRepoLive(xa: Transactor)
+
+final case class RecipeIngredientsRepoLive(xa: Transactor)
   extends Repo[RecipeIngredients, RecipeIngredients, (RecipeId, IngredientId)] with RecipeIngredientsRepo:
 
   override def getAllIngredients(recipeId: RecipeId): IO[Err, Vector[IngredientId]] =
@@ -31,6 +32,6 @@ private final case class RecipeIngredientsRepoLive(xa: Transactor)
       delete(RecipeIngredients(recipeId, ingredientId))
     }.catchAllAsDbError
 
-    
+
 object RecipeIngredientsRepo:
   val layer = ZLayer.fromFunction(RecipeIngredientsRepoLive(_))
