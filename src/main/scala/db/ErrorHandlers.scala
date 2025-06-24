@@ -5,8 +5,6 @@ import domain.DbError.{UnexpectedDbError, DbNotRespondingError, FailedDbQuery}
 
 import org.postgresql.util.PSQLException
 
-import scala.util.matching.Regex
-
 def handleDbError(error: Throwable): DbError =
   val errorCause = error.getCause
   val errorMessage = errorCause.getMessage
@@ -20,3 +18,9 @@ def handleUnfailableQuery(error: DbError): UnexpectedDbError | DbNotRespondingEr
   error match
     case FailedDbQuery(exc) => UnexpectedDbError(exc.getMessage)
     case e: (UnexpectedDbError | DbNotRespondingError) => e
+
+def getAbsentKey(excDetail: String): Option[String] =
+  val pattern = """Key \((.*)\)=\((.*)\) is not present in table "(.*)".""".r
+  excDetail match
+    case pattern(key, _, _) => Some(key)
+    case _ => None

@@ -10,7 +10,8 @@ import api.EndpointErrorVariants.{
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
-import domain.DbError.{UnexpectedDbError, DbNotRespondingError}
+import domain.DbError.{DbNotRespondingError, FailedDbQuery, UnexpectedDbError}
+import db.getAbsentKey
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
@@ -34,5 +35,14 @@ private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: Ingr
      UnexpectedDbError | DbNotRespondingError | IngredientError.NotFound | StorageError.NotFound,
      Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
-    _.addIngredientToStorage(storageId, ingredientId)
+    _.addIngredientToStorage(storageId, ingredientId).mapError {
+      case error: (UnexpectedDbError | DbNotRespondingError) => error
+      case FailedDbQuery(exc) =>
+        getAbsentKey(exc.getServerErrorMessage.getDetail) match
+          case Some(key) =>
+            if key == "storage_id" then StorageError.NotFound(storageId) // TODO: change key validation
+            else if key == "ingredient_id" then IngredientError.NotFound(ingredientId)
+            else UnexpectedDbError(exc.getMessage)
+          case None => UnexpectedDbError(exc.getMessage)
+    }
   }
