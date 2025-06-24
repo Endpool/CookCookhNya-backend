@@ -1,4 +1,4 @@
-package api.storages
+package api.storages.members
 
 import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
@@ -10,15 +10,14 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val getMembers: ZServerEndpoint[AppEnv, Any] =
-  storagesEndpoint
+private val getAll: ZServerEndpoint[AppEnv, Any] =
+  storagesMembersEndpoint
   .get
-  .in(path[StorageId]("storageId") / "members")
   .out(jsonBody[Seq[UserId]])
   .errorOut(oneOf(serverErrorVariant))
-  .zSecuredServerLogic(getMembersHandler)
+  .zSecuredServerLogic(getAllHandler)
 
-private def getMembersHandler(userId: UserId)(storageId: StorageId):
+private def getAllHandler(userId: UserId)(storageId: StorageId):
   ZIO[StorageMembersRepo, DbError.UnexpectedDbError, Seq[UserId]] =
   ZIO.serviceWithZIO[StorageMembersRepo] {
     _.getAllStorageMembers(storageId)
