@@ -1,10 +1,10 @@
 package db.repositories
 
-import db.tables.Recipes
+import db.tables.{RecipeIngredients, DbRecipe, DbRecipeCreator}
 import domain.{IngredientId, Recipe, RecipeError, RecipeId}
+
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
-import db.tables.RecipeIngredients
 
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
@@ -12,14 +12,14 @@ trait RecipesRepo:
   def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Option[Recipe]]
   def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Unit]
 
-private final case class RecipeCreationEntity(name: String, sourceLink: String)
+final case class RecipesRepoLive(xa: Transactor)
+  extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
 
-final case class RecipesRepoLive(xa: Transactor) extends Repo[RecipeCreationEntity, Recipes, RecipeId] with RecipesRepo:
   override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
     ZIO[RecipeIngredientsRepo, Err, Unit] = for
       recipeId <- xa.transact {
-        val recipe = RecipeCreationEntity(name, sourceLink)
-        val Recipes(recipeId, _, _) = insertReturning(recipe)
+        val recipe = DbRecipeCreator(name, sourceLink)
+        val DbRecipe(recipeId, _, _) = insertReturning(recipe)
         recipeId
       }.catchAllAsDbError
       _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.addIngredients(recipeId, ingredients))

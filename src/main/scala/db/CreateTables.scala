@@ -53,10 +53,10 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS ${Recipes.table}(
-          ${Recipes.table.id} BIGSERIAL PRIMARY KEY,
-          ${Recipes.table.name} VARCHAR(255) NOT NULL,
-          ${Recipes.table.sourceLink} VARCHAR(128) NOT NULL
+        CREATE TABLE IF NOT EXISTS ${recipesTable}(
+          ${recipesTable.id} BIGSERIAL PRIMARY KEY,
+          ${recipesTable.name} VARCHAR(255) NOT NULL,
+          ${recipesTable.sourceLink} VARCHAR(128) NOT NULL
         );
       """,
 
@@ -65,7 +65,7 @@ def createTables(xa: Transactor) = {
           ${RecipeIngredients.table.recipeId} BIGINT NOT NULL,
           ${RecipeIngredients.table.ingredientId} BIGINT NOT NULL,
           PRIMARY KEY (${RecipeIngredients.table.recipeId}, ${storageIngredientsTable.ingredientId}),
-          FOREIGN KEY (${RecipeIngredients.table.recipeId}) REFERENCES ${Recipes.table}(${Recipes.table.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${RecipeIngredients.table.recipeId}) REFERENCES ${recipesTable}(${recipesTable.id}) ON DELETE CASCADE,
           FOREIGN KEY (${RecipeIngredients.table.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
         );
       """
