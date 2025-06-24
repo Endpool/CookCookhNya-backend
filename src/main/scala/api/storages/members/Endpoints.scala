@@ -10,5 +10,7 @@ val storagesMembersEndpoint =
   .in(path[StorageId]("storageId") / "members")
 
 val storagesMembersEndpoints = List(
-  getAll
+  getAll,
+  add,
+  // delete
 )
