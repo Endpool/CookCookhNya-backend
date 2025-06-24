@@ -5,12 +5,16 @@ import _root_.db.repositories.{
   StorageIngredientsRepo,
   StorageMembersRepo,
   StoragesRepo,
-  UsersRepo
+  UsersRepo,
+  RecipeIngredientsRepo,
+  RecipesRepo
 }
 
 type AppEnv
-  = IngredientsRepo
+= IngredientsRepo
   & StorageIngredientsRepo
   & StorageMembersRepo
   & StoragesRepo
   & UsersRepo
+  & RecipeIngredientsRepo
+  & RecipesRepo

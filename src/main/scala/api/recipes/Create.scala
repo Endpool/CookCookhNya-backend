@@ -1,0 +1,24 @@
+package api.recipes
+
+import api.AppEnv
+import api.EndpointErrorVariants.serverErrorVariant
+import api.zSecuredServerLogic
+import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
+import domain.{DbError, IngredientId, Recipe, UserId}
+import io.circe.generic.auto.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.circe.*
+import sttp.tapir.ztapir.*
+import zio.ZIO
+
+private final case class RecipeCreationEntity(name: String, sourceLink: String, ingredients: Vector[IngredientId])
+
+val create: ZServerEndpoint[AppEnv, Any] =
+  recipesEndpoint
+    .post
+    .in(jsonBody[RecipeCreationEntity])
+    .errorOut(oneOf(serverErrorVariant))
+    .zSecuredServerLogic(createHandler)
+
+def createHandler(userId: UserId)(recipe: RecipeCreationEntity): ZIO[RecipesRepo & RecipeIngredientsRepo, DbError.UnexpectedDbError, Unit] =
+  ZIO.serviceWithZIO[RecipesRepo](_.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients))

@@ -6,6 +6,6 @@ case class Storage(
                   id: StorageId,
                   name: String,
                   ownerId: UserId,
-                  members: List[UserId],
-                  ingredients: List[IngredientId]
+                  members: Vector[UserId],
+                  ingredients: Vector[IngredientId]
                   )
