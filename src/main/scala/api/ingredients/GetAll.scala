@@ -19,4 +19,5 @@ val getAll: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(_ => getAllHandler)
 
 val getAllHandler: URIO[IngredientsRepo, Seq[Ingredient]] =
-  ZIO.serviceWithZIO[IngredientsRepo](_.getAll)
+  ZIO.serviceWithZIO[IngredientsRepo](_.getAll).map(_.map(_.toDomain))
+    .catchAll { e => ??? } // TODO handle errors

@@ -1,15 +1,16 @@
 package db.tables
 
-import com.augustnagro.magnum.*
+import db.CustomSqlNameMapper
 import domain.{User, UserId, Storage, Ingredient, IngredientId}
 
-@Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
-final case class Users(
-                        @Id id: UserId,
-                        alias: Option[String],
-                        fullName: String
-                      ) derives DbCodec
+import com.augustnagro.magnum.*
 
-object Users:
-  val table = TableInfo[Users, Users, UserId]
+@Table(PostgresDbType, CustomSqlNameMapper)
+final case class DbUser(
+  @Id id: UserId,
+  alias: Option[String],
+  fullName: String
+) derives DbCodec
+
+val usersTable = TableInfo[DbUser, DbUser, UserId]
 

@@ -2,7 +2,7 @@ package api.ingredients
 
 import api.AppEnv
 import db.repositories.IngredientsRepo
-import domain.Ingredient
+import domain.IngredientId
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -17,11 +17,11 @@ private val create: ZServerEndpoint[AppEnv, Any] =
   ingredientsEndpoint
   .post
   .in(jsonBody[CreateIngredientReqBody])
-  .out(jsonBody[Ingredient])
+  .out(jsonBody[IngredientId])
   .out(statusCode(StatusCode.Created))
   .zServerLogic(createHandler)
 
-private def createHandler(reqBody: CreateIngredientReqBody): URIO[IngredientsRepo, Ingredient] =
+private def createHandler(reqBody: CreateIngredientReqBody): URIO[IngredientsRepo, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo] {
-    _.add(reqBody.name)
-  }
+    _.add(reqBody.name).map(_.id)
+  }.catchAll { e => ??? } // TODO handle errors
