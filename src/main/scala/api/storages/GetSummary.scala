@@ -2,7 +2,7 @@ package api.storages
 
 import api.AppEnv
 import db.repositories.StoragesRepo
-import domain.{StorageError, StorageId, StorageView, UserId}
+import domain.{StorageError, StorageId, UserId}
 import api.EndpointErrorVariants.storageNotFoundVariant
 import api.zSecuredServerLogic
 
@@ -16,12 +16,14 @@ private val getSummary: ZServerEndpoint[AppEnv, Any] =
   storagesEndpoint
   .get
   .in(path[StorageId]("storageId"))
-  .out(jsonBody[StorageView])
+  .out(jsonBody[StorageSummaryResp])
   .errorOut(oneOf(storageNotFoundVariant))
-  .zSecuredServerLogic(getStorageView)
+  .zSecuredServerLogic(getSummaryHandler)
 
-private def getStorageView(userId: UserId)(storageId: StorageId):
-  ZIO[StoragesRepo, StorageError.NotFound, StorageView] =
-  ZIO.serviceWithZIO[StoragesRepo] {
-    _.getStorageViewById(storageId)
-  }
+private def getSummaryHandler(userId: UserId)(storageId: StorageId):
+  ZIO[StoragesRepo, StorageError.NotFound, StorageSummaryResp] = for
+    mStorage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
+      .catchAll { e => ??? } // TODO handle error
+    storage  <- ZIO.fromOption(mStorage)
+      .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
+  yield StorageSummaryResp.fromDb(storage)

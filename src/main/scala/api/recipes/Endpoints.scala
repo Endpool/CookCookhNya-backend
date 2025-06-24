@@ -6,8 +6,7 @@ import sttp.tapir.ztapir.*
 
 val recipesEndpoint =
   endpoint
-    .in("my" / "recipes")
-    .securityIn(auth.bearer[UserId]())
+    .in("recipes")
 
 val recipeEndpoints = List(
   create,
