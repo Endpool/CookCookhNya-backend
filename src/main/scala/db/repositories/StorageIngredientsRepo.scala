@@ -16,7 +16,7 @@ trait StorageIngredientsRepo:
   def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError.UnexpectedDbError, Vector[IngredientId]]
 
-final case class StorageIngredientsRepoLive(xa: Transactor)
+private final case class StorageIngredientsRepoLive(xa: Transactor)
   extends Repo[DbStorageIngredient, DbStorageIngredient, Null] with StorageIngredientsRepo:
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):

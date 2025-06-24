@@ -14,7 +14,7 @@ trait StoragesRepo:
   def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]]
   val getAll: UIO[Vector[DbStorage]]
 
-final case class StoragesRepoLive(xa: Transactor)
+private final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
 
   override def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId] =

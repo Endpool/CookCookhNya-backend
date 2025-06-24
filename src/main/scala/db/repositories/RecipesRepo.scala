@@ -12,7 +12,7 @@ trait RecipesRepo:
   def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Option[Recipe]]
   def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, Err, Unit]
 
-final case class RecipesRepoLive(xa: Transactor)
+private final case class RecipesRepoLive(xa: Transactor)
   extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
 
   override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):

@@ -14,7 +14,7 @@ trait IngredientsRepo:
   def removeById(id: IngredientId): IO[DbError, Unit]
   def getAll: IO[DbError, Vector[DbIngredient]]
 
-final case class IngredientsRepoLive(xa: Transactor)
+private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
   override def add(name: String): IO[DbError, DbIngredient] =
     xa.transact(insertReturning(DbIngredientCreator(name))).catchAll { e =>

@@ -10,7 +10,7 @@ trait UsersRepo:
   def saveUser(userId: UserId, alias: Option[String], fullName: String):
     IO[DbError.UnexpectedDbError, Unit]
 
-final case class UsersRepoLive(xa: Transactor) extends Repo[DbUser, DbUser, UserId] with UsersRepo:
+private final case class UsersRepoLive(xa: Transactor) extends Repo[DbUser, DbUser, UserId] with UsersRepo:
   def saveUser(userId: UserId, alias: Option[String], fullName: String):
     IO[DbError.UnexpectedDbError, Unit] =
     val user = DbUser(userId, alias, fullName)
