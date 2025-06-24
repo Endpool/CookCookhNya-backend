@@ -14,8 +14,8 @@ final case class UsersRepoLive(xa: Transactor) extends Repo[Users, Users, UserId
     val user = Users(userId, alias, fullName)
     xa.transact {
       if existsById(user.id)
-        then insert(user)
-        else update(user)
+        then update(user)
+        else insert(user)
     }.catchAll(e => ZIO.fail(DbError.UnexpectedDbError(e.getMessage)))
 
 object UsersRepo:
