@@ -16,8 +16,8 @@ final case class UsersRepoLive(xa: Transactor) extends Repo[DbUser, DbUser, User
     val user = DbUser(userId, alias, fullName)
     xa.transact {
       if existsById(user.id)
-        then insert(user)
-        else update(user)
+        then update(user)
+        else insert(user)
     }.mapError(e => DbError.UnexpectedDbError(e.getMessage))
 
 object UsersRepo:
