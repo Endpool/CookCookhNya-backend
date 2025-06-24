@@ -54,13 +54,13 @@ final case class RecipeIngredientsRepoLive(xa: Transactor)
               ${table.recipeId},
               r.${Recipes.table.name} AS recipe_name,
               COUNT(*) AS total_ingredients,
-              SUM(CASE WHEN ${table.ingredientId} IN (${allIngredients.mkString(",")}) THEN 1 ELSE 0 END) AS available_ingredients
+              SUM(CASE WHEN ${table.ingredientId} = ANY(${allIngredients.toArray}) THEN 1 ELSE 0 END) AS available_ingredients
             FROM
               $table ri
             JOIN
               ${Recipes.table} r ON r.${Recipes.table.id} = ri.${table.recipeId}
             GROUP BY
-              ${table.recipeId}
+              ${table.recipeId}, recipe_name
             )
             SELECT
               ${table.recipeId},
