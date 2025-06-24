@@ -22,9 +22,8 @@ final case class UsersRepoLive(xa: Transactor) extends Repo[DbUser, DbUser, User
         else update(user)
     }.mapError {
       handleDbError(_) match
-        case error: UnexpectedDbError => error
-        case error: DbNotRespondingError => error
         case FailedDbQuery(msg) => UnexpectedDbError(msg)
+        case error: (UnexpectedDbError | DbNotRespondingError) => error
     }
 
 object UsersRepo:
