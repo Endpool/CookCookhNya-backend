@@ -13,16 +13,16 @@ import sttp.tapir.ztapir.*
 import sttp.model.StatusCode
 import zio.ZIO
 
-private val add: ZServerEndpoint[AppEnv, Any] =
+private val remove: ZServerEndpoint[AppEnv, Any] =
   storagesMembersEndpoint
-  .put
+  .delete
   .in(path[UserId]("memberId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(userNotFoundVariant, storageNotFoundVariant))
-  .zSecuredServerLogic(addHandler)
+  .zSecuredServerLogic(removeHandler)
 
-private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
+private def removeHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
   ZIO[StorageMembersRepo, UserError.NotFound | StorageError.NotFound, Unit] =
   ZIO.serviceWithZIO[StorageMembersRepo] {
-    _.addMemberToStorageById(storageId, memberId)
+    _.removeMemberFromStorageById(storageId, memberId)
   }

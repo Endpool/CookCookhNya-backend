@@ -12,5 +12,5 @@ val storagesMembersEndpoint =
 val storagesMembersEndpoints = List(
   getAll,
   add,
-  // delete
+  remove
 )
