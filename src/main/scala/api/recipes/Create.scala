@@ -18,7 +18,7 @@ val create: ZServerEndpoint[AppEnv, Any] =
     .post
     .in(jsonBody[RecipeCreationEntity])
     .errorOut(oneOf(serverErrorVariant))
-    .zSecuredServerLogic(createHandler)
+    .zServerLogic(createHandler)
 
-def createHandler(userId: UserId)(recipe: RecipeCreationEntity): ZIO[RecipesRepo & RecipeIngredientsRepo, DbError.UnexpectedDbError, Unit] =
+def createHandler(recipe: RecipeCreationEntity): ZIO[RecipesRepo & RecipeIngredientsRepo, DbError.UnexpectedDbError, Unit] =
   ZIO.serviceWithZIO[RecipesRepo](_.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients))
