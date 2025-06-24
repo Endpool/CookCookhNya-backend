@@ -2,9 +2,8 @@ package api.recipes
 
 import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
-import api.zSecuredServerLogic
 import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
-import domain.{DbError, IngredientId, Recipe, UserId}
+import domain.{DbError, IngredientId}
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*

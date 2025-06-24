@@ -2,8 +2,7 @@ package db.repositories
 
 import db.tables.{DbIngredient, DbIngredientCreator}
 import domain.DbError
-import domain.{IngredientId}
-import domain.IngredientError.NotFound
+import domain.IngredientId
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}

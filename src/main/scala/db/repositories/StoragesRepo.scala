@@ -1,8 +1,7 @@
 package db.repositories
 
 import db.tables.{DbStorage, DbStorageCreator}
-import domain.StorageError.NotFound
-import domain.{Storage, StorageError, StorageId, UserId}
+import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}

@@ -1,7 +1,7 @@
 package db.repositories
 
-import db.tables.{DbRecipeIngredient, DbRecipe, DbRecipeCreator}
-import domain.{IngredientId, Recipe, RecipeError, RecipeId}
+import db.tables.{DbRecipe, DbRecipeCreator}
+import domain.{IngredientId, Recipe, RecipeId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}

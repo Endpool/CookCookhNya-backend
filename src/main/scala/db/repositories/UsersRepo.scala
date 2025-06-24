@@ -1,10 +1,10 @@
 package db.repositories
 
-import db.tables.{DbUser, usersTable}
+import db.tables.DbUser
 import domain.{UserId, DbError}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import zio.{IO, ZLayer}
 
 trait UsersRepo:
   def saveUser(userId: UserId, alias: Option[String], fullName: String):
