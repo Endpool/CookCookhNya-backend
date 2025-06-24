@@ -1,43 +1,45 @@
 package db.repositories
 
 import db.tables.{DbStorageMember, storageMembersTable}
-import domain.*
+import domain.DbError.{UnexpectedDbError, DbNotRespondingError, FailedDbQuery}
+import domain.{UserId, StorageId, DbError}
+import db.{handleDbError, handleUnfailableQuery}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{ZIO, IO, RLayer, ZLayer}
+import zio.{IO, RLayer, ZLayer}
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit]
+    IO[DbError, Unit]
   def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit]
+    IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[UserId]]
+    IO[UnexpectedDbError | DbNotRespondingError, Vector[UserId]]
 
 final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
 
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit] =
-    xa.transact(insert(DbStorageMember(storageId, memberId))).catchAll {
-      _ => ZIO.fail(StorageError.NotFound(storageId))
+    IO[DbError, Unit] =
+    xa.transact(insert(DbStorageMember(storageId, memberId))).mapError {
+      handleDbError
     }
 
   override def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit] =
-    xa.transact(delete(DbStorageMember(storageId, memberId))).catchAll {
-      _ => ZIO.fail(StorageError.NotFound(storageId))
+    IO[DbError, Unit] =
+    xa.transact(delete(DbStorageMember(storageId, memberId))).mapError {
+      handleDbError
     }
 
   override def getAllStorageMembers(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[UserId]] =
+    IO[UnexpectedDbError | DbNotRespondingError, Vector[UserId]] =
     xa.transact {
       sql"""
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
       """.query[UserId].run()
-    }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
+    }.mapError(e => handleUnfailableQuery(handleDbError(e)))
 
 object StorageMembersRepoLive:
   val layer: RLayer[Transactor, StorageMembersRepo] =
