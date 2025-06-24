@@ -1,6 +1,6 @@
 package db.repositories
 
-import db.tables.{RecipeIngredients, DbRecipe, DbRecipeCreator}
+import db.tables.{DbRecipeIngredient, DbRecipe, DbRecipeCreator}
 import domain.{IngredientId, Recipe, RecipeError, RecipeId}
 
 import com.augustnagro.magnum.magzio.*

@@ -1,6 +1,6 @@
 package db.repositories
 
-import db.tables.{RecipeIngredients, DbRecipe, recipesTable}
+import db.tables.{DbRecipeIngredient, recipeIngredientsTable, DbRecipe, recipesTable}
 import domain.{DbError, StorageError, IngredientId, RecipeId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
@@ -18,24 +18,25 @@ trait RecipeIngredientsRepo:
   ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]]
 
 final case class RecipeIngredientsRepoLive(xa: Transactor)
-  extends Repo[RecipeIngredients, RecipeIngredients, (RecipeId, IngredientId)] with RecipeIngredientsRepo:
+  extends Repo[DbRecipeIngredient, DbRecipeIngredient, (RecipeId, IngredientId)]
+  with RecipeIngredientsRepo:
 
   override def getAllIngredients(recipeId: RecipeId): IO[Err, Vector[IngredientId]] =
     xa.transact{
       sql"""
-        SELECT ${RecipeIngredients.table.ingredientId} FROM ${RecipeIngredients.table}
-        WHERE ${RecipeIngredients.table.recipeId} = $recipeId
+        SELECT ${recipeIngredientsTable.ingredientId} FROM ${recipeIngredientsTable}
+        WHERE ${recipeIngredientsTable.recipeId} = $recipeId
       """.query[IngredientId].run()
     }.catchAllAsDbError
 
   override def addIngredients(recipeId: RecipeId, ingredientIds: Vector[IngredientId]): IO[Err, Unit] =
     xa.transact {
-      insertAll(ingredientIds.map(RecipeIngredients(recipeId, _)))
+      insertAll(ingredientIds.map(DbRecipeIngredient(recipeId, _)))
     }.catchAllAsDbError
 
   override def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[Err, Unit] =
     xa.transact {
-      delete(RecipeIngredients(recipeId, ingredientId))
+      delete(DbRecipeIngredient(recipeId, ingredientId))
     }.catchAllAsDbError
 
   override def getSuggestedIngredients(
@@ -43,7 +44,7 @@ final case class RecipeIngredientsRepoLive(xa: Transactor)
     offset: Int,
     storageIds: Vector[StorageId]
   ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]] =
-    val table = RecipeIngredients.table
+    val table = recipeIngredientsTable
     for
       allIngredients <- ZIO.collectAll(storageIds.map{ storageId =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
