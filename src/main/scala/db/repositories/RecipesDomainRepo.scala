@@ -13,7 +13,7 @@ trait RecipesDomainRepo:
                                storageIds: Vector[StorageId]
                              ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]]
   
-final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
+private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
   override def getSuggestedIngredients(
                                         size: Int,
                                         offset: Int,
