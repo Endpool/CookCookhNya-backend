@@ -31,3 +31,6 @@ final case class RecipeIngredientsRepoLive(xa: Transactor)
     xa.transact {
       delete(RecipeIngredients(recipeId, ingredientId))
     }.catchAllAsDbError
+
+object RecipeIngredientsRepo:
+  val layer = ZLayer.fromFunction(RecipeIngredientsRepoLive(_))
