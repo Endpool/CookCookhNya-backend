@@ -57,27 +57,26 @@ private final case class RecipeIngredientsRepoLive(xa: Transactor)
                 ${table.recipeId},
                 r.${recipesTable.name} AS recipe_name,
                 COUNT(*) AS total_ingredients,
-                SUM(CASE WHEN ${table.ingredientId} IN (${allIngredients.mkString(",")}) THEN 1 ELSE 0 END) AS available_ingredients
-              FROM
-                $table ri
-              JOIN
-                ${recipesTable} r ON r.${recipesTable.id} = ri.${table.recipeId}
-              GROUP BY
-                ${table.recipeId}
+                SUM(
+                  CASE WHEN ${table.ingredientId} = ANY(${allIngredients.toArray})
+                    THEN 1
+                    ELSE 0
+                  END
+                ) AS available_ingredients
+              FROM $table ri
+              JOIN ${recipesTable} r ON r.${recipesTable.id} = ri.${table.recipeId}
+              GROUP BY ${table.recipeId}, recipe_name
             )
             SELECT
               ${table.recipeId},
               recipe_name,
               available_ingredients,
               total_ingredients,
-              (available_ingredients::float / total_ingredients) AS availability_ratio
-              COUNT(*) AS total_recipes
-            FROM
-              recipe_stats
-            WHERE
-              total_ingredients > 0  -- Avoid division by zero
+              COUNT(*) OVER() AS recipes_found
+            FROM recipe_stats
+            WHERE total_ingredients > 0  -- Avoid division by zero
             ORDER BY
-              availability_ratio DESC,
+              (available_ingredients::float / total_ingredients) DESC,
               total_ingredients DESC
             LIMIT $size
             OFFSET $offset;

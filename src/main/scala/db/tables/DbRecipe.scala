@@ -1,10 +1,11 @@
 package db.tables
 
+import db.CustomSqlNameMapper
 import domain.RecipeId
 
 import com.augustnagro.magnum.*
 
-@Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
+@Table(PostgresDbType, CustomSqlNameMapper)
 final case class DbRecipe(
   @Id id: RecipeId,
   name: String,
