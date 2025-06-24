@@ -32,7 +32,7 @@ private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
     ownerId <- ZIO.fromOption(mStorage)
       .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
       .map(_.ownerId)
-    _ <- ZIO.when(ownerId != memberId) {
+    _ <- ZIO.unless(ownerId == memberId) {
       ZIO.serviceWithZIO[StorageMembersRepo] {
         _.addMemberToStorageById(storageId, memberId)
       }
