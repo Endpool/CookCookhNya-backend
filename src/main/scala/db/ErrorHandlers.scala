@@ -4,10 +4,7 @@ import domain.DbError
 
 def handleDbError(error: Throwable): DbError =
   val errorCause = error.getCause
-  val errorMessage = error.getCause.getMessage
-  
-  println(s"Error class: ${errorCause.getClass}")
-  println(s"Error message: $errorMessage")
+  val errorMessage = errorCause.getMessage
 
   errorCause match
     case _: org.postgresql.util.PSQLException => DbError.FailedDbQuery(errorMessage)
