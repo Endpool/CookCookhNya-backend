@@ -14,7 +14,7 @@ trait StorageMembersRepo:
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError.UnexpectedDbError, Vector[UserId]]
 
-final case class StorageMembersRepoLive(xa: Transactor)
+private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
 

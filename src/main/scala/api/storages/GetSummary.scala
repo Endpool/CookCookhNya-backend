@@ -30,7 +30,7 @@ private def getSummaryHandler(userId: UserId)(storageId: StorageId):
     storage <- ZIO.fromOption(mStorage)
       .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
     _ <- checkForMembership(userId, storage)
-  yield dbToResp(storage)
+  yield StorageSummaryResp.fromDb(storage)
 
 def checkForMembership(userId: UserId, storage: DbStorage):
   ZIO[StorageMembersRepo, StorageError.NotFound, Unit] =

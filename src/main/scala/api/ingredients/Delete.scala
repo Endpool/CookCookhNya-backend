@@ -5,10 +5,7 @@ import api.EndpointErrorVariants.ingredientNotFoundVariant
 import db.repositories.IngredientsRepo
 import domain.{IngredientError, IngredientId}
 
-import io.circe.generic.auto.*
 import sttp.model.StatusCode
-import sttp.tapir.generic.auto.*
-import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 

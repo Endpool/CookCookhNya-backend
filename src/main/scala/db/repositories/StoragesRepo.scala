@@ -3,6 +3,8 @@ package db.repositories
 import db.tables.{DbStorage, DbStorageCreator, storagesTable}
 import domain.StorageError.NotFound
 import domain.{Storage, StorageError, StorageId, UserId}
+import db.tables.{DbStorage, DbStorageCreator}
+import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
@@ -14,7 +16,7 @@ trait StoragesRepo:
   def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]]
   def getAll(id: UserId) : UIO[Vector[DbStorage]]
 
-final case class StoragesRepoLive(xa: Transactor)
+private final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
 
   override def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId] =
