@@ -37,7 +37,12 @@ private final case class StorageMembersRepoLive(xa: Transactor)
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
       """.query[UserId].run()
-    }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
+    }.mapError{
+      e => {
+        println(e.getMessage)
+        DbError.UnexpectedDbError(e.getMessage())
+      }
+    }
 
 object StorageMembersRepoLive:
   val layer: RLayer[Transactor, StorageMembersRepo] =
