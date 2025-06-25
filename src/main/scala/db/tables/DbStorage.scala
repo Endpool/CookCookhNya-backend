@@ -2,9 +2,10 @@ package db.tables
 
 import com.augustnagro.magnum.*
 
+import db.CustomSqlNameMapper
 import domain.{StorageId, UserId}
 
-@Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
+@Table(PostgresDbType, CustomSqlNameMapper)
 final case class DbStorage(
   @Id id: StorageId,
   ownerId: UserId,
