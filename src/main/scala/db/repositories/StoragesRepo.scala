@@ -1,6 +1,6 @@
 package db.repositories
 
-import db.tables.{DbStorage, DbStorageCreator}
+import db.tables.{DbStorage, DbStorageCreator, storagesTable}
 import domain.StorageError.NotFound
 import domain.{Storage, StorageError, StorageId, UserId}
 
@@ -12,7 +12,7 @@ trait StoragesRepo:
   def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId]
   def removeById(id: StorageId): IO[DbError.UnexpectedDbError, Unit]
   def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]]
-  val getAll: UIO[Vector[DbStorage]]
+  def getAll(id: UserId) : UIO[Vector[DbStorage]]
 
 final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
@@ -28,9 +28,12 @@ final case class StoragesRepoLive(xa: Transactor)
       findById(id)
     }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
 
-  override val getAll: UIO[Vector[DbStorage]] =
+  override def getAll(id: UserId): UIO[Vector[DbStorage]] =
     xa.transact {
-      findAll
+      sql"""
+           select * from $storagesTable where ${storagesTable.ownerId} = $id
+         """
+        .query[DbStorage].run()
     }.catchAll(_ => ZIO.succeed(Vector.empty))
 
   override def removeById(id: StorageId): IO[DbError.UnexpectedDbError, Unit] =

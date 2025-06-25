@@ -18,5 +18,5 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(getAllHandler)
 
 private def getAllHandler(userId: UserId)(u : Unit) : URIO[StoragesRepo, Seq[StorageSummaryResp]] =
-  ZIO.serviceWithZIO[StoragesRepo](_.getAll.map(_.map(dbToResp)))
+  ZIO.serviceWithZIO[StoragesRepo](_.getAll(userId).map(_.map(dbToResp)))
 
