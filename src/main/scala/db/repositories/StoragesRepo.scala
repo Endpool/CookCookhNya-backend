@@ -31,7 +31,7 @@ private final case class StoragesRepoLive(xa: Transactor)
   override def getAll(id: UserId): UIO[Vector[DbStorage]] =
     xa.transact {
       sql"""
-           select ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+           select distinct ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
            from $storagesTable left join $storageMembersTable
            on ${storagesTable.id} = ${storageMembersTable.storageId}
            where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
