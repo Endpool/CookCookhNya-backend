@@ -1,11 +1,9 @@
 package db.repositories
 
-import db.tables.{DbStorage, DbStorageCreator, storagesTable}
+import db.tables.{DbStorage, DbStorageCreator, storageMembersTable, storagesTable}
 import domain.StorageError.NotFound
 import domain.{Storage, StorageError, StorageId, UserId}
-import db.tables.{DbStorage, DbStorageCreator}
 import domain.{StorageId, UserId}
-
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 import domain.DbError
@@ -33,7 +31,10 @@ private final case class StoragesRepoLive(xa: Transactor)
   override def getAll(id: UserId): UIO[Vector[DbStorage]] =
     xa.transact {
       sql"""
-           select * from $storagesTable where ${storagesTable.ownerId} = $id
+           select ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+           from $storagesTable left join $storageMembersTable
+           on ${storagesTable.id} = ${storageMembersTable.storageId}
+           where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
          """
         .query[DbStorage].run()
     }.catchAll(_ => ZIO.succeed(Vector.empty))
