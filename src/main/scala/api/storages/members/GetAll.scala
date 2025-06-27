@@ -37,7 +37,7 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
 
           SELECT u.${usersTable.id}, u.alias, u.${usersTable.fullName}
           FROM $usersTable u
-          JOIN $storagesTable s on u.${usersTable.id} = s.${storagesTable.ownerId}
+          JOIN $storagesTable s ON u.${usersTable.id} = s.${storagesTable.ownerId}
           WHERE s.${storagesTable.id} = $storageId
         """.query[UserResp].run()
       }
