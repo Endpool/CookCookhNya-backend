@@ -42,10 +42,8 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
         """.query[UserResp].run()
       }
     }.mapError[DbError.UnexpectedDbError](e => DbError.UnexpectedDbError(e.getMessage))
-    //         ^^^^^^^^^^^^^^^^^^^^^^^^^ <- scala is stupid
 
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
       ZIO.fail[StorageError.NotFound](StorageError.NotFound(storageId))
-      //       ^^^^^^^^^^^^^^^^^^^^^ <- scala is stupid
     }
   yield members
