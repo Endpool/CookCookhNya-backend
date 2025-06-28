@@ -2,7 +2,7 @@ package api.recipes
 
 import api.AppEnv
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
-import db.repositories.RecipeIngredientsRepo
+import db.repositories.RecipesDomainRepo
 import domain.{DbError, RecipeId, StorageError, StorageId}
 
 import io.circe.generic.auto.*
@@ -30,7 +30,7 @@ private def getSuggestedHandler(
   storageIds: Vector[StorageId]
 ): ZIO[AppEnv, DbError.UnexpectedDbError | StorageError.NotFound, SuggestedRecipesResp] =
   for
-    suggestedTuples <- ZIO.serviceWithZIO[RecipeIngredientsRepo] {
+    suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
       _.getSuggestedIngredients(size, offset, storageIds)
     }
     suggested = suggestedTuples.map{ (id, name, available, totalIngredients, _) =>
