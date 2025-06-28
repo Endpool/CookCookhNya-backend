@@ -11,7 +11,7 @@ import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.ZIO
+import zio.{URIO, ZIO}
 
 private val getAll: ZServerEndpoint[AppEnv, Any] =
   storagesEndpoint
@@ -22,4 +22,4 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
 
 private def getAllHandler(userId: UserId)(u : Unit):
   ZIO[StoragesRepo, UnexpectedDbError | DbNotRespondingError, Seq[StorageSummaryResp]] =
-  ZIO.serviceWithZIO[StoragesRepo](_.getAll.map(_.map(dbToResp)))
+  ZIO.serviceWithZIO[StoragesRepo](_.getAll(userId).map(_.map(StorageSummaryResp.fromDb)))

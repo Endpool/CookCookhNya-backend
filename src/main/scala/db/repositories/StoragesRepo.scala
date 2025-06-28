@@ -1,6 +1,6 @@
 package db.repositories
 
-import db.tables.{DbStorage, DbStorageCreator}
+import db.tables.{DbStorage, DbStorageCreator, storageMembersTable, storagesTable}
 import domain.StorageError.NotFound
 import domain.DbError.{
   FailedDbQuery,
@@ -15,12 +15,12 @@ import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 import domain.DbError
 
 trait StoragesRepo:
-  def createEmpty(name: String, ownerId: UserId): IO[UnexpectedDbError | DbNotRespondingError, StorageId]
-  def removeById(id: StorageId): IO[UnexpectedDbError | DbNotRespondingError, Unit]
-  def getById(id: StorageId): IO[UnexpectedDbError | DbNotRespondingError, Option[DbStorage]]
-  val getAll: IO[UnexpectedDbError | DbNotRespondingError, Vector[DbStorage]]
+  def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId]
+  def removeById(id: StorageId): IO[DbError.UnexpectedDbError, Unit]
+  def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]]
+  def getAll(id: UserId) : UIO[Vector[DbStorage]]
 
-final case class StoragesRepoLive(xa: Transactor)
+private final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
 
   override def createEmpty(name: String, ownerId: UserId): IO[UnexpectedDbError | DbNotRespondingError, StorageId] =
@@ -38,10 +38,16 @@ final case class StoragesRepoLive(xa: Transactor)
       findById(id)
     }.mapError(e => handleUnfailableQuery(handleDbError(e)))
 
-  override val getAll: IO[UnexpectedDbError | DbNotRespondingError, Vector[DbStorage]] =
+  override def getAll(id: UserId): UIO[Vector[DbStorage]] =
     xa.transact {
-      findAll
-    }.mapError(e => handleUnfailableQuery(handleDbError(e)))
+      sql"""
+           select distinct ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+           from $storagesTable left join $storageMembersTable
+           on ${storagesTable.id} = ${storageMembersTable.storageId}
+           where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
+         """
+        .query[DbStorage].run()
+    }.catchAll(_ => ZIO.succeed(Vector.empty))
 
   override def removeById(id: StorageId): IO[UnexpectedDbError | DbNotRespondingError, Unit] =
     xa.transact {

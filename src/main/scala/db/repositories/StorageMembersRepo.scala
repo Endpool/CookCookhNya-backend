@@ -6,7 +6,7 @@ import domain.{UserId, StorageId, DbError}
 import db.{handleDbError, handleUnfailableQuery}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, ZLayer}
+import zio.{ZIO, IO, RLayer, ZLayer}
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
@@ -16,7 +16,7 @@ trait StorageMembersRepo:
   def getAllStorageMembers(storageId: StorageId):
     IO[UnexpectedDbError | DbNotRespondingError, Vector[UserId]]
 
-final case class StorageMembersRepoLive(xa: Transactor)
+private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
 

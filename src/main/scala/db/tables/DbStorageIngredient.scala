@@ -1,9 +1,11 @@
 package db.tables
 
-import com.augustnagro.magnum.*
+import db.CustomSqlNameMapper
 import domain.{IngredientId, StorageId}
 
-@Table(PostgresDbType, SqlNameMapper.CamelToSnakeCase)
+import com.augustnagro.magnum.*
+
+@Table(PostgresDbType, CustomSqlNameMapper)
 case class DbStorageIngredient(
   storageId: StorageId,
   ingredientId: IngredientId

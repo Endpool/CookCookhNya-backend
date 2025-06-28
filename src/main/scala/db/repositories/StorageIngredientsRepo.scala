@@ -10,7 +10,7 @@ import zio.{RLayer, IO, ZIO, ZLayer}
 
 trait StorageIngredientsRepo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[DbError, Unit]
+    IO[StorageError.NotFound | IngredientError.NotFound, Unit]
 
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit]
@@ -18,8 +18,8 @@ trait StorageIngredientsRepo:
   def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]]
 
-final case class StorageIngredientsRepoLive(xa: Transactor)
-  extends Repo[DbStorageIngredient, DbStorageIngredient, Null] with StorageIngredientsRepo:
+private final case class StorageIngredientsRepoLive(xa: Transactor)
+  extends Repo[DbStorageIngredient, DbStorageIngredient, (StorageId, UserId)] with StorageIngredientsRepo:
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
@@ -28,9 +28,16 @@ final case class StorageIngredientsRepoLive(xa: Transactor)
     }
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-    IO[DbError, Unit] =
-    xa.transact(delete(DbStorageIngredient(storageId, ingredientId))).mapError {
-      handleDbError
+    IO[StorageError.NotFound, Unit] =
+    xa.transact {
+      sql"""
+        DELETE FROM $storageIngredientsTable
+        WHERE ${storageIngredientsTable.storageId} = $storageId
+          AND ${storageIngredientsTable.ingredientId} = $ingredientId
+      """.update.run()
+      ()
+    }.mapError {
+      _ => StorageError.NotFound(storageId) // TODO actual error handling
     }
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
