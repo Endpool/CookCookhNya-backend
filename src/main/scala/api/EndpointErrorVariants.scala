@@ -10,15 +10,16 @@ import sttp.tapir.ztapir.*
 
 import scala.reflect.ClassTag
 import sttp.model.StatusCode.*
+import sttp.tapir.EndpointOutput
 
 
 extension (sc: StatusCode)
-  def variantJson[E <: ErrorResponse : ClassTag] =
+  def variantJson[E <: ErrorResponse : ClassTag]: EndpointOutput.OneOfVariant[E] =
     oneOfVariant(statusCode(sc).and(jsonBody[E]))
-
+    
 object EndpointErrorVariants:
-  val ingredientNotFoundVariant  = NotFound.variantJson[IngredientError.NotFound]
-  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
-  val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
+  val ingredientNotFoundVariant  = NotFound.variantJson[IngredientError.NotFound] 
+  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound] 
+  val userNotFoundVariant = NotFound.variantJson[UserError.NotFound] 
 
-  val serverErrorVariant = InternalServerError.variantJson[DbError.UnexpectedDbError]
+  val serverErrorVariant = InternalServerError.variantJson[DbError.UnexpectedDbError] 
