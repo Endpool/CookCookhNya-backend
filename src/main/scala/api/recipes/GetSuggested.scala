@@ -18,7 +18,7 @@ import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.{URIO, ZIO}
+import zio.ZIO
 
 private case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
 private case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])

@@ -29,8 +29,8 @@ private def getHandler(ingredientId: IngredientId):
       ingredient <- ZIO.fromOption(mIngredient)
         .orElseFail(NotFound(ingredientId))
     yield IngredientResp.fromDb(ingredient)
-  }.catchAll {
-    case e: NotFound => ZIO.fail(e)
-    case _ => ZIO.fail(InternalServerError())
+  }.mapError {
+    case e: NotFound => e
+    case _ => InternalServerError()
   }
 
