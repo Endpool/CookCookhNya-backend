@@ -15,5 +15,4 @@ enum UserError(val message: String) extends ErrorResponse:
 enum RecipeError(val message: String) extends ErrorResponse:
   case NotFound(recipeId: RecipeId) extends RecipeError(s"No user with id $RecipeError")
 
-enum DbError(val message: String) extends ErrorResponse:
-  case UnexpectedDbError(msg: String) extends DbError(s"Something went wrong with the db: $msg")
+case class InternalServerError(message: String = "Something went wrong on the server side") extends ErrorResponse

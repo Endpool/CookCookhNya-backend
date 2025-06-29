@@ -1,6 +1,11 @@
 package api
 
-import domain.{DbError, IngredientError, StorageError, UserError}
+import domain.{
+  IngredientError, 
+  StorageError, 
+  UserError, 
+  InternalServerError,
+}
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
@@ -18,4 +23,4 @@ object EndpointErrorVariants:
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[UserError.NotFound]))
 
   val serverErrorVariant =
-    oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DbError.UnexpectedDbError]))
+    oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[InternalServerError]))

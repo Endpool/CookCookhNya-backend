@@ -1,34 +1,35 @@
 package db.repositories
 
 import db.tables.{DbStorage, DbStorageCreator, storageMembersTable, storagesTable}
-import domain.StorageError.NotFound
-import domain.{Storage, StorageError, StorageId, UserId}
 import domain.{StorageId, UserId}
+import db.{DbError, handleDbError}
+
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
-import domain.DbError
 
 trait StoragesRepo:
-  def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId]
-  def removeById(id: StorageId): IO[DbError.UnexpectedDbError, Unit]
-  def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]]
-  def getAll(id: UserId) : UIO[Vector[DbStorage]]
+  def createEmpty(name: String, ownerId: UserId): IO[DbError, StorageId]
+  def removeById(id: StorageId): IO[DbError, Unit]
+  def getById(id: StorageId): IO[DbError, Option[DbStorage]]
+  def getAll(id: UserId) : IO[DbError, Vector[DbStorage]]
 
 private final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
 
-  override def createEmpty(name: String, ownerId: UserId): IO[DbError.UnexpectedDbError, StorageId] =
+  override def createEmpty(name: String, ownerId: UserId): IO[DbError, StorageId] =
     xa.transact {
       val storage = insertReturning(DbStorageCreator(name, ownerId))
       storage.id
-    }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
+    }.mapError {
+      handleDbError
+    }
 
-  override def getById(id: StorageId): IO[DbError.UnexpectedDbError, Option[DbStorage]] =
+  override def getById(id: StorageId): IO[DbError, Option[DbStorage]] =
     xa.transact {
       findById(id)
-    }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
+    }.mapError(handleDbError)
 
-  override def getAll(id: UserId): UIO[Vector[DbStorage]] =
+  override def getAll(id: UserId): IO[DbError, Vector[DbStorage]] =
     xa.transact {
       sql"""
            select distinct ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
@@ -37,12 +38,12 @@ private final case class StoragesRepoLive(xa: Transactor)
            where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
          """
         .query[DbStorage].run()
-    }.catchAll(_ => ZIO.succeed(Vector.empty))
+    }.mapError(handleDbError)
 
-  override def removeById(id: StorageId): IO[DbError.UnexpectedDbError, Unit] =
+  override def removeById(id: StorageId): IO[DbError, Unit] =
     xa.transact {
       deleteById(id)
-    }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
+    }.mapError(handleDbError)
 
 object StoragesRepoLive:
   val layer: RLayer[Transactor, StoragesRepo] =

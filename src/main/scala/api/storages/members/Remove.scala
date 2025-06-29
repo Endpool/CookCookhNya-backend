@@ -1,12 +1,19 @@
 package api.storages.members
 
-import api.AppEnv
-import api.EndpointErrorVariants.{userNotFoundVariant, storageNotFoundVariant}
+import api.{
+  AppEnv,
+  handleFailedSqlQuery,
+  toUserNotFound,
+  toStorageNotFound
+}
+import api.EndpointErrorVariants.{
+  serverErrorVariant,
+  storageNotFoundVariant,
+  userNotFoundVariant}
 import api.zSecuredServerLogic
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageMembersRepo
-import domain.{UserError, StorageError, StorageId, UserId, DbError}
-import domain.StorageError.NotFound
-import domain.UserError.NotFound
+import domain.{StorageError, InternalServerError, UserError, UserId, StorageId}
 
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
@@ -18,11 +25,19 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
   .delete
   .in(path[UserId]("memberId"))
   .out(statusCode(StatusCode.NoContent))
-  .errorOut(oneOf(userNotFoundVariant, storageNotFoundVariant))
+  .errorOut(oneOf(serverErrorVariant, userNotFoundVariant, storageNotFoundVariant))
   .zSecuredServerLogic(removeHandler)
 
 private def removeHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
-  ZIO[StorageMembersRepo, UserError.NotFound | StorageError.NotFound, Unit] =
+  ZIO[StorageMembersRepo, InternalServerError | UserError.NotFound | StorageError.NotFound, Unit] =
   ZIO.serviceWithZIO[StorageMembersRepo] {
     _.removeMemberFromStorageById(storageId, memberId)
+  }.catchAll {
+    case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
+    case e: FailedDbQuery => 
+      for {
+        keyName <- handleFailedSqlQuery(e)
+        _ <- toUserNotFound(keyName, userId)
+        _ <- toStorageNotFound(keyName, storageId)
+      } yield ()
   }
