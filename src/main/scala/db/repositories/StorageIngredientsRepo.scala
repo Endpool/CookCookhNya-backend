@@ -1,16 +1,15 @@
 package db.repositories
 
 import db.tables.{DbStorageIngredient, storageIngredientsTable}
-import domain.{IngredientId, StorageError, StorageId, DbError}
-import domain.DbError.{UnexpectedDbError, DbNotRespondingError, FailedDbQuery}
-import db.{handleDbError, handleUnfailableQuery}
+import domain.{IngredientId, StorageError, StorageId, UserId}
+import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{RLayer, IO, ZIO, ZLayer}
 
 trait StorageIngredientsRepo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound | IngredientError.NotFound, Unit]
+    IO[DbError, Unit]
 
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit]
@@ -28,7 +27,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     }
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound, Unit] =
+    IO[DbError, Unit] =
     xa.transact {
       sql"""
         DELETE FROM $storageIngredientsTable
@@ -36,9 +35,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
           AND ${storageIngredientsTable.ingredientId} = $ingredientId
       """.update.run()
       ()
-    }.mapError {
-      _ => StorageError.NotFound(storageId) // TODO actual error handling
-    }
+    }.mapError(handleDbError)
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]] =

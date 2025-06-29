@@ -1,9 +1,18 @@
 package api.recipes
 
-import api.AppEnv
-import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
+import api.{
+  AppEnv,
+  handleFailedSqlQuery,
+  toStorageNotFound
+}
+import api.EndpointErrorVariants.{
+  serverErrorVariant,
+  storageNotFoundVariant
+}
+import db.DbError.{FailedDbQuery, DbNotRespondingError}
 import db.repositories.RecipeIngredientsRepo
-import domain.{DbError, RecipeId, StorageError, StorageId}
+import domain.{InternalServerError, RecipeId, StorageId}
+import domain.StorageError.NotFound
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -28,13 +37,23 @@ private def getSuggestedHandler(
   size: Int,
   offset: Int,
   storageIds: Vector[StorageId]
-): ZIO[AppEnv, DbError.UnexpectedDbError | StorageError.NotFound, SuggestedRecipesResp] =
-  for
-    suggestedTuples <- ZIO.serviceWithZIO[RecipeIngredientsRepo] {
-      _.getSuggestedIngredients(size, offset, storageIds)
-    }
-    suggested = suggestedTuples.map{ (id, name, available, totalIngredients, _) =>
-      SuggestedRecipeResp(id, name, available, totalIngredients)
-    }
-    recipesFound = suggestedTuples.collectFirst(_._5).getOrElse(0)
-  yield SuggestedRecipesResp(recipesFound, suggested)
+): ZIO[AppEnv, InternalServerError | NotFound, SuggestedRecipesResp] =
+  {
+    for
+      suggestedTuples <- ZIO.serviceWithZIO[RecipeIngredientsRepo] {
+        _.getSuggestedIngredients(size, offset, storageIds)
+      }.catchSome {
+        case e: FailedDbQuery => handleFailedSqlQuery(e).flatMap {
+          toStorageNotFound(_, storageIds.head) // TODO: fix this костыль 
+            .flatMap(_ => ZIO.fail(InternalServerError()))
+        }
+      }
+      suggested = suggestedTuples.map { (id, name, available, totalIngredients, _) =>
+        SuggestedRecipeResp(id, name, available, totalIngredients)
+      }
+      recipesFound = suggestedTuples.collectFirst(_._5).getOrElse(0)
+    yield SuggestedRecipesResp(recipesFound, suggested)
+  }.mapError {
+    case e: (DbNotRespondingError | InternalServerError) => InternalServerError()
+    case e: NotFound => e
+  }

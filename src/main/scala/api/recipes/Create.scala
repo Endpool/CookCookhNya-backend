@@ -3,7 +3,7 @@ package api.recipes
 import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
-import domain.{DbError, IngredientId}
+import domain.{InternalServerError, IngredientId}
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -19,5 +19,7 @@ val create: ZServerEndpoint[AppEnv, Any] =
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(createHandler)
 
-def createHandler(recipe: RecipeCreationEntity): ZIO[RecipesRepo & RecipeIngredientsRepo, DbError.UnexpectedDbError, Unit] =
-  ZIO.serviceWithZIO[RecipesRepo](_.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients))
+def createHandler(recipe: RecipeCreationEntity): ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError, Unit] =
+  ZIO.serviceWithZIO[RecipesRepo] {
+    _.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
+  }.mapError(_ => InternalServerError())

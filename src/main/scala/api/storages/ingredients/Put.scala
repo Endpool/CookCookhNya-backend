@@ -1,18 +1,20 @@
 package api.storages.ingredients
 
-import api.AppEnv
+import api.{
+  AppEnv,
+  handleFailedSqlQuery,
+  toStorageNotFound,
+  toIngredientNotFound
+}
 import api.EndpointErrorVariants.{
-  databaseFailureErrorVariant,
   ingredientNotFoundVariant,
-  serverUnexpectedErrorVariant,
+  serverErrorVariant,
   storageNotFoundVariant
 }
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
-import domain.DbError.{DbNotRespondingError, FailedDbQuery, UnexpectedDbError}
-import db.getAbsentKey
-
+import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -23,8 +25,7 @@ val put: ZServerEndpoint[AppEnv, Any] =
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(
-    serverUnexpectedErrorVariant,
-    databaseFailureErrorVariant,
+    serverErrorVariant,
     ingredientNotFoundVariant,
     storageNotFoundVariant,
   ))
@@ -32,17 +33,16 @@ val put: ZServerEndpoint[AppEnv, Any] =
 
 private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
   ZIO[StorageIngredientsRepo,
-     UnexpectedDbError | DbNotRespondingError | IngredientError.NotFound | StorageError.NotFound,
+     InternalServerError | IngredientError.NotFound | StorageError.NotFound,
      Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
-    _.addIngredientToStorage(storageId, ingredientId).mapError {
-      case error: (UnexpectedDbError | DbNotRespondingError) => error
-      case FailedDbQuery(exc) =>
-        getAbsentKey(exc.getServerErrorMessage.getDetail) match
-          case Some(key) =>
-            if key == "storage_id" then StorageError.NotFound(storageId) // TODO: change key validation
-            else if key == "ingredient_id" then IngredientError.NotFound(ingredientId)
-            else UnexpectedDbError(exc.getMessage)
-          case None => UnexpectedDbError(exc.getMessage)
+    _.addIngredientToStorage(storageId, ingredientId).catchAll {
+      case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
+      case e: FailedDbQuery => for {
+          keyName <- handleFailedSqlQuery(e)
+          _ <- toStorageNotFound(keyName, storageId)
+          _ <- toIngredientNotFound(keyName, ingredientId)
+          _ <- ZIO.fail(InternalServerError())
+        } yield ()
     }
   }

@@ -1,9 +1,9 @@
 package db.repositories
 
 import db.tables.{DbStorageMember, storageMembersTable}
-import domain.DbError.{UnexpectedDbError, DbNotRespondingError, FailedDbQuery}
-import domain.{UserId, StorageId, DbError}
-import db.{handleDbError, handleUnfailableQuery}
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
+import domain.{UserId, StorageId}
+import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
@@ -14,7 +14,7 @@ trait StorageMembersRepo:
   def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
     IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
-    IO[UnexpectedDbError | DbNotRespondingError, Vector[UserId]]
+    IO[DbError, Vector[UserId]]
 
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
@@ -33,13 +33,13 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     }
 
   override def getAllStorageMembers(storageId: StorageId):
-    IO[UnexpectedDbError | DbNotRespondingError, Vector[UserId]] =
+    IO[DbError, Vector[UserId]] =
     xa.transact {
       sql"""
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
       """.query[UserId].run()
-    }.mapError(e => handleUnfailableQuery(handleDbError(e)))
+    }.mapError(handleDbError)
 
 object StorageMembersRepoLive:
   val layer: RLayer[Transactor, StorageMembersRepo] =

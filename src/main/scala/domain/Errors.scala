@@ -1,7 +1,5 @@
 package domain
 
-import org.postgresql.util.PSQLException
-
 sealed trait ErrorResponse:
   val message: String
 
@@ -17,7 +15,4 @@ enum UserError(val message: String) extends ErrorResponse:
 enum RecipeError(val message: String) extends ErrorResponse:
   case NotFound(recipeId: RecipeId) extends RecipeError(s"No user with id $RecipeError")
 
-enum DbError(val message: String) extends ErrorResponse:
-  case UnexpectedDbError(msg: String) extends DbError(s"Something went wrong with the db: $msg")
-  case FailedDbQuery(sqlExc: PSQLException) extends DbError(s"Failed to execute DB query: ${sqlExc.getServerErrorMessage}")
-  case DbNotRespondingError(msg: String) extends DbError(s"DB connection failed: $msg")
+case class InternalServerError(message: String = "Something went wrong on the server side") extends ErrorResponse

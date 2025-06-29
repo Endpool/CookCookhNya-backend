@@ -1,39 +1,38 @@
 package db.repositories
 
 import db.tables.{DbIngredient, DbIngredientCreator}
-import domain.DbError.{UnexpectedDbError, DbNotRespondingError}
 import domain.IngredientId
-import db.{handleDbError, handleUnfailableQuery}
+import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
 trait IngredientsRepo:
-  def add(name: String): IO[UnexpectedDbError | DbNotRespondingError, DbIngredient]
-  def getById(id: IngredientId): IO[UnexpectedDbError | DbNotRespondingError, Option[DbIngredient]]
-  def removeById(id: IngredientId): IO[UnexpectedDbError | DbNotRespondingError, Unit]
-  def getAll: IO[UnexpectedDbError | DbNotRespondingError, Vector[DbIngredient]]
+  def add(name: String): IO[DbError, DbIngredient]
+  def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
+  def removeById(id: IngredientId): IO[DbError, Unit]
+  def getAll: IO[DbError, Vector[DbIngredient]]
 
-final case class IngredientsRepoLive(xa: Transactor)
+private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
-  override def add(name: String): IO[UnexpectedDbError | DbNotRespondingError, DbIngredient] =
+  override def add(name: String): IO[DbError, DbIngredient] =
     xa.transact(insertReturning(DbIngredientCreator(name))).mapError {
-      e => handleUnfailableQuery(handleDbError(e))
+      handleDbError
     }
 
-  override def getById(id: IngredientId): IO[UnexpectedDbError | DbNotRespondingError, Option[DbIngredient]] =
+  override def getById(id: IngredientId): IO[DbError, Option[DbIngredient]] =
     xa.transact(findById(id)).mapError {
-      e => handleUnfailableQuery(handleDbError(e))
+      handleDbError
     }
 
-  override def removeById(id: IngredientId): IO[UnexpectedDbError | DbNotRespondingError, Unit] =
+  override def removeById(id: IngredientId): IO[DbError, Unit] =
     xa.transact(deleteById(id)).mapError {
-      e => handleUnfailableQuery(handleDbError(e))
+      handleDbError
     }
 
-  override def getAll: IO[UnexpectedDbError | DbNotRespondingError, Vector[DbIngredient]] =
+  override def getAll: IO[DbError, Vector[DbIngredient]] =
     xa.transact(findAll).mapError {
-      e => handleUnfailableQuery(handleDbError(e))
+      handleDbError
     }
 
 object IngredientsRepoLive:

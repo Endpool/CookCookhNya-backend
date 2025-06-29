@@ -1,17 +1,15 @@
 package api.storages.members
 
-import api.AppEnv
-import api.EndpointErrorVariants.{userNotFoundVariant, storageNotFoundVariant}
+import api.{AppEnv, handleFailedSqlQuery, toStorageNotFound, toUserNotFound}
+import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import api.zSecuredServerLogic
+import db.DbError
 import db.repositories.{StorageMembersRepo, StoragesRepo}
-import domain.{UserError, StorageError, StorageId, UserId, DbError}
-import domain.StorageError.NotFound
-import domain.UserError.NotFound
-
+import domain.{ErrorResponse, InternalServerError, StorageError, StorageId, UserError, UserId}
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import sttp.model.StatusCode
-import zio.ZIO
+import zio.{IO, ZIO}
 import sttp.tapir.ValidationError
 import io.circe.{Encoder, Json}
 import io.circe.syntax.*
@@ -25,16 +23,29 @@ private val add: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(addHandler)
 
 private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
-  ZIO[StorageMembersRepo & StoragesRepo, DbError.UnexpectedDbError | UserError.NotFound | StorageError.NotFound, Unit] = for
-    mStorage <- ZIO.serviceWithZIO[StoragesRepo] {
-      _.getById(storageId)
-    }
-    ownerId <- ZIO.fromOption(mStorage)
-      .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
-      .map(_.ownerId)
-    _ <- ZIO.unless(ownerId == memberId) {
-      ZIO.serviceWithZIO[StorageMembersRepo] {
-        _.addMemberToStorageById(storageId, memberId)
+  ZIO[StorageMembersRepo & StoragesRepo, InternalServerError | UserError.NotFound | StorageError.NotFound, Unit] =
+  {
+    for
+      mStorage <- ZIO.serviceWithZIO[StoragesRepo] {
+        _.getById(storageId)
       }
-    }
-  yield ()
+      ownerId <- ZIO.fromOption(mStorage)
+        .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
+        .map(_.ownerId)
+      _ <- ZIO.unless(ownerId == memberId) {
+        ZIO.serviceWithZIO[StorageMembersRepo] {
+          _.addMemberToStorageById(storageId, memberId)
+        }
+      }
+    yield ()
+  }.catchAll {
+    case e: StorageError.NotFound => ZIO.fail(e)
+    case DbError.DbNotRespondingError(_) => ZIO.fail(InternalServerError())
+    case e: DbError.FailedDbQuery => {
+        for {
+          keyName <- handleFailedSqlQuery(e)
+          _ <- toUserNotFound(keyName, userId)
+          _ <- ZIO.fail(InternalServerError())
+        } yield ()
+      }: IO[InternalServerError | UserError.NotFound | StorageError.NotFound, Unit]
+  }

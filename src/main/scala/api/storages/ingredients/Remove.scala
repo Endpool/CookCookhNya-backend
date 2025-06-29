@@ -1,16 +1,19 @@
 package api.storages.ingredients
 
-import api.AppEnv
-import api.EndpointErrorVariants.{databaseFailureErrorVariant,
-  ingredientNotFoundVariant,
-  serverUnexpectedErrorVariant,
-  storageNotFoundVariant
+import api.{
+  AppEnv,
+  handleFailedSqlQuery,
+  toIngredientNotFound,
+  toStorageNotFound
 }
+import api.EndpointErrorVariants.{
+  ingredientNotFoundVariant,
+  serverErrorVariant,
+  storageNotFoundVariant}
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
-import domain.DbError.{UnexpectedDbError, DbNotRespondingError}
-
+import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -21,8 +24,7 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(
-      serverUnexpectedErrorVariant,
-      databaseFailureErrorVariant,
+      serverErrorVariant,
       ingredientNotFoundVariant,
       storageNotFoundVariant,
     ))
@@ -30,8 +32,16 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
 
 private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
   ZIO[StorageIngredientsRepo,
-      UnexpectedDbError | DbNotRespondingError | StorageError.NotFound | IngredientError.NotFound,
+      InternalServerError | StorageError.NotFound | IngredientError.NotFound,
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.removeIngredientFromStorageById(storageId, ingredientId)
+  }.catchAll {
+    case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
+    case e: FailedDbQuery => for {
+        keyName <- handleFailedSqlQuery(e)
+        _ <- toStorageNotFound(keyName, storageId)
+        _ <- toIngredientNotFound(keyName, ingredientId)
+        _ <- ZIO.fail(InternalServerError())
+      } yield ()
   }

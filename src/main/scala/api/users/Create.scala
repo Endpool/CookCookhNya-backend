@@ -7,10 +7,11 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 import api.zSecuredServerLogic
-import api.EndpointErrorVariants.serverUnexpectedErrorVariant
+import api.EndpointErrorVariants.serverErrorVariant
 import api.AppEnv
+import db.DbError
 import db.repositories.UsersRepo
-import domain.{DbError, UserId}
+import domain.{InternalServerError, UserId}
 
 final case class CreateUserReqBody(alias: Option[String], fullName: String)
 
@@ -18,8 +19,10 @@ val create: ZServerEndpoint[AppEnv, Any] =
   usersEndpoint
     .put
     .in(jsonBody[CreateUserReqBody])
-    .errorOut(oneOf(serverUnexpectedErrorVariant))
+    .errorOut(oneOf(serverErrorVariant))
     .zSecuredServerLogic(createHandler)
 
-private def createHandler(userId: UserId)(reqBody: CreateUserReqBody): ZIO[UsersRepo, DbError.UnexpectedDbError, Unit] =
-  ZIO.serviceWithZIO[UsersRepo](_.saveUser(userId, reqBody.alias, reqBody.fullName))
+private def createHandler(userId: UserId)(reqBody: CreateUserReqBody): ZIO[UsersRepo, InternalServerError, Unit] =
+  ZIO.serviceWithZIO[UsersRepo](_.saveUser(userId, reqBody.alias, reqBody.fullName)).mapError {
+    e => InternalServerError(e.message)
+  }
