@@ -1,13 +1,10 @@
 package api.storages
 
 import api.AppEnv
-import api.{handleFailedSqlQuery, failIfUserNotFound}
 import db.repositories.StoragesRepo
-import db.DbError
 import domain.{UserId, StorageId, InternalServerError}
-import domain.UserError.NotFound
 import api.zSecuredServerLogic
-import api.EndpointErrorVariants.{serverErrorVariant, userNotFoundVariant}
+import api.EndpointErrorVariants.serverErrorVariant
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -19,15 +16,11 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
   storagesEndpoint
   .get
   .out(jsonBody[Seq[StorageSummaryResp]])
-  .errorOut(oneOf(serverErrorVariant, userNotFoundVariant))
+  .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(getAllHandler)
 
 private def getAllHandler(userId: UserId)(u : Unit):
-  ZIO[StoragesRepo, InternalServerError | NotFound, Seq[StorageSummaryResp]] =
-  ZIO.serviceWithZIO[StoragesRepo](_.getAll(userId).map(_.map(StorageSummaryResp.fromDb))).catchAll {
-    case DbError.DbNotRespondingError(_) => ZIO.fail(InternalServerError())
-    case e: DbError.FailedDbQuery => handleFailedSqlQuery(e).flatMap {
-      case (keyName, keyValue, _) =>
-        failIfUserNotFound(keyName, keyValue).flatMap(_ => ZIO.fail(InternalServerError()))
-    }
+  ZIO[StoragesRepo, InternalServerError, Seq[StorageSummaryResp]] =
+  ZIO.serviceWithZIO[StoragesRepo](_.getAll(userId).map(_.map(StorageSummaryResp.fromDb))).mapError {
+    _ => InternalServerError()
   }
