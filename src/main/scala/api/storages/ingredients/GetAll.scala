@@ -3,8 +3,8 @@ package api.storages.ingredients
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  toStorageNotFound,
-  toUserNotFound
+  failIfStorageNotFound,
+  failIfUserNotFound
 }
 import api.EndpointErrorVariants.{
   serverErrorVariant,
@@ -57,9 +57,10 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
     case e: FailedDbQuery => {
       {
         for
-          keyName <- handleFailedSqlQuery(e)
-          _ <- toStorageNotFound(keyName, storageId)
-          _ <- toUserNotFound(keyName, userId)
+          missingEntry <- handleFailedSqlQuery(e)
+          (keyName, keyValue, _) = missingEntry
+          _ <- failIfStorageNotFound(keyName, keyValue)
+          _ <- failIfUserNotFound(keyName, keyValue)
         yield ()
       }: IO[InternalServerError | StorageError.NotFound | UserError.NotFound, Unit]
     }.flatMap(_ => ZIO.fail(InternalServerError()))

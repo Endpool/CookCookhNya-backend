@@ -27,7 +27,7 @@ private def getHandler(ingredientId: IngredientId):
     for
       mIngredient <- ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))
       ingredient <- ZIO.fromOption(mIngredient)
-        .orElseFail(NotFound(ingredientId))
+        .orElseFail(NotFound(ingredientId.toString))
     yield IngredientResp.fromDb(ingredient)
   }.mapError {
     case e: NotFound => e

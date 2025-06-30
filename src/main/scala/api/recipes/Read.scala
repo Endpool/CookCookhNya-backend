@@ -85,7 +85,7 @@ def getHandler(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFou
           ))
         case Left(_) =>
           ZIO.fail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
-    case None => ZIO.fail(NotFound(recipeId))
+    case None => ZIO.fail(NotFound(recipeId.toString))
   }.catchAll {
     case _: DbError => ZIO.fail(InternalServerError())
     case e: (InternalServerError | NotFound) => ZIO.fail(e)

@@ -1,6 +1,6 @@
 package api.storages.members
 
-import api.{AppEnv, handleFailedSqlQuery, toStorageNotFound, toUserNotFound}
+import api.{AppEnv, handleFailedSqlQuery, failIfStorageNotFound, failIfUserNotFound}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import api.zSecuredServerLogic
 import db.DbError
@@ -30,7 +30,7 @@ private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
         _.getById(storageId)
       }
       ownerId <- ZIO.fromOption(mStorage)
-        .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId))
+        .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId.toString))
         .map(_.ownerId)
       _ <- ZIO.unless(ownerId == memberId) {
         ZIO.serviceWithZIO[StorageMembersRepo] {
@@ -43,8 +43,9 @@ private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
     case DbError.DbNotRespondingError(_) => ZIO.fail(InternalServerError())
     case e: DbError.FailedDbQuery => {
         for {
-          keyName <- handleFailedSqlQuery(e)
-          _ <- toUserNotFound(keyName, userId)
+          missingEntry <- handleFailedSqlQuery(e)
+          (keyName, keyValue, _) = missingEntry
+          _ <- failIfUserNotFound(keyName, keyValue)
           _ <- ZIO.fail(InternalServerError())
         } yield ()
       }: IO[InternalServerError | UserError.NotFound | StorageError.NotFound, Unit]

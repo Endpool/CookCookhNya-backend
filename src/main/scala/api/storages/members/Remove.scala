@@ -3,8 +3,8 @@ package api.storages.members
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  toUserNotFound,
-  toStorageNotFound
+  failIfUserNotFound,
+  failIfStorageNotFound
 }
 import api.EndpointErrorVariants.{
   serverErrorVariant,
@@ -36,8 +36,9 @@ private def removeHandler(userId: UserId)(storageId: StorageId, memberId: UserId
     case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
     case e: FailedDbQuery => 
       for {
-        keyName <- handleFailedSqlQuery(e)
-        _ <- toUserNotFound(keyName, userId)
-        _ <- toStorageNotFound(keyName, storageId)
+        missingEntry <- handleFailedSqlQuery(e)
+        (keyName, keyValue, _) = missingEntry
+        _ <- failIfUserNotFound(keyName, keyValue)
+        _ <- failIfStorageNotFound(keyName, keyValue)
       } yield ()
   }

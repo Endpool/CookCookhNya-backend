@@ -3,7 +3,7 @@ package api.recipes
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  toStorageNotFound
+  failIfStorageNotFound
 }
 import api.EndpointErrorVariants.{
   serverErrorVariant,
@@ -44,7 +44,7 @@ private def getSuggestedHandler(
         _.getSuggestedIngredients(size, offset, storageIds)
       }.catchSome {
         case e: FailedDbQuery => handleFailedSqlQuery(e).flatMap {
-          toStorageNotFound(_, storageIds.head) // TODO: fix this костыль
+          case (keyName, keyValue, _) => failIfStorageNotFound(keyName, keyValue)
             .flatMap(_ => ZIO.fail(InternalServerError()))
         }
       }

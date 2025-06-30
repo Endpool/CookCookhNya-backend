@@ -45,6 +45,6 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
       }
     }.mapError(_ => InternalServerError())
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
-      ZIO.fail[InternalServerError | NotFound](NotFound(storageId))
+      ZIO.fail[InternalServerError | NotFound](NotFound(storageId.toString))
     }
   yield members

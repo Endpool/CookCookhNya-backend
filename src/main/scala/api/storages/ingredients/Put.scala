@@ -3,8 +3,8 @@ package api.storages.ingredients
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  toStorageNotFound,
-  toIngredientNotFound
+  failIfStorageNotFound,
+  failIfIngredientNotFound
 }
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
@@ -39,9 +39,10 @@ private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: Ingr
     _.addIngredientToStorage(storageId, ingredientId).catchAll {
       case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
       case e: FailedDbQuery => for {
-          keyName <- handleFailedSqlQuery(e)
-          _ <- toStorageNotFound(keyName, storageId)
-          _ <- toIngredientNotFound(keyName, ingredientId)
+          missingEntry <- handleFailedSqlQuery(e)
+          (keyName, keyValue, _) = missingEntry
+          _ <- failIfStorageNotFound(keyName, keyValue)
+          _ <- failIfIngredientNotFound(keyName, keyValue)
           _ <- ZIO.fail(InternalServerError())
         } yield ()
     }

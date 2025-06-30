@@ -29,7 +29,7 @@ private def getSummaryHandler(userId: UserId)(storageId: StorageId):
     for
       mStorage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
       storage <- ZIO.fromOption(mStorage)
-        .orElseFail(NotFound(storageId))
+        .orElseFail(NotFound(storageId.toString))
       _ <- checkForMembership(userId, storage)
     yield StorageSummaryResp.fromDb(storage)
   }.mapError {
@@ -46,5 +46,5 @@ def checkForMembership(userId: UserId, storage: DbStorage):
     }.flatMap {
       members =>
         if members.contains(userId) then ZIO.unit
-        else ZIO.fail(NotFound(storage.id))
+        else ZIO.fail(NotFound(storage.id.toString))
     }
