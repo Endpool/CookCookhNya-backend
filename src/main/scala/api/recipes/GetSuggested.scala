@@ -40,11 +40,11 @@ private def getSuggestedHandler(
 ): ZIO[AppEnv, InternalServerError | NotFound, SuggestedRecipesResp] =
   {
     for
-      suggestedTuples <- ZIO.serviceWithZIO[RecipeIngredientsRepo] {
+      suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
         _.getSuggestedIngredients(size, offset, storageIds)
       }.catchSome {
         case e: FailedDbQuery => handleFailedSqlQuery(e).flatMap {
-          toStorageNotFound(_, storageIds.head) // TODO: fix this костыль 
+          toStorageNotFound(_, storageIds.head) // TODO: fix this костыль
             .flatMap(_ => ZIO.fail(InternalServerError()))
         }
       }

@@ -8,5 +8,6 @@ val recipesEndpoint =
 
 val recipeEndpoints = List(
   create,
-  getSuggested
+  getSuggested,
+  get
 )
