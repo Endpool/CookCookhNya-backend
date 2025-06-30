@@ -28,9 +28,14 @@ private final case class StorageMembersRepoLive(xa: Transactor)
 
   override def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
     IO[DbError, Unit] =
-    xa.transact(delete(DbStorageMember(storageId, memberId))).mapError {
-      handleDbError
-    }
+    xa.transact {
+      sql"""
+       delete from $storageMembersTable
+       where ${storageMembersTable.storageId} = $storageId
+       and ${storageMembersTable.memberId} = $memberId
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]] =
