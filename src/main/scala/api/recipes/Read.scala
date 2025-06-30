@@ -24,7 +24,7 @@ private case class IngredientSummary(
 private case class RecipeResp(
                              ingredients: Vector[IngredientSummary],
                              name: String,
-                             sourceLing: String
+                             sourceLink: String
                              )
 
 val get: ZServerEndpoint[AppEnv, Any] =
