@@ -7,6 +7,7 @@ import domain.{InternalServerError, StorageId, UserId}
 import domain.StorageError.NotFound
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
 import api.zSecuredServerLogic
+import api.storages.checkForMembership
 import db.DbError
 import db.tables.DbStorage
 import io.circe.generic.auto.*
@@ -31,20 +32,12 @@ private def getSummaryHandler(userId: UserId)(storageId: StorageId):
       storage <- ZIO.fromOption(mStorage)
         .orElseFail(NotFound(storageId.toString))
       _ <- checkForMembership(userId, storage)
-    yield StorageSummaryResp.fromDb(storage)
+      result <- ZIO.ifZIO(checkForMembership(userId, storage))(
+        ZIO.succeed(StorageSummaryResp.fromDb(storage)),
+        ZIO.fail(NotFound(storageId.toString))
+      )
+    yield result
   }.mapError {
     case e: NotFound => e
     case _ => InternalServerError()
   }
-
-def checkForMembership(userId: UserId, storage: DbStorage):
-  ZIO[StorageMembersRepo, DbError | NotFound, Unit] =
-  if userId == storage.ownerId then ZIO.unit
-  else
-    ZIO.serviceWithZIO[StorageMembersRepo] {
-      _.getAllStorageMembers(storage.id)
-    }.flatMap {
-      members =>
-        if members.contains(userId) then ZIO.unit
-        else ZIO.fail(NotFound(storage.id.toString))
-    }

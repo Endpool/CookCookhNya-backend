@@ -1,14 +1,14 @@
 package api.storages
 
-import db.DbError
 import db.repositories.StorageMembersRepo
 import db.tables.DbStorage
-import domain.UserId
-
+import domain.{InternalServerError, UserId}
 import zio.ZIO
 
-def checkForMembership(userId: UserId, storage: DbStorage): ZIO[StorageMembersRepo, DbError, Boolean] =
+def checkForMembership(userId: UserId, storage: DbStorage):
+ZIO[StorageMembersRepo, InternalServerError, Boolean] =
   if userId == storage.ownerId then ZIO.succeed(true)
   else ZIO.serviceWithZIO[StorageMembersRepo] {
     _.getAllStorageMembers(storage.id)
   }.flatMap(members => ZIO.succeed(members.contains(userId)))
+    .mapError(_ => InternalServerError())
