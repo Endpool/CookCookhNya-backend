@@ -1,7 +1,7 @@
 package api
 
 import db.DbError.FailedDbQuery
-import domain.{ErrorResponse, IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserError, UserId}
+import domain.{IngredientError, InternalServerError, StorageError, UserError}
 import zio.{IO, ZIO}
 import db.tables.*
 
@@ -9,9 +9,13 @@ case class ForeignKeyViolation(keyName: String, keyValue: String, tableName: Str
 
 def handleFailedSqlQuery(error: FailedDbQuery): IO[InternalServerError, (String, String, String)] =
   val pattern = """Key \((.*)\)=\((.*)\) is not present in table "(.*)".""".r
-  error.sqlExc.getServerErrorMessage.getDetail match
-    case pattern(key, value, table) => ZIO.succeed((key, value, table))
-    case _ => ZIO.fail(InternalServerError())
+  pattern.findFirstMatchIn(error.sqlExc.getMessage) match
+    case Some(text) =>
+      val keyName = text.group(1)
+      val keyValue = text.group(2)
+      val tableName = text.group(3)
+      ZIO.succeed((keyName, keyValue, tableName))
+    case None => ZIO.fail(InternalServerError())
 
 def failIfIngredientNotFound(keyName: String, ingredientId: String):
 IO[IngredientError.NotFound, Unit] = {

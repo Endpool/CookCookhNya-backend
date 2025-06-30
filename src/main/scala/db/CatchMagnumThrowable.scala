@@ -1,6 +1,8 @@
 package db
 
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
+
+import java.sql.BatchUpdateException
 import org.postgresql.util.PSQLException
 
 def handleDbError(error: Throwable): DbError =
@@ -8,5 +10,5 @@ def handleDbError(error: Throwable): DbError =
   val errorMessage = errorCause.getMessage
 
   errorCause match
-    case exc: PSQLException => FailedDbQuery(exc)
+    case exc: (PSQLException | BatchUpdateException) => FailedDbQuery(exc)
     case _: java.sql.SQLTransientConnectionException => DbNotRespondingError(errorMessage)
