@@ -12,11 +12,6 @@ trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[DbError, Vector[IngredientId]]
   def addIngredients(recipeId: RecipeId, ingredientIds: Vector[IngredientId]): IO[DbError, Unit]
   def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
-  def getSuggestedIngredients(
-    size: Int,
-    offset: Int,
-    storageIds: Vector[StorageId]
-  ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
 
 private final case class RecipeIngredientsRepoLive(xa: Transactor)
   extends Repo[DbRecipeIngredient, DbRecipeIngredient, (RecipeId, IngredientId)]

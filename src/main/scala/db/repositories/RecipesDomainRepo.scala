@@ -1,8 +1,16 @@
 package db.repositories
 
-import db.tables.{DbStorage, DbStorageCreator, recipeIngredientsTable, recipesTable, storageMembersTable, storagesTable}
+import db.tables.{
+  DbStorage,
+  DbStorageCreator,
+  recipeIngredientsTable,
+  recipesTable,
+  storageMembersTable,
+  storagesTable
+}
 import domain.StorageError.NotFound
-import domain.{DbError, RecipeId, Storage, StorageError, StorageId, UserId}
+import db.{DbError, handleDbError}
+import domain.{RecipeId, Storage, StorageError, StorageId, UserId}
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
@@ -12,14 +20,14 @@ trait RecipesDomainRepo:
                                size: Int,
                                offset: Int,
                                storageIds: Vector[StorageId]
-                             ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]]
+                             ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
 
 private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
   override def getSuggestedIngredients(
                                         size: Int,
                                         offset: Int,
                                         storageIds: Vector[StorageId]
-                                      ): ZIO[StorageIngredientsRepo, Err | StorageError.NotFound, Vector[RecipeSummary]] =
+                                      ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
     val table = recipeIngredientsTable
     for
       allIngredients <- ZIO.collectAll(storageIds.map { storageId =>
@@ -59,7 +67,7 @@ private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDo
           """
 
         frag.query[RecipeSummary].run()
-      }.catchAllAsDbError
+      }.mapError(handleDbError)
     yield res
 
 object RecipesDomainRepo:

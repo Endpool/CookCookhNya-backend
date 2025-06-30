@@ -10,7 +10,7 @@ import api.EndpointErrorVariants.{
   storageNotFoundVariant
 }
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
-import db.repositories.RecipeIngredientsRepo
+import db.repositories.RecipesDomainRepo
 import domain.{InternalServerError, RecipeId, StorageId}
 import domain.StorageError.NotFound
 

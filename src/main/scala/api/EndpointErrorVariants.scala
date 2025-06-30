@@ -1,6 +1,7 @@
 package api
 
 import domain.{
+  ErrorResponse,
   IngredientError,
   StorageError,
   UserError,
@@ -27,4 +28,4 @@ object EndpointErrorVariants:
   val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
   val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
   val recipeNotFoundVariant = NotFound.variantJson[RecipeError.NotFound]
-  val serverErrorVariant = InternalServerError.variantJson[InternalServerError]
+  val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]
