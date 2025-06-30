@@ -1,7 +1,5 @@
 package api.recipes
 
-import domain.UserId
-
 import sttp.tapir.ztapir.*
 
 val recipesEndpoint =
@@ -10,5 +8,6 @@ val recipesEndpoint =
 
 val recipeEndpoints = List(
   create,
-  getSuggested
+  getSuggested,
+  get
 )
