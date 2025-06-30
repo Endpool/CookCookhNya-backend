@@ -27,6 +27,13 @@ private case class RecipeResp(
                              sourceLink: String
                              )
 
+// intermediate class to accept raw query result
+private case class RawRecipeResult(
+                                    name: String,
+                                    sourceLink: String,
+                                    ingredients: String // JSON string from PostgreSQL
+                                  )
+
 val get: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
     .get
@@ -43,22 +50,28 @@ def getHandler(recipeId: RecipeId): ZIO[Transactor, DbError.UnexpectedDbError | 
     val frag =
       sql"""
         SELECT r.${recipesTable.name} AS "name", r.${recipesTable.sourceLink} AS sourceLink,
-        (
-          SELECT JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'id', i.${ingredientsTable.id},
-              'name', i.${ingredientsTable.name},
-              'inStorages', (
-                SELECT JSON_AGG(DISTINCT si.storage_id)
-                FROM $storageIngredientsTable si
-                WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
+        COALESCE(
+          (
+            SELECT JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'id', i.${ingredientsTable.id},
+                'name', i.${ingredientsTable.name},
+                'inStorages', COALESCE(
+                  (
+                    SELECT JSON_AGG(DISTINCT si.storage_id)
+                    FROM $storageIngredientsTable si
+                    WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
+                  ),
+                  '[]'::json
+                )
               )
             )
-          )
-          FROM $ingredientsTable i
-          JOIN $recipeIngredientsTable ri ON i.${ingredientsTable.id}= ri.${recipeIngredientsTable.recipeId}
-          WHERE ri.${recipeIngredientsTable.recipeId} = r.id
-        ) AS "ingredients"
+            FROM $ingredientsTable i
+            JOIN $recipeIngredientsTable ri ON i.${ingredientsTable.id}= ri.${recipeIngredientsTable.ingredientId}
+            WHERE ri.${recipeIngredientsTable.recipeId} = r.${recipesTable.id}
+          ),
+          '[]'::json
+        ) AS ingredients
         FROM $recipesTable r
         WHERE r.${recipesTable.id} = $recipeId
         LIMIT 1;
