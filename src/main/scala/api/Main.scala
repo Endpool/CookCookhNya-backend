@@ -2,13 +2,13 @@ package api
 
 import _root_.db.dbLayer
 import _root_.db.repositories.*
+import _root_.db.dataSourceDescriptionFromEnv
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
-import db.dataSourceDescriptionFromEnv
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(

@@ -8,14 +8,15 @@ import zio.{ZLayer, IO, System, Task}
 case class DataSourceDescription(
   jdbcUrl : String,
   username : String,
-  password : String
+  password : String,
+  driver : String
 ):
   def toDataSource: DataSource =
     val hikari = new HikariDataSource()
     hikari.setJdbcUrl(jdbcUrl)
     hikari.setUsername(username)
     hikari.setPassword(password)
-    hikari.setDriverClassName("org.postgresql.Driver")
+    hikari.setDriverClassName(driver)
     hikari
 
 object DataSourceDescription:
@@ -23,11 +24,13 @@ object DataSourceDescription:
     address : String,
     dbName : String,
     username : String,
-    password : String
+    password : String,
+    driver : String = "org.postgresql.Driver"
   ): DataSourceDescription = DataSourceDescription(
     jdbcUrl = s"jdbc:postgresql://$address/$dbName",
     username,
-    password
+    password,
+    driver
   )
 
 def dbLayer(dataSourceDescr: Task[DataSourceDescription]) : ZLayer[Any, Throwable, Transactor] =
