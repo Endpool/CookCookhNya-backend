@@ -11,11 +11,14 @@ import api.EndpointErrorVariants.{
   storageNotFoundVariant,
   userNotFoundVariant
 }
+import api.storages.checkForMembership
 import api.zSecuredServerLogic
 import api.ingredients.IngredientResp
-import db.repositories.StorageIngredientsRepo
-import domain.{InternalServerError, UserError, IngredientId, StorageError, StorageId, UserId}
+import db.repositories.{StorageIngredientsRepo, StorageMembersRepo, StoragesRepo}
+import domain.{InternalServerError, UserError, IngredientId, StorageId, UserId}
+import domain.StorageError.NotFound
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
+import db.DbError
 
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
@@ -38,10 +41,10 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(getAllHandler)
 
 private def getAllHandler(userId: UserId)(storageId: StorageId):
-  ZIO[StorageIngredientsRepo & IngredientsRepo,
-      InternalServerError | StorageError.NotFound | UserError.NotFound,
+  ZIO[StorageIngredientsRepo & IngredientsRepo & StoragesRepo & StorageMembersRepo,
+      InternalServerError | NotFound,
       Seq[IngredientResp]] =
-  {
+  val getAll = {
     for
       ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo] {
         _.getAllIngredientsFromStorage(storageId)
@@ -60,8 +63,22 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
           missingEntry <- handleFailedSqlQuery(e)
           (keyName, keyValue, _) = missingEntry
           _ <- failIfStorageNotFound(keyName, keyValue)
-          _ <- failIfUserNotFound(keyName, keyValue)
         yield ()
-      }: IO[InternalServerError | StorageError.NotFound | UserError.NotFound, Unit]
+      }: IO[InternalServerError | NotFound, Unit]
     }.flatMap(_ => ZIO.fail(InternalServerError()))
+  }
+
+  {
+    for {
+      storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId)).flatMap {
+        case Some(storage) => ZIO.succeed(storage)
+        case None => ZIO.fail(NotFound(storageId.toString))
+      }
+      result <- ZIO.ifZIO(checkForMembership(userId, storage))(
+        getAll, ZIO.fail(NotFound(storageId.toString))
+      )
+    } yield result
+  }.mapError {
+    case _: DbError => InternalServerError()
+    case e: (InternalServerError | NotFound) => e
   }
