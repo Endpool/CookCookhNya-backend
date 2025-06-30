@@ -1,12 +1,10 @@
 package api.recipes
 
-import api.AppEnv
-import api.variantJson
+import api.{AppEnv, EndpointErrorVariants, variantJson}
 import com.augustnagro.magnum.magzio
-import db.repositories.{catchAllAsDbError, RecipeIngredientsRepo, RecipesDomainRepo, RecipesRepo}
+import db.repositories.{RecipeIngredientsRepo, RecipesDomainRepo, RecipesRepo, catchAllAsDbError}
 import domain.{DbError, IngredientId, RecipeError, RecipeId, StorageId}
 import db.tables.{DbStorage, DbStorageCreator, ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
-
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.model.StatusCode.{InternalServerError, NotFound}
@@ -39,10 +37,7 @@ val get: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
     .get
     .in(path[RecipeId])
-    .errorOut(oneOf(
-      NotFound.variantJson[RecipeError.NotFound],
-      InternalServerError.variantJson[DbError.UnexpectedDbError])
-    )
+    .errorOut(oneOf(EndpointErrorVariants.recipeNotFoundVariant, EndpointErrorVariants.storageNotFoundVariant))
     .out(jsonBody[RecipeResp])
     .zServerLogic(getHandler)
 
