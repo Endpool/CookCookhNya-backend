@@ -8,6 +8,7 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
+import db.dataSourceDescriptionFromEnv
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
@@ -28,7 +29,7 @@ object Main extends ZIOAppDefault:
     Server.serve(app)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
-        dbLayer,
+        dbLayer(dataSourceDescriptionFromEnv),
         IngredientsRepoLive.layer,
         UsersRepo.layer,
         StoragesRepoLive.layer,

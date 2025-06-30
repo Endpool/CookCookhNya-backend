@@ -15,7 +15,7 @@ object IntegrationTest extends ZIOSpecDefault:
           for
             container <- getContainer
             dbName <- getDbName
-            xa <- dbLayer.build
+            xa <- dbLayer(ZIO.succeed(???)).build
             _ <- createTables(xa.get)
           yield assertTrue(true == true)
         }

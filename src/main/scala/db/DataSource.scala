@@ -3,16 +3,47 @@ package db
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.HikariDataSource
 import javax.sql.DataSource
-import zio.{ZLayer, IO, System}
+import zio.{ZLayer, IO, System, Task}
 
-val dbLayer: ZLayer[Any, Throwable, Transactor] =
+case class DataSourceDescription(
+  jdbcUrl : String,
+  username : String,
+  password : String
+):
+  def toDataSource: DataSource =
+    val hikari = new HikariDataSource()
+    hikari.setJdbcUrl(jdbcUrl)
+    hikari.setUsername(username)
+    hikari.setPassword(password)
+    hikari.setDriverClassName("org.postgresql.Driver")
+    hikari
+
+object DataSourceDescription:
+  def apply(
+    address : String,
+    dbName : String,
+    username : String,
+    password : String
+  ): DataSourceDescription = DataSourceDescription(
+    jdbcUrl = s"jdbc:postgresql://$address/$dbName",
+    username,
+    password
+  )
+
+def dbLayer(dataSourceDescr: Task[DataSourceDescription]) : ZLayer[Any, Throwable, Transactor] =
   for
-    ds <- ZLayer.fromZIO(dataSource)
+    ds <- ZLayer.fromZIO(dataSourceDescr.map(_.toDataSource))
     xa <- Transactor.layer(ds.get)
     _  <- ZLayer(createTables(xa.get))
   yield xa
 
-val dataSource: IO[RuntimeException, DataSource] =
+def dbLayer(dataSourceDescr: DataSourceDescription) : ZLayer[Any, Throwable, Transactor] =
+  for
+    xa <- Transactor.layer(dataSourceDescr.toDataSource)
+    _  <- ZLayer(createTables(xa.get))
+  yield xa
+
+val dataSourceDescriptionFromEnv: IO[RuntimeException, DataSourceDescription] =
   for
     address  <- System.env("DB_ADDRESS").someOrFail(
       new IllegalStateException("DB_ADDRESS environment variable not set")
@@ -26,12 +57,4 @@ val dataSource: IO[RuntimeException, DataSource] =
     password <- System.env("DB_PASSWORD").someOrFail(
       new IllegalStateException("DB_PASSWORD environment variable not set")
     )
-  yield mkDataSource(s"jdbc:postgresql://$address/$dbName", username, password)
-
-private def mkDataSource(url: String, username: String, password: String) =
-  val hikari = new HikariDataSource()
-  hikari.setJdbcUrl(url)
-  hikari.setUsername(username)
-  hikari.setPassword(password)
-  hikari.setDriverClassName("org.postgresql.Driver")
-  hikari
+  yield DataSourceDescription(address, dbName, username, password)
