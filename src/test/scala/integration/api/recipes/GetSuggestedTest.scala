@@ -6,6 +6,7 @@ import com.augustnagro.magnum.magzio.Transactor
 import db.createTables
 import db.dbLayer
 import api.recipes.getSuggested
+import db.DataSourceDescription
 
 object IntegrationTest extends ZIOSpecDefault:
   override def spec: Spec[TestEnvironment & Scope, Any] =
@@ -14,16 +15,16 @@ object IntegrationTest extends ZIOSpecDefault:
         ZIO.scoped {
           for
             container <- getContainer
-            dbName <- getDbName
-            xa <- dbLayer(ZIO.succeed(???)).build
-            _ <- createTables(xa.get)
-          yield assertTrue(true == true)
+            dataSourceDescr = DataSourceDescription(
+              container.jdbcUrl,
+              container.username,
+              container.password
+            )
+            xa <- dbLayer(dataSourceDescr).build
+          yield assertTrue(true)
         }
       }
     }
-
-  val getDbName: Task[String] =
-    ZIO.attempt(java.util.UUID.randomUUID().toString.replace("-", ""))
 
   val getContainer: ZIO[Scope, Throwable, PostgreSQLContainer] =
     ZIO.acquireRelease(
