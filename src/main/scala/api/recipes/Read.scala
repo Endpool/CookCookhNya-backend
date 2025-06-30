@@ -8,6 +8,7 @@ import domain.{DbError, IngredientId, RecipeError, RecipeId, StorageId}
 import db.tables.{DbStorage, DbStorageCreator, ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 
 import io.circe.generic.auto.*
+import io.circe.parser.decode
 import sttp.model.StatusCode.{InternalServerError, NotFound}
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -73,16 +74,24 @@ def getHandler(recipeId: RecipeId): ZIO[Transactor, DbError.UnexpectedDbError | 
           '[]'::json
         ) AS ingredients
         FROM $recipesTable r
-        WHERE r.${recipesTable.id} = $recipeId
-        LIMIT 1;
+        WHERE r.${recipesTable.id} = $recipeId;
         """
-    frag.query[RecipeResp].run().headOption
+    frag.query[RawRecipeResult].run().headOption
   })
 
   dbEffect.foldZIO(
     error => ZIO.fail(DbError.UnexpectedDbError(error.getMessage)),
     {
-      case Some(recipe) => ZIO.succeed(recipe)
+      case Some(rawResult) =>
+        // Parse the JSON ingredients string
+        decode[Vector[IngredientSummary]](rawResult.ingredients) match
+          case Right(ingredients) =>
+            ZIO.succeed(RecipeResp(
+              ingredients, rawResult.name, rawResult.sourceLink
+            ))
+          case Left(_) =>
+            ZIO.fail(DbError.UnexpectedDbError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
+
       case None => ZIO.fail(RecipeError.NotFound(recipeId))
     }
   )
