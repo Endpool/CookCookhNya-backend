@@ -14,4 +14,4 @@ final case class DbStorage(
 
 case class DbStorageCreator(name: String, ownerId: UserId)
 
-val storagesTable = TableInfo[DbStorageCreator, DbStorage, StorageId]
+val storagesTable  = TableInfo[DbStorageCreator, DbStorage, StorageId]

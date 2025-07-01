@@ -13,4 +13,3 @@ final case class DbUser(
 ) derives DbCodec
 
 val usersTable = TableInfo[DbUser, DbUser, UserId]
-

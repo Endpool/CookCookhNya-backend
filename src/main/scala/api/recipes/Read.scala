@@ -1,9 +1,12 @@
 package api.recipes
 
-import api.{AppEnv, EndpointErrorVariants}
+import api.{AppEnv, EndpointErrorVariants, handleFailedSqlQuery}
 import com.augustnagro.magnum.magzio
-import domain.{DbError, IngredientId, RecipeError, RecipeId, StorageId}
+import domain.{InternalServerError, IngredientId, RecipeId, StorageId}
+import domain.RecipeError.NotFound
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable}
+import db.{DbError, handleDbError}
+
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
@@ -39,7 +42,7 @@ val get: ZServerEndpoint[AppEnv, Any] =
     .out(jsonBody[RecipeResp])
     .zServerLogic(getHandler)
 
-def getHandler(recipeId: RecipeId): ZIO[Transactor, DbError.UnexpectedDbError | RecipeError.NotFound, RecipeResp] =
+def getHandler(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
   val dbEffect = ZIO.serviceWithZIO[magzio.Transactor](_.transact {
     val frag =
       sql"""
@@ -72,19 +75,18 @@ def getHandler(recipeId: RecipeId): ZIO[Transactor, DbError.UnexpectedDbError | 
     frag.query[RawRecipeResult].run().headOption
   })
 
-  dbEffect.foldZIO(
-    error => ZIO.fail(DbError.UnexpectedDbError(error.getMessage)),
-    {
-      case Some(rawResult) =>
-        // Parse the JSON ingredients string
-        decode[Vector[IngredientSummary]](rawResult.ingredients) match
-          case Right(ingredients) =>
-            ZIO.succeed(RecipeResp(
-              ingredients, rawResult.name, rawResult.sourceLink
-            ))
-          case Left(_) =>
-            ZIO.fail(DbError.UnexpectedDbError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
-
-      case None => ZIO.fail(RecipeError.NotFound(recipeId))
-    }
-  )
+  dbEffect.mapError(handleDbError).flatMap {
+    case Some(rawResult) =>
+      // Parse the JSON ingredients string
+      decode[Vector[IngredientSummary]](rawResult.ingredients) match
+        case Right(ingredients) =>
+          ZIO.succeed(RecipeResp(
+            ingredients, rawResult.name, rawResult.sourceLink
+          ))
+        case Left(_) =>
+          ZIO.fail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
+    case None => ZIO.fail(NotFound(recipeId.toString))
+  }.catchAll {
+    case _: DbError => ZIO.fail(InternalServerError())
+    case e: (InternalServerError | NotFound) => ZIO.fail(e)
+  }

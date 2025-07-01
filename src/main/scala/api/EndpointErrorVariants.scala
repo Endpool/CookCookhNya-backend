@@ -1,6 +1,13 @@
 package api
 
-import domain.{DbError, ErrorResponse, IngredientError, RecipeError, StorageError, UserError}
+import domain.{
+  ErrorResponse,
+  IngredientError,
+  StorageError,
+  UserError,
+  RecipeError,
+  InternalServerError,
+}
 
 import io.circe.generic.auto.*
 import io.circe.{Decoder, Encoder}
@@ -18,8 +25,7 @@ extension (sc: StatusCode)
 
 object EndpointErrorVariants:
   val ingredientNotFoundVariant  = NotFound.variantJson[IngredientError.NotFound]
-  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound] 
+  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
   val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
   val recipeNotFoundVariant = NotFound.variantJson[RecipeError.NotFound]
-
-  val serverErrorVariant = InternalServerError.variantJson[DbError.UnexpectedDbError] 
+  val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]
