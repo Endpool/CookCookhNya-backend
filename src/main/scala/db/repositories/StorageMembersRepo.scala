@@ -1,7 +1,7 @@
 package db.repositories
 
-import db.tables.{DbStorageMember, storageMembersTable}
-import db.DbError.{DbNotRespondingError, FailedDbQuery}
+import db.tables.{DbStorageMember, storageMembersTable, storagesTable}
+import db.DbError
 import domain.{UserId, StorageId}
 import db.{DbError, handleDbError}
 
@@ -61,6 +61,12 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       sql"""
         SELECT ${storageMembersTable.storageId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.memberId} = $userId
+
+        UNION
+
+        SELECT ${storagesTable.id}
+        FROM $storagesTable
+        WHERE ${storagesTable.ownerId} = $userId
       """.query[UserId].run()
     }.mapError(handleDbError)
 
