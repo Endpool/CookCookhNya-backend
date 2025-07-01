@@ -59,7 +59,7 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     IO[DbError, Vector[StorageId]] =
     xa.transact {
       sql"""
-        SELECT ${storageMembersTable.storageId} FROM ${storageMembersTable}
+        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
         WHERE ${storageMembersTable.memberId} = $userId
 
         UNION
