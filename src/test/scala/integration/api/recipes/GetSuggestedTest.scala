@@ -12,8 +12,10 @@ import zio.http.*
 import zio.test.*
 import zio.test.Assertion.*
 
+case class ServerFiber(server: Fiber.Runtime[Throwable, Nothing])
+
 object IntegrationTest extends ZIOSpecDefault:
-  def server(dataSourceDescr: DataSourceDescription) =
+  def server(dataSourceDescr: DataSourceDescription): ZIO[Any, Throwable, Nothing] =
     Server.serve(Main.app)
       .provide(
         ZLayer.succeed(Server.Config.default.port(8080)),
@@ -29,38 +31,38 @@ object IntegrationTest extends ZIOSpecDefault:
       )
 
   override def spec =
-    suite("Test tests") {
-      test("get my storages returns status Ok") {
-        for
-          resp <- Client.request(
-            Request.get("http://localhost:8080/my/storages")
-              .addHeader("Authorization", "Bearer 52")
-          )
-        yield assert(resp.status)(equalTo(Status.Ok))
+    test("get my storages returns status Ok") {
+      for
+        resp <- Client.batched(
+          Request.get("http://localhost:8080/my/storages")
+            .addHeader("Authorization", "Bearer 52")
+        ).provide(Client.default)
+      yield assertTrue(resp.status == Status.Ok)
+    }.provideSomeLayerShared(serverLayer)
+     .provideSomeLayer(psqlContainerLayer)
+
+  val psqlContainerLayer: ZLayer[Any, Throwable, PostgreSQLContainer] =
+    ZLayer.scoped {
+      ZIO.acquireRelease(
+        ZIO.attempt {
+          val container = PostgreSQLContainer()
+          container.start
+          container
+        }
+      ){ container =>
+        ZIO.attemptBlocking{ container.stop }.orDie
       }
-    }.provideSomeLayer {
-      ZLayer.scoped {
-        for
-          container <- getContainer
-          dataSourceDescr = DataSourceDescription(
-            container.jdbcUrl,
-            container.username,
-            container.password,
-            container.driverClassName
-          )
-          fiber <- server(dataSourceDescr).forkDaemon
-          client <- ZIO.service[Client].provide(Client.default)
-        yield client
-      } ++ ZLayer.succeed(Scope.global)
     }
 
-  val getContainer: ZIO[Scope, Throwable, PostgreSQLContainer] =
-    ZIO.acquireRelease(
-      ZIO.attempt {
-        val container = PostgreSQLContainer()
-        container.start
-        container
-      }
-    ){ container =>
-      ZIO.attempt{ container.stop }.orDie
-    }
+  def serverLayer: ZLayer[PostgreSQLContainer, Nothing, ServerFiber] = ZLayer.scoped {
+    for
+      container <- ZIO.service[PostgreSQLContainer]
+      dataSourceDescr = DataSourceDescription(
+        container.jdbcUrl,
+        container.username,
+        container.password,
+        container.driverClassName
+      )
+      server <- server(dataSourceDescr).forkScoped
+    yield ServerFiber(server)
+  }
