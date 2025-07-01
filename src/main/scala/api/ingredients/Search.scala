@@ -2,8 +2,9 @@ package api.ingredients
 
 import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
-import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
-import domain.{InternalServerError, IngredientId, StorageId}
+import api.zSecuredServerLogic
+import db.repositories.{IngredientsRepo, StorageIngredientsRepo, StorageMembersRepo}
+import domain.{IngredientId, InternalServerError, StorageId, UserId}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -25,6 +26,7 @@ private case class SearchResults(
 
 private val search: ZServerEndpoint[AppEnv, Any] =
   endpoint
+    .securityIn(auth.bearer[UserId]())
     .get
     .in("ingredients-for-storage")
     .in(query[String]("query"))
@@ -33,17 +35,17 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in(query[Int]("offset").default(0))
     .out(jsonBody[SearchResults])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchHandler)
+    .zSecuredServerLogic(searchHandler)
 
-private def searchHandler(
+private def searchHandler(userId: UserId)(
                            query: String,
                            storageId: StorageId,
                            size: Int,
                            offset: Int
                          ):
-  ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchResults] =
+  ZIO[IngredientsRepo & StorageIngredientsRepo & StorageMembersRepo, InternalServerError, SearchResults] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll).mapError(_ => InternalServerError())
+    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll(userId)).mapError(_ => InternalServerError())
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
       ingredient =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
