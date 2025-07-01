@@ -1,0 +1,37 @@
+ame: CI
+
+on:
+  push:
+    branches:
+      - integration-tests
+  pull_request:
+    branches:
+      - integration-tests
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Scala and SBT
+        uses: coursier/setup-action@v1
+        with:
+          jvm: adopt:17
+          apps: sbt
+
+      - name: Cache SBT dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.sbt
+            ~/.ivy2/cache
+            ~/.cache/coursier
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/build.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-
+
+      - name: Run tests
+        run: sbt test
