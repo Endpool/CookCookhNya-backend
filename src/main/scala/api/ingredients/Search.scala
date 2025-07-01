@@ -2,7 +2,6 @@ package api.ingredients
 
 import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
-import api.zSecuredServerLogic
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo, StorageMembersRepo}
 import domain.{IngredientId, InternalServerError, StorageId, UserId}
 
@@ -26,7 +25,6 @@ private case class SearchResults(
 
 private val search: ZServerEndpoint[AppEnv, Any] =
   endpoint
-    .securityIn(auth.bearer[UserId]())
     .get
     .in("ingredients-for-storage")
     .in(query[String]("query"))
@@ -35,9 +33,9 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in(query[Int]("offset").default(0))
     .out(jsonBody[SearchResults])
     .errorOut(oneOf(serverErrorVariant))
-    .zSecuredServerLogic(searchHandler)
+    .zServerLogic(searchHandler)
 
-private def searchHandler(userId: UserId)(
+private def searchHandler(
                            query: String,
                            storageId: StorageId,
                            size: Int,
@@ -45,7 +43,7 @@ private def searchHandler(userId: UserId)(
                          ):
   ZIO[IngredientsRepo & StorageIngredientsRepo & StorageMembersRepo, InternalServerError, SearchResults] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll(userId)).mapError(_ => InternalServerError())
+    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
       ingredient =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
