@@ -18,6 +18,11 @@ private case class IngredientSearchResult(
                                          available: Boolean
                                          )
 
+private case class SearchResults(
+                                  results: Vector[IngredientSearchResult],
+                                  found: Int
+                                )
+
 private val search: ZServerEndpoint[AppEnv, Any] =
   endpoint
     .get
@@ -26,7 +31,7 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in(query[StorageId]("storage"))
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
-    .out(jsonBody[Vector[IngredientSearchResult]])
+    .out(jsonBody[SearchResults])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
 
@@ -36,7 +41,7 @@ private def searchHandler(
                            size: Int,
                            offset: Int
                          ):
-  ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, Vector[IngredientSearchResult]] =
+  ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchResults] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll).mapError(_ => InternalServerError())
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
@@ -45,10 +50,15 @@ private def searchHandler(
           .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
           .mapError(_ => InternalServerError())
     }
-    res = allIngredientsAvailability.sortBy(
-      i => (
-        - FuzzySearch.tokenSetPartialRatio(query, i.name), // negate the ratio to make order descending
-        (i.name.length - query.length).abs // secondary sorting is performed by length difference
+    res = allIngredientsAvailability
+      .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
+      .filter((_, ratio) => ratio >= 70) // 70 is the min ratio threshold
+      .sortBy(
+        (i, ratio) => (
+          - ratio, // negate the ratio to make order descending
+          (i.name.length - query.length).abs // secondary sorting is performed by length difference
         )
-    ).slice(offset, offset + size)
-  yield res
+      )
+      .map(_._1)
+
+  yield SearchResults(res.slice(offset, offset + size), res.length)
