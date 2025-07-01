@@ -21,7 +21,15 @@ private final case class ShoppingListsLive(xa: Transactor)
   override def addIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
   ZIO[ShoppingListsRepo, DbError, Unit] =
     xa.transact {
-      insertAll(ingredients.map(ingredientId => DbShoppingList(ownerId, ingredientId)))
+      ingredients.foreach { ingredientId =>
+        sql"""
+             insert into ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+             values ($ownerId, $ingredientId)
+             on conflict (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+             do nothing
+           """.update.run()
+        ()
+      }
     }.mapError(handleDbError)
 
   override def getIngredients(ownerId: UserId):
