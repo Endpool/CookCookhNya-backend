@@ -24,24 +24,31 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in("ingredients-for-storage")
     .in(query[String]("query"))
     .in(query[StorageId]("storage"))
+    .in(query[Int]("size").default(2))
+    .in(query[Int]("offset").default(0))
     .out(jsonBody[Vector[IngredientSearchResult]])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
 
-private def searchHandler(query: String, storageId: StorageId):
+private def searchHandler(
+                           query: String,
+                           storageId: StorageId,
+                           size: Int,
+                           offset: Int
+                         ):
   ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, Vector[IngredientSearchResult]] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll).mapError(_ => InternalServerError())
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
       ingredient =>
-        ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id)).debug
-          .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage)).debug
+        ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
+          .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
           .mapError(_ => InternalServerError())
-    }.debug
+    }
     res = allIngredientsAvailability.sortBy(
       i => (
         - FuzzySearch.tokenSetPartialRatio(query, i.name), // negate the ratio to make order descending
         (i.name.length - query.length).abs // secondary sorting is performed by length difference
         )
-    )
+    ).slice(offset, offset + size)
   yield res
