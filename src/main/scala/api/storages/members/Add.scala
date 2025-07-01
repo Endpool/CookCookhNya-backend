@@ -19,7 +19,7 @@ private val add: ZServerEndpoint[AppEnv, Any] =
   .put
   .in(path[UserId]("memberId"))
   .out(statusCode(StatusCode.NoContent))
-  .errorOut(oneOf(userNotFoundVariant, storageNotFoundVariant))
+  .errorOut(oneOf(serverErrorVariant, userNotFoundVariant, storageNotFoundVariant))
   .zSecuredServerLogic(addHandler)
 
 private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
