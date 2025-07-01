@@ -10,8 +10,9 @@ trait IngredientsRepo:
   def add(name: String): IO[DbError, DbIngredient]
   def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
-  def getAll(userId: UserId):
-  ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] 
+  def getAll: IO[DbError, Vector[DbIngredient]] 
+  def getAllOwnedBy(userId: UserId):
+    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] 
 
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
@@ -30,7 +31,12 @@ private final case class IngredientsRepoLive(xa: Transactor)
       handleDbError
     }
 
-  override def getAll(userId: UserId):
+  override def getAll: IO[DbError, Vector[DbIngredient]] =
+    xa.transact(findAll).mapError {
+      handleDbError
+    }
+    
+  override def getAllOwnedBy(userId: UserId):
     ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
     for 
       userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorages(userId))
