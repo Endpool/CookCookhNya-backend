@@ -30,6 +30,8 @@ lazy val root = (project in file("."))
 
       "io.circe" %% "circe-generic" % circeVersion,
 
-      "ch.qos.logback" % "logback-classic" % "1.4.14"
+      "ch.qos.logback" % "logback-classic" % "1.4.14",
+
+      "me.xdrop" % "fuzzywuzzy" % "1.4.0"
     )
   )
