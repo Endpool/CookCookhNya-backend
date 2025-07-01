@@ -1,12 +1,12 @@
-ame: CI
+name: CI
 
 on:
   push:
     branches:
-      - integration-tests
+      - main
   pull_request:
     branches:
-      - integration-tests
+      - main
 
 jobs:
   test:
