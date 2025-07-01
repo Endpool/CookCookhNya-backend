@@ -17,6 +17,8 @@ trait StorageIngredientsRepo:
   def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]]
 
+  def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean]
+
 private final case class StorageIngredientsRepoLive(xa: Transactor)
   extends Repo[DbStorageIngredient, DbStorageIngredient, (StorageId, UserId)] with StorageIngredientsRepo:
 
@@ -52,6 +54,16 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     }.mapError {
       handleDbError
     }
+
+  override def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean] =
+    xa.transact {
+      val spec = Spec[DbStorageIngredient]
+        .where(sql"${storageIngredientsTable.storageId} = $storageId")
+        .where(sql"${storageIngredientsTable.ingredientId} = $ingredientId")
+        .limit(1)
+      val exists = ! findAll(spec).isEmpty
+      exists
+    }.mapError(handleDbError)
 
 object StorageIngredientsRepoLive:
   val layer: RLayer[Transactor, StorageIngredientsRepo] =

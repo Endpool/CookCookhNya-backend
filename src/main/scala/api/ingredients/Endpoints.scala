@@ -11,4 +11,5 @@ val ingredientsEndpoints = List(
   delete,
   getAll,
   get,
+  search
 )
