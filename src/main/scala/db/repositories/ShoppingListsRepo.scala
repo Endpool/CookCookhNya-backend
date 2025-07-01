@@ -36,7 +36,13 @@ private final case class ShoppingListsLive(xa: Transactor)
   override def deleteIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
   ZIO[ShoppingListsRepo, DbError, Unit] =
     xa.transact {
-      deleteAll(ingredients.map(ingredientId => DbShoppingList(ownerId, ingredientId)))
+      ingredients.foreach { ingredientId =>
+        sql"""
+             delete from ${shoppingListTable}
+             where ${shoppingListTable.ownerId} = $ownerId
+             and ${shoppingListTable.ingredientId} = $ingredientId
+           """.update.run()
+      }
       ()
     }.mapError(handleDbError)
 
