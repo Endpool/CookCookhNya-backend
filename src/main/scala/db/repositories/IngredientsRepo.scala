@@ -1,9 +1,8 @@
 package db.repositories
 
 import db.tables.{DbIngredient, DbIngredientCreator}
-import domain.IngredientId
+import domain.{IngredientId, UserId}
 import db.{DbError, handleDbError}
-
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
@@ -11,7 +10,7 @@ trait IngredientsRepo:
   def add(name: String): IO[DbError, DbIngredient]
   def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
-  def getAll: IO[DbError, Vector[DbIngredient]]
+  def getAll: ZIO[StorageMembersRepo & StorageIngredientsRepo,DbError, Vector[DbIngredient]]
 
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
@@ -30,10 +29,18 @@ private final case class IngredientsRepoLive(xa: Transactor)
       handleDbError
     }
 
-  override def getAll: IO[DbError, Vector[DbIngredient]] =
-    xa.transact(findAll).mapError {
-      handleDbError
-    }
+  override def getAll(userId: UserId):
+    ZIO[StorageMembersRepo & StorageIngredientsRepo,DbError, Vector[DbIngredient]] =
+    for 
+      userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorages(userId))
+      userIngredientIds <- ZIO.foreach(userStorageIds) {
+        storageId => ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
+      }.map(_.flatten)
+//      userIngredients <- userIngredientIds.map(findById(_)).map(_.flatten)
+        
+    yield userIngredients  
+      
+    
 
 object IngredientsRepoLive:
   val layer: RLayer[Transactor, IngredientsRepo] =
