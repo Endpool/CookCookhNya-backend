@@ -22,9 +22,15 @@ private final case class StorageMembersRepoLive(xa: Transactor)
 
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
     IO[DbError, Unit] =
-    xa.transact(insert(DbStorageMember(storageId, memberId))).mapError {
-      handleDbError
-    }
+    xa.transact {
+      sql"""
+           insert into ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+           values ($storageId, $memberId)
+           on conflict (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+           do nothing
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
     IO[DbError, Unit] =
