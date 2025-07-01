@@ -1,9 +1,9 @@
 package api
 
-import db.DbError.FailedDbQuery
+import _root_.db.DbError.FailedDbQuery
 import domain.{IngredientError, InternalServerError, StorageError, UserError}
 import zio.{IO, ZIO}
-import db.tables.*
+import _root_.db.tables.*
 
 case class ForeignKeyViolation(keyName: String, keyValue: String, tableName: String)
 
