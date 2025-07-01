@@ -1,12 +1,13 @@
 package api.recipes
 
 import api.{AppEnv, EndpointErrorVariants, handleFailedSqlQuery}
-import com.augustnagro.magnum.magzio
-import domain.{InternalServerError, IngredientId, RecipeId, StorageId}
+import api.zSecuredServerLogic
+import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 import domain.RecipeError.NotFound
-import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable}
+import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 import db.{DbError, handleDbError}
 
+import com.augustnagro.magnum.magzio
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
@@ -36,13 +37,14 @@ private case class RawRecipeResult(
 
 val get: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
+    .securityIn(auth.bearer[UserId]())
     .get
     .in(path[RecipeId])
     .errorOut(oneOf(EndpointErrorVariants.recipeNotFoundVariant, EndpointErrorVariants.storageNotFoundVariant))
     .out(jsonBody[RecipeResp])
-    .zServerLogic(getHandler)
+    .zSecuredServerLogic(getHandler)
 
-def getHandler(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
+def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
   val dbEffect = ZIO.serviceWithZIO[magzio.Transactor](_.transact {
     val frag =
       sql"""
@@ -58,6 +60,17 @@ def getHandler(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFou
                     SELECT JSON_AGG(DISTINCT si.storage_id)
                     FROM $storageIngredientsTable si
                     WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
+                      AND si.${storageIngredientsTable.storageId} IN
+                       (
+                        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+                        WHERE ${storageMembersTable.memberId} = $userId
+
+                        UNION
+
+                        SELECT ${storagesTable.id}
+                        FROM $storagesTable
+                        WHERE ${storagesTable.ownerId} = $userId
+                       )
                   ),
                   '[]'::json
                 )
