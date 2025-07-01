@@ -10,7 +10,8 @@ trait IngredientsRepo:
   def add(name: String): IO[DbError, DbIngredient]
   def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
-  def getAll: ZIO[StorageMembersRepo & StorageIngredientsRepo,DbError, Vector[DbIngredient]]
+  def getAll(userId: UserId):
+  ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] 
 
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
@@ -30,18 +31,18 @@ private final case class IngredientsRepoLive(xa: Transactor)
     }
 
   override def getAll(userId: UserId):
-    ZIO[StorageMembersRepo & StorageIngredientsRepo,DbError, Vector[DbIngredient]] =
+    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
     for 
       userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorages(userId))
       userIngredientIds <- ZIO.foreach(userStorageIds) {
         storageId => ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
       }.map(_.flatten)
-//      userIngredients <- userIngredientIds.map(findById(_)).map(_.flatten)
-        
-    yield userIngredients  
-      
-    
+      userIngredients <- xa.transact {
+        userIngredientIds.map(findById).flatten
+      }.mapError(handleDbError) 
 
+    yield userIngredients
+      
 object IngredientsRepoLive:
   val layer: RLayer[Transactor, IngredientsRepo] =
     ZLayer.fromFunction(IngredientsRepoLive(_))
