@@ -36,9 +36,22 @@ jobs:
             ~/.sbt
             ~/.ivy2/cache
             ~/.cache/coursier
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt', '**/project/build.properties') }}
+          key: ${{ runner.os }}-sbt-deps-${{ hashFiles('**/build.sbt', '**/project/build.properties', '**/project/plugins.sbt') }}
           restore-keys: |
-            ${{ runner.os }}-sbt-
+            ${{ runner.os }}-sbt-deps-
+
+      - name: Cache SBT build
+        uses: actions/cache@v4
+        with:
+          path: |
+            target
+            **/target
+          key: ${{ runner.os }}-sbt-build-${{ hashFiles('src/main/**/*.scala', 'src/test/**/*.scala', '**/build.sbt', '**/project/build.properties', '**/project/plugins.sbt') }}
+          restore-keys: |
+            ${{ runner.os }}-sbt-build-
+
+      - name: Compile
+        run: sbt compile test:compile
 
       - name: Run tests
         run: sbt test
