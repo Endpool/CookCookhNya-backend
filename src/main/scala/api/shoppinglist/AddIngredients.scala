@@ -12,14 +12,14 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val add: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
+private val addIngredients: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
   .put
   .in(query[Vector[IngredientId]]("ingredient-id"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-  .zSecuredServerLogic(addIngredients)
+  .zSecuredServerLogic(addIngredientsHandler)
 
-def addIngredients(userId: UserId)(ingredients: Vector[IngredientId]):
+private def addIngredientsHandler(userId: UserId)(ingredients: Vector[IngredientId]):
 ZIO[ShoppingListsRepo, InternalServerError | NotFound, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
     _.addIngredients(userId, ingredients)

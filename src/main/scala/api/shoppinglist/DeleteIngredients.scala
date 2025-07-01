@@ -13,14 +13,14 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{Exit, ZIO}
 
-val delete: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
+private val deleteIngredients: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
   .delete
   .in(query[Vector[IngredientId]]("ingredient-id"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(serverErrorVariant))
-  .zSecuredServerLogic(deleteIngredients)
+  .zSecuredServerLogic(deleteIngredientsHandler)
 
-def deleteIngredients(userId: UserId)(ingredients: Vector[IngredientId]):
+private def deleteIngredientsHandler(userId: UserId)(ingredients: Vector[IngredientId]):
 ZIO[ShoppingListsRepo, InternalServerError, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
     _.deleteIngredients(userId, ingredients)

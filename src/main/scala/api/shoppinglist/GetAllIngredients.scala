@@ -16,13 +16,13 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{Exit, ZIO}
 
-val get: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
+private val getIngredients: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
   .get
   .out(jsonBody[Seq[IngredientResp]])
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-  .zSecuredServerLogic(getIngredients)
+  .zSecuredServerLogic(getIngredientsHandler)
 
-def getIngredients(userId: UserId)(u: Unit):
+private def getIngredientsHandler(userId: UserId)(u: Unit):
 ZIO[ShoppingListsRepo & IngredientsRepo, InternalServerError | NotFound, Seq[IngredientResp]] =
   {
     for
