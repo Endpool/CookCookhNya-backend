@@ -16,6 +16,9 @@ trait StorageMembersRepo:
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
 
+  def getAllUserStorages(userId: UserId):
+    IO[DbError, Vector[StorageId]]
+  
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -49,6 +52,15 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       sql"""
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
+      """.query[UserId].run()
+    }.mapError(handleDbError)
+
+  override def getAllUserStorages(userId: UserId):
+    IO[DbError, Vector[StorageId]] =
+    xa.transact {
+      sql"""
+        SELECT ${storageMembersTable.storageId} FROM ${storageMembersTable}
+        WHERE ${storageMembersTable.memberId} = $userId
       """.query[UserId].run()
     }.mapError(handleDbError)
 
