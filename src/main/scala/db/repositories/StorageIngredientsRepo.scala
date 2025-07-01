@@ -22,9 +22,14 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
-    xa.transact(insert(DbStorageIngredient(storageId, ingredientId))).mapError {
-      handleDbError
-    }
+    xa.transact {
+      sql"""
+           insert into ${storageIngredientsTable}
+           values ($storageId, $ingredientId)
+           on conflict do nothing
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
