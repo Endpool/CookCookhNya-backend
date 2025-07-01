@@ -38,5 +38,10 @@ private def searchHandler(query: String, storageId: StorageId):
           .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage)).debug
           .mapError(_ => InternalServerError())
     }.debug
-    res = allIngredientsAvailability.sortBy(i => - FuzzySearch.tokenSetPartialRatio(query, i.name)) // negate the ratio to make order descending
+    res = allIngredientsAvailability.sortBy(
+      i => (
+        - FuzzySearch.tokenSetPartialRatio(query, i.name), // negate the ratio to make order descending
+        (i.name.length - query.length).abs // secondary sorting is performed by length difference
+        )
+    )
   yield res
