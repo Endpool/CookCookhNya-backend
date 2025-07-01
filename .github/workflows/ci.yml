@@ -8,6 +8,7 @@ on:
     branches:
       - integration-tests
 
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -24,8 +25,9 @@ jobs:
 
       - name: Install SBT
         run: |
-          curl -fL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz | tar xz -C /usr/local
-          echo "/usr/local/sbt/bin" >> $GITHUB_PATH
+          mkdir -p ~/.local/sbt
+          curl -fL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz | tar xz -C ~/.local/sbt --strip-components=1
+          echo "~/.local/sbt/bin" >> $GITHUB_PATH
 
       - name: Cache SBT dependencies
         uses: actions/cache@v4
