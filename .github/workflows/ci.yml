@@ -14,16 +14,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Scala and SBT
-        uses: coursier/setup-action@v1
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          jvm: adopt:17
-          apps: sbt
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install SBT
+        run: |
+          curl -fL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz | tar xz -C /usr/local
+          echo "/usr/local/sbt/bin" >> $GITHUB_PATH
 
       - name: Cache SBT dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.sbt
