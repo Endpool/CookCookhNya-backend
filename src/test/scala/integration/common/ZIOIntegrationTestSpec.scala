@@ -22,6 +22,7 @@ import zio.http.{Client, Server, TestServer, URL}
 import zio.test.ZIOSpecDefault
 import integration.common.Utils.addAuthorization
 import domain.UserId
+import zio.test.Gen
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   protected def testLayer:
@@ -46,18 +47,30 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       ++ UsersRepo.layer
     )
 
-  protected def authorize: RIO[Client, UserId] =
-    val userId = 52
-    val alias = Some("alias")
-    val fullName = "fullName"
-    for
-      resp <- Client.batched(
-        put("users")
-          .withJsonBody(CreateUserReqBody(alias, fullName))
-          .addAuthorization(userId)
-      )
-      _ <- resp.body.asString
-    yield userId
+  protected val registerUser: RIO[Client, UserId] = for
+    userId <- Gen.long(1, 100000000).runHead.map(_.getOrElse(52L))
+    alias <- Gen.alphaNumericStringBounded(3, 13).runHead
+    fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.map(_.getOrElse("fullName"))
+    resp <- Client.batched(
+      put("users")
+        .withJsonBody(CreateUserReqBody(alias, fullName))
+        .addAuthorization(userId)
+    )
+    _ <- resp.body.asString
+  yield userId
+
+  protected def registerUser(
+    userId: UserId,
+    alias: Option[String],
+    fullName: String,
+  ): RIO[Client, UserId] = for
+    resp <- Client.batched(
+      put("users")
+        .withJsonBody(CreateUserReqBody(alias, fullName))
+        .addAuthorization(userId)
+    )
+    _ <- resp.body.asString
+  yield userId
 
   private val psqlContainerLayer: TaskLayer[PostgreSQLContainer] = ZLayer.scoped {
     ZIO.acquireRelease(

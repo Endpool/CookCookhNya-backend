@@ -2,6 +2,7 @@ package integration.api.storages
 
 import api.storages.CreateStorageReqBody
 import db.dbLayer
+import db.repositories.StoragesRepo
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
@@ -9,9 +10,12 @@ import io.circe.generic.auto.*
 import zio.http.{Client, Status}
 import zio.{Scope, ZIO}
 import zio.test.Assertion.*
-import zio.test.{TestEnvironment, assertTrue, Spec, SmartAssertionOps, SmartAssertMacros}
-import zio.test.*
-import db.repositories.StoragesRepo
+import zio.test.{
+  TestEnvironment,
+  assert, assertTrue,
+  Spec,
+  SmartAssertionOps, SmartAssertMacros, TestLensOptionOps
+}
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
@@ -24,21 +28,23 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
       },
       test("When authorized should get 200") {
         for
-          _ <- authorize
+          userId <- registerUser
           resp <- Client.batched(
             post("my/storages")
               .withJsonBody(CreateStorageReqBody("storage"))
+              .addAuthorization(userId)
           )
         yield assertTrue(resp.status == Status.Ok)
       },
       test("When authorized storage should be added to db") {
         var storageName = "storage"
         for
-          _ <- authorize
+          userId <- registerUser
 
           resp <- Client.batched(
             post("my/storages")
               .withJsonBody(CreateStorageReqBody("storage"))
+              .addAuthorization(userId)
           )
 
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
@@ -51,11 +57,12 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
       test("When created storage should have creator as owner") {
         var storageName = "storage"
         for
-          userId <- authorize
+          userId <- registerUser
 
           resp <- Client.batched(
             post("my/storages")
               .withJsonBody(CreateStorageReqBody("storage"))
+              .addAuthorization(userId)
           )
 
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
