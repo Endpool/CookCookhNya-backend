@@ -50,6 +50,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-build-
 
+      - name: Pull Docker images
+        run: |
+          docker pull testcontainers/ryuk:0.9.0
+          docker pull postgres:9.6.12
+
       - name: Compile
         run: sbt compile test:compile
 
