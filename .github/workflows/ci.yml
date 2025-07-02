@@ -28,9 +28,6 @@ jobs:
           curl -fL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz | tar xz -C ~/.local/sbt --strip-components=1
           echo "~/.local/sbt/bin" >> $GITHUB_PATH
 
-      - name: Debug Cache Key
-        run: echo "Cache Key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci.yml') }}"
-      
       - name: Cache SBT dependencies
         uses: actions/cache@v4
         with:
@@ -52,6 +49,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-build-
 
+      - name: Debug Cache Key
+        run: echo "Cache Key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}"
+
       - name: Cache Docker images
         id: cache-docker-images
         uses: actions/cache@v4
@@ -59,9 +59,12 @@ jobs:
           path: |
             /tmp/ryuk.tar
             /tmp/postgres.tar
-          key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci.yml') }}
+          key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}
           restore-keys: |
             ${{ runner.os }}-docker-images-
+
+      - name: Check Cache Hit
+        run: echo "Cache Hit: ${{ steps.cache-docker-images.outputs.cache-hit }}"
 
       - name: Load cached Docker images
         if: steps.cache-docker-images.outputs.cache-hit == 'true'
@@ -76,14 +79,8 @@ jobs:
           docker pull postgres:9.6.12
           docker save -o /tmp/ryuk.tar testcontainers/ryuk:0.9.0
           docker save -o /tmp/postgres.tar postgres:9.6.12
+          ls -l /tmp/ryuk.tar /tmp/postgres.tar
 
-      - name: List Tar Files
-        if: steps.cache-docker-images.outputs.cache-hit != 'true'
-        run: ls -l /tmp/ryuk.tar /tmp/postgres.tar
-
-      - name: Check Cache Hit
-        run: echo "Cache Hit: ${{ steps.cache-docker-images.outputs.cache-hit }}"
-        
       - name: Compile
         run: sbt compile test:compile
 
