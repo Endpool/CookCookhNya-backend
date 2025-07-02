@@ -5,12 +5,14 @@ import api.users.CreateUserReqBody
 import db.{DataSourceDescription, dbLayer}
 import db.repositories.{
   IngredientsRepo,
+  RecipeIngredientsRepo,
+  RecipesDomainRepo,
+  RecipesRepo,
+  ShoppingListsRepo,
   StorageIngredientsRepo,
   StorageMembersRepo,
   StoragesRepo,
   UsersRepo,
-  RecipeIngredientsRepo,
-  RecipesRepo
 }
 import integration.common.Utils.{put, withJsonBody}
 
@@ -99,7 +101,9 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       .provideSomeLayer(
         IngredientsRepo.layer ++
         RecipeIngredientsRepo.layer ++
+        RecipesDomainRepo.layer ++
         RecipesRepo.layer ++
+        ShoppingListsRepo.layer ++
         StorageIngredientsRepo.layer ++
         StorageMembersRepo.layer ++
         StoragesRepo.layer ++
