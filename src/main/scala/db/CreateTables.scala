@@ -68,7 +68,17 @@ def createTables(xa: Transactor) = {
           FOREIGN KEY (${recipeIngredientsTable.recipeId}) REFERENCES ${recipesTable}(${recipesTable.id}) ON DELETE CASCADE,
           FOREIGN KEY (${recipeIngredientsTable.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
         );
-      """
+      """,
+      
+      sql"""
+         CREATE TABLE IF NOT EXISTS ${shoppingListTable}(
+          ${shoppingListTable.ownerId} BIGINT NOT NULL,
+          ${shoppingListTable.ingredientId} BIGINT NOT NULL,
+          PRIMARY KEY (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId}),
+          FOREIGN KEY (${shoppingListTable.ownerId}) REFERENCES ${usersTable}(${usersTable.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${shoppingListTable.ingredientId}) REFERENCES ${ingredientsTable}(${ingredientsTable.id}) ON DELETE CASCADE
+         )
+       """
     )
 
     tableList.map(_.update.run())

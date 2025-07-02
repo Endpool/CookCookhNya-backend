@@ -65,6 +65,6 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
       exists
     }.mapError(handleDbError)
 
-object StorageIngredientsRepoLive:
+object StorageIngredientsRepo:
   val layer: RLayer[Transactor, StorageIngredientsRepo] =
     ZLayer.fromFunction(StorageIngredientsRepoLive(_))

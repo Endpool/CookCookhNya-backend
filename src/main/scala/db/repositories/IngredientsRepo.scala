@@ -35,7 +35,7 @@ private final case class IngredientsRepoLive(xa: Transactor)
     xa.transact(findAll).mapError {
       handleDbError
     }
-    
+  
   override def getAllOwnedBy(userId: UserId):
     ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
     for 
@@ -49,6 +49,6 @@ private final case class IngredientsRepoLive(xa: Transactor)
 
     yield userIngredients
       
-object IngredientsRepoLive:
+object IngredientsRepo:
   val layer: RLayer[Transactor, IngredientsRepo] =
     ZLayer.fromFunction(IngredientsRepoLive(_))
