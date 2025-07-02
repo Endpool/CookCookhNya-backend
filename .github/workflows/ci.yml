@@ -49,8 +49,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-build-
 
-      - name: Debug Cache Key
-        run: echo "Cache Key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}"
+    
 
       - name: Cache Docker images
         id: cache-docker-images
