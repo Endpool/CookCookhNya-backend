@@ -7,10 +7,10 @@ import zio.{ZLayer, Layer, ZIO, IO, System, Task, RLayer}
 import zio.Scope
 
 case class DataSourceDescription(
-  jdbcUrl : String,
-  username : String,
-  password : String,
-  driver : String
+  jdbcUrl: String,
+  username: String,
+  password: String,
+  driver: String
 ):
   def toDataSource: DataSource =
     val hikari = new HikariDataSource()
@@ -48,7 +48,7 @@ object DataSourceDescription:
       password <- System.env("DB_PASSWORD").someOrFail(
         new IllegalStateException("DB_PASSWORD environment variable not set")
       )
-    yield DataSourceDescription(address, dbName, username, password)
+    yield DataSourceDescription(address, dbName, username, password, "org.postgresql.Driver")
   }
 
 val dbLayer: RLayer[DataSourceDescription, Transactor] =
