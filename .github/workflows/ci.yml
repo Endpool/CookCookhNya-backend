@@ -28,6 +28,9 @@ jobs:
           curl -fL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz | tar xz -C ~/.local/sbt --strip-components=1
           echo "~/.local/sbt/bin" >> $GITHUB_PATH
 
+      - name: Debug Cache Key
+        run: echo "Cache Key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci.yml') }}"
+      
       - name: Cache SBT dependencies
         uses: actions/cache@v4
         with:
@@ -56,7 +59,7 @@ jobs:
           path: |
             /tmp/ryuk.tar
             /tmp/postgres.tar
-          key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}
+          key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci.yml') }}
           restore-keys: |
             ${{ runner.os }}-docker-images-
 
@@ -74,6 +77,13 @@ jobs:
           docker save -o /tmp/ryuk.tar testcontainers/ryuk:0.9.0
           docker save -o /tmp/postgres.tar postgres:9.6.12
 
+      - name: List Tar Files
+        if: steps.cache-docker-images.outputs.cache-hit != 'true'
+        run: ls -l /tmp/ryuk.tar /tmp/postgres.tar
+
+      - name: Check Cache Hit
+        run: echo "Cache Hit: ${{ steps.cache-docker-images.outputs.cache-hit }}"
+        
       - name: Compile
         run: sbt compile test:compile
 
