@@ -12,7 +12,7 @@ import zio.{Scope, ZIO}
 import zio.test.Assertion.*
 import zio.test.{
   TestEnvironment,
-  assert, assertTrue,
+  assertTrue,
   Spec,
   SmartAssertionOps, SmartAssertMacros, TestLensOptionOps
 }
@@ -50,7 +50,6 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
           storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
         yield assertTrue(resp.status == Status.Ok)
-           && assert(storage)(isSome)
            && assertTrue(storage.is(_.some).id == storageId)
            && assertTrue(storage.is(_.some).name == storageName)
       },
