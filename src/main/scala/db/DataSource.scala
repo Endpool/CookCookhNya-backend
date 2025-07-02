@@ -3,7 +3,8 @@ package db
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.HikariDataSource
 import javax.sql.DataSource
-import zio.{ZLayer, IO, System, Task}
+import zio.{ZLayer, Layer, ZIO, IO, System, Task, RLayer}
+import zio.Scope
 
 case class DataSourceDescription(
   jdbcUrl : String,
@@ -33,31 +34,27 @@ object DataSourceDescription:
     driver
   )
 
-def dbLayer(dataSourceDescr: Task[DataSourceDescription]) : ZLayer[Any, Throwable, Transactor] =
-  for
-    ds <- ZLayer.fromZIO(dataSourceDescr.map(_.toDataSource))
-    xa <- Transactor.layer(ds.get)
-    _  <- ZLayer(createTables(xa.get))
-  yield xa
+  val layerFromEnv: Layer[RuntimeException, DataSourceDescription] = ZLayer.fromZIO {
+    for
+      address  <- System.env("DB_ADDRESS").someOrFail(
+        new IllegalStateException("DB_ADDRESS environment variable not set")
+      )
+      dbName   <- System.env("DB_NAME").someOrFail(
+        new IllegalStateException("DB_NAME environment variable not set")
+      )
+      username <- System.env("DB_USER").someOrFail(
+        new IllegalStateException("DB_USER environment variable not set")
+      )
+      password <- System.env("DB_PASSWORD").someOrFail(
+        new IllegalStateException("DB_PASSWORD environment variable not set")
+      )
+    yield DataSourceDescription(address, dbName, username, password)
+  }
 
-def dbLayer(dataSourceDescr: DataSourceDescription) : ZLayer[Any, Throwable, Transactor] =
+val dbLayer: RLayer[DataSourceDescription, Transactor] = ZLayer.scopedEnvironment {
   for
-    xa <- Transactor.layer(dataSourceDescr.toDataSource)
-    _  <- ZLayer(createTables(xa.get))
+    dataSourceDescr <- ZIO.service[DataSourceDescription]
+    xa <- Transactor.layer(dataSourceDescr.toDataSource).build
+    _  <- createTables(xa.get)
   yield xa
-
-val dataSourceDescriptionFromEnv: IO[RuntimeException, DataSourceDescription] =
-  for
-    address  <- System.env("DB_ADDRESS").someOrFail(
-      new IllegalStateException("DB_ADDRESS environment variable not set")
-    )
-    dbName   <- System.env("DB_NAME").someOrFail(
-      new IllegalStateException("DB_NAME environment variable not set")
-    )
-    username <- System.env("DB_USER").someOrFail(
-      new IllegalStateException("DB_USER environment variable not set")
-    )
-    password <- System.env("DB_PASSWORD").someOrFail(
-      new IllegalStateException("DB_PASSWORD environment variable not set")
-    )
-  yield DataSourceDescription(address, dbName, username, password)
+}

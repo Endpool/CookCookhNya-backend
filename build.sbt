@@ -36,6 +36,7 @@ lazy val root = (project in file("."))
       // tests
       "dev.zio" %% "zio-test" % zioVersion % Test,
       "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+      "dev.zio" %% "zio-http-testkit" % "3.3.3" % Test,
 
       "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.41.4" % Test,
       "org.testcontainers" % "postgresql" % "1.20.2" % Test,

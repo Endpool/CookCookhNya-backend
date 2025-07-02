@@ -2,58 +2,104 @@ package integration.api.recipes
 
 import api.Main
 import api.recipes.getSuggested
-import db.createTables
-import db.DataSourceDescription
-import db.dbLayer
+import api.storages.CreateStorageReqBody
+import api.users.CreateUserReqBody
+import db.{DataSourceDescription, dbLayer}
 import db.repositories.*
-import domain.UserId
+import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.sql
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
+import io.circe.generic.auto.*
+import io.circe.parser.decode
+import io.circe.syntax.*
 import zio.*
 import zio.http.*
-import zio.http.Request.*
+import zio.http.Request.{get}
 import zio.test.*
 import zio.test.Assertion.*
+import io.circe.Encoder
 
 case class ServerFiber(server: Fiber.Runtime[Throwable, Nothing])
 
 extension(req: Request)
   def addAuthorization(userId: UserId) =
-    req.addHeader("Authorization", s"Bearer $userId")
+    req.addHeader(Header.Authorization.Bearer(userId.toString))
+
+  def withJsonBody[A](value: A)(using encoder: Encoder[A]) =
+    req.addHeader(Header.ContentType(MediaType.application.json))
+      .withBody(Body.fromCharSequence(value.asJson.toString))
+
+// redefining here for the sake of having default value of body
+def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
+def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
 
 object IntegrationTest extends ZIOSpecDefault:
-  val serverPort = 8080
-  val serverUrl: URL = URL.decode(s"http://localhost:$serverPort/").toOption.get
+  def auth(userId: UserId, reqBody: CreateUserReqBody): RIO[Server & Client, Unit] = for
+    _ <- Client.batched(
+      put("users")
+        .withJsonBody(reqBody)
+        .addAuthorization(userId)
+    )
+  yield ()
 
-  def server(dataSourceDescr: DataSourceDescription): ZIO[Any, Throwable, Nothing] =
-    Server.serve(Main.app)
-      .provide(
-        ZLayer.succeed(Server.Config.default.port(serverPort)),
-        dbLayer(dataSourceDescr),
-        IngredientsRepoLive.layer,
-        UsersRepo.layer,
-        StoragesRepoLive.layer,
-        StorageIngredientsRepoLive.layer,
-        StorageMembersRepoLive.layer,
-        RecipesRepo.layer,
-        RecipeIngredientsRepo.layer,
-        Server.live
-      )
-
-  override def spec =
-    test("get my storages returns status Ok") {
-      val userId = 52
-      for
-        resp <- Client.batched(
-          get(serverUrl / "my" / "storages")
-            .addAuthorization(userId)
-        )
-      yield assertTrue(resp.status == Status.Ok)
-    } .provideSomeLayer(Client.default)
-      .provideSomeLayerShared(serverLayer)
-      .provideSomeLayer(psqlContainerLayer)
+  override def spec: Spec[Environment & TestEnvironment & Scope, Any] =
+    suite("aboba")(
+      test("get my storages returns status Ok") {
+        val userId = 52
+        for
+          resp <- Client.batched(
+            get("my/storages")
+              .addAuthorization(userId)
+          )
+        yield assertTrue(resp.status == Status.Ok)
+      },
+      test("test test") {
+        val userId = 52
+        val reqBody = CreateUserReqBody(None, "cuckookhnya")
+        for
+          resp <- Client.batched(
+            put("users")
+              .withJsonBody(reqBody)
+              .addAuthorization(userId)
+          )
+        yield assertTrue(resp.status == Status.Ok)
+      },
+      test("Auth test") {
+        val userId = 52
+        for
+          resp <- Client.batched(
+            get("my/storages")
+          )
+        yield assertTrue(resp.status == Status.Unauthorized)
+      },
+      test("Auth test") {
+        val userId = 52
+        val aboa = CreateUserReqBody(None, "cuckookhnya")
+        var reqBody = CreateStorageReqBody("aboba")
+        for
+          _ <- auth(userId, aboa)
+          resp <- Client.batched(
+            post("my/storages")
+              .withJsonBody(reqBody)
+              .addAuthorization(userId)
+          )
+          bodyStr <- resp.body.asString
+          storageId <- ZIO.fromEither(decode[StorageId](bodyStr))
+          storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
+        yield assertTrue(storage.is(_.some).id == storageId)
+           && assertTrue(storage.is(_.some).ownerId == userId)
+           && assertTrue(storageId == 1)
+      }
+    ).provide(
+      clientLayer,
+      StoragesRepoLive.layer,
+      dbLayer,
+      dataSourceDescritptionLayer,
+      psqlContainerLayer,
+      testServerLayer,
+    )
 
   val psqlContainerLayer: TaskLayer[PostgreSQLContainer] = ZLayer.scoped {
     ZIO.acquireRelease(
@@ -67,15 +113,35 @@ object IntegrationTest extends ZIOSpecDefault:
     }
   }
 
-  def serverLayer: URLayer[PostgreSQLContainer, ServerFiber] = ZLayer.scoped {
-    for
-      container <- ZIO.service[PostgreSQLContainer]
-      dataSourceDescr = DataSourceDescription(
+  val dataSourceDescritptionLayer: URLayer[PostgreSQLContainer, DataSourceDescription] =
+    ZLayer.fromFunction { (container: PostgreSQLContainer) =>
+      DataSourceDescription(
         container.jdbcUrl,
         container.username,
         container.password,
         container.driverClassName
       )
-      server <- server(dataSourceDescr).forkScoped
-    yield ServerFiber(server)
-  }
+    }
+
+  def initTestServer(testServer: TestServer): RIO[Transactor, Unit] =
+    testServer.addRoutes(Main.app)
+      .provideSomeAuto(
+        IngredientsRepoLive.layer,
+        UsersRepo.layer,
+        StoragesRepoLive.layer,
+        StorageIngredientsRepoLive.layer,
+        StorageMembersRepoLive.layer,
+        RecipesRepo.layer,
+        RecipeIngredientsRepo.layer,
+      )
+
+  val testServerLayer: RLayer[Transactor, TestServer] = for
+    testServer <- TestServer.default
+    _ <- ZLayer.fromZIO(initTestServer(testServer.get))
+  yield testServer
+
+  val clientLayer: RLayer[Server, Client] = for
+    port <- ZLayer(ZIO.serviceWithZIO[Server](_.port))
+    client <- Client.default
+    url <- ZLayer(ZIO.fromEither(URL.decode(s"http://localhost:${port.get}/")))
+  yield ZEnvironment(client.get.url(url.get))
