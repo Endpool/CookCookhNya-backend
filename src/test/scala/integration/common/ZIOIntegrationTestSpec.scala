@@ -1,6 +1,7 @@
 package integration.common
 
 import api.Main
+import api.users.CreateUserReqBody
 import db.{DataSourceDescription, dbLayer}
 import db.repositories.{
   IngredientsRepo,
@@ -11,15 +12,19 @@ import db.repositories.{
   RecipeIngredientsRepo,
   RecipesRepo
 }
+import integration.common.Utils.{put, withJsonBody}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
+import io.circe.generic.auto.deriveEncoder
 import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
 import zio.http.{Client, Server, TestServer, URL}
 import zio.test.ZIOSpecDefault
+import integration.common.Utils.addAuthorization
+import domain.UserId
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
-  def testLayer:
+  protected def testLayer:
     TaskLayer[
       Client
       & IngredientsRepo
@@ -40,6 +45,19 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       ++ StoragesRepo.layer
       ++ UsersRepo.layer
     )
+
+  protected def authorize: RIO[Client, UserId] =
+    val userId = 52
+    val alias = Some("alias")
+    val fullName = "fullName"
+    for
+      resp <- Client.batched(
+        put("users")
+          .withJsonBody(CreateUserReqBody(alias, fullName))
+          .addAuthorization(userId)
+      )
+      _ <- resp.body.asString
+    yield userId
 
   private val psqlContainerLayer: TaskLayer[PostgreSQLContainer] = ZLayer.scoped {
     ZIO.acquireRelease(
