@@ -8,7 +8,6 @@ on:
     branches:
       - integration-tests
 
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -52,18 +51,28 @@ jobs:
 
       - name: Cache Docker images
         id: cache-docker-images
-        uses: ScribeMD/docker-cache@0.5.0
+        uses: actions/cache@v4
         with:
+          path: |
+            /tmp/ryuk.tar
+            /tmp/postgres.tar
           key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}
-          images: |
-            testcontainers/ryuk:0.9.0
-            postgres:9.6.12
+          restore-keys: |
+            ${{ runner.os }}-docker-images-
 
-      - name: Pull Docker images
+      - name: Load cached Docker images
+        if: steps.cache-docker-images.outputs.cache-hit == 'true'
+        run: |
+          docker load -i /tmp/ryuk.tar
+          docker load -i /tmp/postgres.tar
+
+      - name: Pull and save Docker images
         if: steps.cache-docker-images.outputs.cache-hit != 'true'
         run: |
           docker pull testcontainers/ryuk:0.9.0
           docker pull postgres:9.6.12
+          docker save -o /tmp/ryuk.tar testcontainers/ryuk:0.9.0
+          docker save -o /tmp/postgres.tar postgres:9.6.12
 
       - name: Compile
         run: sbt compile test:compile
