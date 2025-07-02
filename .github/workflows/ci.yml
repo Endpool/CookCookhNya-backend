@@ -74,5 +74,5 @@ jobs:
       - name: Compile
         run: sbt compile test:compile
 
-      # - name: Run tests
-      #   run: sbt test
+      - name: Run tests
+        run: sbt test
