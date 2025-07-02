@@ -3,10 +3,12 @@ name: ci-backend
 on:
   push:
     branches:
-      - integration-tests
+      - main
+      - dev
   pull_request:
     branches:
-      - integration-tests
+      - main
+      - dev
 
 jobs:
   test:
