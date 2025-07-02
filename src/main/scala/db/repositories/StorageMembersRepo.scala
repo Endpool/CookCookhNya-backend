@@ -1,7 +1,7 @@
 package db.repositories
 
-import db.tables.{DbStorageMember, storageMembersTable}
-import db.DbError.{DbNotRespondingError, FailedDbQuery}
+import db.tables.{DbStorageMember, storageMembersTable, storagesTable}
+import db.DbError
 import domain.{UserId, StorageId}
 import db.{DbError, handleDbError}
 
@@ -16,6 +16,9 @@ trait StorageMembersRepo:
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
 
+  def getAllUserStorageIds(userId: UserId):
+    IO[DbError, Vector[StorageId]]
+  
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -49,6 +52,21 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       sql"""
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
+      """.query[UserId].run()
+    }.mapError(handleDbError)
+
+  override def getAllUserStorageIds(userId: UserId):
+    IO[DbError, Vector[StorageId]] =
+    xa.transact {
+      sql"""
+        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+        WHERE ${storageMembersTable.memberId} = $userId
+
+        UNION
+
+        SELECT ${storagesTable.id}
+        FROM $storagesTable
+        WHERE ${storagesTable.ownerId} = $userId
       """.query[UserId].run()
     }.mapError(handleDbError)
 
