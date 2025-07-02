@@ -52,6 +52,6 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-object StorageMembersRepoLive:
+object StorageMembersRepo:
   val layer: RLayer[Transactor, StorageMembersRepo] =
     ZLayer.fromFunction(StorageMembersRepoLive(_))
