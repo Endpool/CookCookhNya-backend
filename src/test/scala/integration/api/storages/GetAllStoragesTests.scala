@@ -141,12 +141,12 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
             ZIO.foreach(memberedStorageIds){ id => repo.addMemberToStorageById(id, memberId) }
           }
 
-          userId <- registerUser
+          userId <- registerUser(creatorId + memberId)
 
           resp <- Client.batched(
             get("my/storages")
               .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(memberId)
+              .addAuthorization(userId)
           )
 
           bodyStr <- resp.body.asString

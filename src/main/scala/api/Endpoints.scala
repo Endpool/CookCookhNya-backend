@@ -13,5 +13,5 @@ object AppEndpoints:
     =  storageEndpoints
     ++ ingredientsEndpoints
     ++ usersEndpoints
-    ++ recipeEndpoints 
+    ++ recipeEndpoints
     ++ shoppingListEndpoints

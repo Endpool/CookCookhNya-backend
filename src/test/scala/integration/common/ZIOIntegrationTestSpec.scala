@@ -49,8 +49,12 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       ++ UsersRepo.layer
     )
 
-  protected val registerUser: RIO[Client, UserId] = for
-    userId <- Gen.long(1, 100000000).runHead.map(_.getOrElse(52L))
+  protected def registerUser: RIO[Client, UserId] =
+    Gen.long(1, 100000000)
+      .runHead.map(_.getOrElse(52L))
+      .flatMap(registerUser(_))
+
+  protected def registerUser(userId: UserId): RIO[Client, UserId] = for
     alias <- Gen.alphaNumericStringBounded(3, 13).runHead
     fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.map(_.getOrElse("fullName"))
     resp <- Client.batched(
