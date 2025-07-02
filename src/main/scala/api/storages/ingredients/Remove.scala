@@ -1,11 +1,19 @@
 package api.storages.ingredients
 
-import api.AppEnv
-import api.EndpointErrorVariants.{ingredientNotFoundVariant, storageNotFoundVariant}
+import api.{
+  AppEnv,
+  handleFailedSqlQuery,
+  failIfIngredientNotFound,
+  failIfStorageNotFound
+}
+import api.EndpointErrorVariants.{
+  ingredientNotFoundVariant,
+  serverErrorVariant,
+  storageNotFoundVariant}
 import api.zSecuredServerLogic
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, StorageError, StorageId, UserId}
-
+import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -15,11 +23,26 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
   .delete
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
-  .errorOut(oneOf(ingredientNotFoundVariant, storageNotFoundVariant))
+    .errorOut(oneOf(
+      serverErrorVariant,
+      ingredientNotFoundVariant,
+      storageNotFoundVariant,
+    ))
   .zSecuredServerLogic(removeHandler)
 
 private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[StorageIngredientsRepo, StorageError.NotFound | IngredientError.NotFound, Unit] =
+  ZIO[StorageIngredientsRepo,
+      InternalServerError | StorageError.NotFound | IngredientError.NotFound,
+      Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.removeIngredientFromStorageById(storageId, ingredientId)
+  }.catchAll {
+    case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
+    case e: FailedDbQuery => for {
+        missingEntry <- handleFailedSqlQuery(e)
+        (keyName, keyValue, _) = missingEntry
+        _ <- failIfStorageNotFound(keyName, keyValue)
+        _ <- failIfIngredientNotFound(keyName, keyValue)
+        _ <- ZIO.fail(InternalServerError())
+      } yield ()
   }

@@ -1,48 +1,56 @@
 package db.repositories
 
 import db.tables.{DbStorageMember, storageMembersTable}
-import domain.*
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
+import domain.{UserId, StorageId}
+import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit]
+    IO[DbError, Unit]
   def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit]
+    IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[UserId]]
+    IO[DbError, Vector[UserId]]
 
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
 
   override def addMemberToStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit] =
-    xa.transact(insert(DbStorageMember(storageId, memberId))).catchAll {
-      _ => ZIO.fail(StorageError.NotFound(storageId))
-    }
+    IO[DbError, Unit] =
+    xa.transact {
+      sql"""
+           insert into ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+           values ($storageId, $memberId)
+           on conflict (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+           do nothing
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def removeMemberFromStorageById(storageId: StorageId, memberId: UserId):
-    IO[StorageError.NotFound | UserError.NotFound, Unit] =
-    xa.transact(delete(DbStorageMember(storageId, memberId))).catchAll {
-      _ => ZIO.fail(StorageError.NotFound(storageId))
-    }
+    IO[DbError, Unit] =
+    xa.transact {
+      sql"""
+       delete from $storageMembersTable
+       where ${storageMembersTable.storageId} = $storageId
+       and ${storageMembersTable.memberId} = $memberId
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def getAllStorageMembers(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[UserId]] =
+    IO[DbError, Vector[UserId]] =
     xa.transact {
       sql"""
         SELECT ${storageMembersTable.memberId} FROM ${storageMembersTable}
         WHERE ${storageMembersTable.storageId} = $storageId
       """.query[UserId].run()
-    }.mapError{
-      e => {
-        println(e.getMessage)
-        DbError.UnexpectedDbError(e.getMessage())
-      }
-    }
+    }.mapError(handleDbError)
 
 object StorageMembersRepo:
   val layer: RLayer[Transactor, StorageMembersRepo] =

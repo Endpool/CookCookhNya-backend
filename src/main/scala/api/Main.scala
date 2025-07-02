@@ -36,5 +36,8 @@ object Main extends ZIOAppDefault:
         StorageIngredientsRepo.layer,
         StorageMembersRepo.layer,
         RecipesRepo.layer,
-        RecipeIngredientsRepo.layer
+        RecipeIngredientsRepo.layer,
+        RecipesDomainRepo.layer,
+        ShoppingListsRepo.layer,
+        Server.live
       )
