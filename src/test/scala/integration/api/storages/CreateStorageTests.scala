@@ -1,7 +1,6 @@
 package integration.api.storages
 
 import api.storages.CreateStorageReqBody
-import db.dbLayer
 import db.repositories.StoragesRepo
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -9,12 +8,11 @@ import integration.common.ZIOIntegrationTestSpec
 import io.circe.generic.auto.*
 import zio.http.{Client, Status}
 import zio.{Scope, ZIO}
-import zio.test.Assertion.*
 import zio.test.{
   TestEnvironment,
   assertTrue,
   Spec,
-  SmartAssertionOps, SmartAssertMacros, TestLensOptionOps
+  SmartAssertionOps, TestLensOptionOps
 }
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
