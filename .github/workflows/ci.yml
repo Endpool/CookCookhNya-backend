@@ -48,9 +48,6 @@ jobs:
           key: ${{ runner.os }}-sbt-build-${{ hashFiles('src/main/**/*.scala', 'src/test/**/*.scala', '**/build.sbt', '**/project/build.properties', '**/project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-build-
-            
-      - name: Check tar file
-        run: ls -l postgres-image.tar      
 
       - name: Cache PostgreSQL Docker image
         id: cache-docker
@@ -59,18 +56,21 @@ jobs:
           path: postgres-image.tar
           key: docker-image-postgres-9.6.12
 
-      
+      - name: Debug cache result
+        run: echo "Cache hit: ${{ steps.cache-docker.outputs.cache-hit }}"
 
       - name: Load or pull PostgreSQL Docker image
         run: |
           if [ "${{ steps.cache-docker.outputs.cache-hit }}" == "true" ]; then
             echo "Cache hit, loading Docker image from tar file"
-            docker load -i postgres-image.tar
+            ls -l postgres-image.tar || echo "Error: postgres-image.tar not found in cache"
+            docker load -i postgres-image.tar || { echo "Error: Failed to load postgres-image.tar"; exit 1; }
           else
             echo "Cache miss, pulling Docker image"
-            docker pull postgres:9.6.12
+            docker pull postgres:9.6.12 || { echo "Error: Failed to pull postgres:9.6.12"; exit 1; }
             echo "Saving Docker image to tar file"
-            docker save -o postgres-image.tar postgres:9.6.12
+            docker save -o postgres-image.tar postgres:9.6.12 || { echo "Error: Failed to save postgres-image.tar"; exit 1; }
+            ls -l postgres-image.tar || { echo "Error: postgres-image.tar was not created"; exit 1; }
           fi
 
       - name: Compile
