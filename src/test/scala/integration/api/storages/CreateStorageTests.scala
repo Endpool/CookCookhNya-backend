@@ -37,7 +37,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok)
       },
       test("When authorized storage should be added to db") {
-        var storageName = "storage"
+        val storageName = "storage"
         for
           userId <- registerUser
 
@@ -54,7 +54,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
            && assertTrue(storage.is(_.some).name == storageName)
       },
       test("When created storage should have creator as owner") {
-        var storageName = "storage"
+        val storageName = "storage"
         for
           userId <- registerUser
 
