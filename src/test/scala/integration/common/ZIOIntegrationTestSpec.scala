@@ -19,9 +19,9 @@ import zio.http.{Client, Server, TestServer, URL}
 import zio.test.ZIOSpecDefault
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
-  val testLayer:
+  def testLayer:
     TaskLayer[
-      TestServer & Client
+      Client
       & IngredientsRepo
       & StorageMembersRepo
       & StoragesRepo
@@ -31,7 +31,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       & UsersRepo
     ] =
     psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >>> (
-      testServerLayer >+> clientLayer
+      testServerLayer >>> clientLayer
       ++ IngredientsRepo.layer
       ++ RecipeIngredientsRepo.layer
       ++ RecipesRepo.layer

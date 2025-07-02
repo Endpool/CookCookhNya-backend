@@ -51,10 +51,9 @@ object DataSourceDescription:
     yield DataSourceDescription(address, dbName, username, password)
   }
 
-val dbLayer: RLayer[DataSourceDescription, Transactor] = ZLayer.scopedEnvironment {
+val dbLayer: RLayer[DataSourceDescription, Transactor] =
   for
-    dataSourceDescr <- ZIO.service[DataSourceDescription]
-    xa <- Transactor.layer(dataSourceDescr.toDataSource).build
-    _  <- createTables(xa.get)
+    dataSourceDescr <- ZLayer.service[DataSourceDescription]
+    xa <- Transactor.layer(dataSourceDescr.get.toDataSource)
+    _  <- ZLayer.fromZIO(createTables(xa.get))
   yield xa
-}
