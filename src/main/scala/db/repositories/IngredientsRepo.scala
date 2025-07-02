@@ -39,7 +39,7 @@ private final case class IngredientsRepoLive(xa: Transactor)
   override def getAllOwnedBy(userId: UserId):
     ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
     for 
-      userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorages(userId))
+      userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorageIds(userId))
       userIngredientIds <- ZIO.foreach(userStorageIds) {
         storageId => ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
       }.map(_.flatten)

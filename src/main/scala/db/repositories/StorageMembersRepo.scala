@@ -16,7 +16,7 @@ trait StorageMembersRepo:
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
 
-  def getAllUserStorages(userId: UserId):
+  def getAllUserStorageIds(userId: UserId):
     IO[DbError, Vector[StorageId]]
   
 private final case class StorageMembersRepoLive(xa: Transactor)
@@ -55,7 +55,7 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-  override def getAllUserStorages(userId: UserId):
+  override def getAllUserStorageIds(userId: UserId):
     IO[DbError, Vector[StorageId]] =
     xa.transact {
       sql"""
