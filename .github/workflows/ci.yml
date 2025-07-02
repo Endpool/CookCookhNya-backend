@@ -48,6 +48,9 @@ jobs:
           key: ${{ runner.os }}-sbt-build-${{ hashFiles('src/main/**/*.scala', 'src/test/**/*.scala', '**/build.sbt', '**/project/build.properties', '**/project/plugins.sbt') }}
           restore-keys: |
             ${{ runner.os }}-sbt-build-
+            
+      - name: Check tar file
+        run: ls -l postgres-image.tar      
 
       - name: Cache PostgreSQL Docker image
         id: cache-docker
@@ -55,6 +58,8 @@ jobs:
         with:
           path: postgres-image.tar
           key: docker-image-postgres-9.6.12
+
+      
 
       - name: Load or pull PostgreSQL Docker image
         run: |
