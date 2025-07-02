@@ -49,36 +49,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-build-
 
-    
-
-      - name: Cache Docker images
-        id: cache-docker-images
+      - name: Cache PostgreSQL Docker image
+        id: cache-docker
         uses: actions/cache@v4
         with:
-          path: |
-            /tmp/ryuk.tar
-            /tmp/postgres.tar
-          key: ${{ runner.os }}-docker-images-${{ hashFiles('.github/workflows/ci-backend.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-docker-images-
+          path: postgres-image.tar
+          key: docker-image-postgres-9.6.12
 
-      - name: Check Cache Hit
-        run: echo "Cache Hit: ${{ steps.cache-docker-images.outputs.cache-hit }}"
-
-      - name: Load cached Docker images
-        if: steps.cache-docker-images.outputs.cache-hit == 'true'
+      - name: Load or pull PostgreSQL Docker image
         run: |
-          docker load -i /tmp/ryuk.tar
-          docker load -i /tmp/postgres.tar
-
-      - name: Pull and save Docker images
-        if: steps.cache-docker-images.outputs.cache-hit != 'true'
-        run: |
-          docker pull testcontainers/ryuk:0.9.0
-          docker pull postgres:9.6.12
-          docker save -o /tmp/ryuk.tar testcontainers/ryuk:0.9.0
-          docker save -o /tmp/postgres.tar postgres:9.6.12
-          ls -l /tmp/ryuk.tar /tmp/postgres.tar
+          if [ "${{ steps.cache-docker.outputs.cache-hit }}" == "true" ]; then
+            echo "Cache hit, loading Docker image from tar file"
+            docker load -i postgres-image.tar
+          else
+            echo "Cache miss, pulling Docker image"
+            docker pull postgres:9.6.12
+            echo "Saving Docker image to tar file"
+            docker save -o postgres-image.tar postgres:9.6.12
+          fi
 
       - name: Compile
         run: sbt compile test:compile
