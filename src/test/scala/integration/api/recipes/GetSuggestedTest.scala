@@ -4,6 +4,7 @@ import api.Main
 import api.recipes.getSuggested
 import api.storages.CreateStorageReqBody
 import api.users.CreateUserReqBody
+import common.Utils.*
 import db.{DataSourceDescription, dbLayer}
 import db.repositories.*
 import domain.{StorageId, UserId}
@@ -11,6 +12,7 @@ import domain.{StorageId, UserId}
 import com.augustnagro.magnum.magzio.sql
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
+import io.circe.Encoder
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import io.circe.syntax.*
@@ -19,21 +21,6 @@ import zio.http.*
 import zio.http.Request.{get}
 import zio.test.*
 import zio.test.Assertion.*
-import io.circe.Encoder
-
-case class ServerFiber(server: Fiber.Runtime[Throwable, Nothing])
-
-extension(req: Request)
-  def addAuthorization(userId: UserId) =
-    req.addHeader(Header.Authorization.Bearer(userId.toString))
-
-  def withJsonBody[A](value: A)(using encoder: Encoder[A]) =
-    req.addHeader(Header.ContentType(MediaType.application.json))
-      .withBody(Body.fromCharSequence(value.asJson.toString))
-
-// redefining here for the sake of having default value of body
-def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
-def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
 
 object IntegrationTest extends ZIOSpecDefault:
   def auth(userId: UserId, reqBody: CreateUserReqBody): RIO[Server & Client, Unit] = for
