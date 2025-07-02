@@ -56,8 +56,6 @@ jobs:
           path: postgres-image.tar
           key: docker-image-postgres-9.6.12
 
-      - name: Debug cache result
-        run: echo "Cache hit: ${{ steps.cache-docker.outputs.cache-hit }}"
 
       - name: Load or pull PostgreSQL Docker image
         run: |
