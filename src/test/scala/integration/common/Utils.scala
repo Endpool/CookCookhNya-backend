@@ -1,4 +1,4 @@
-package common
+package integration.common
 
 import domain.UserId
 

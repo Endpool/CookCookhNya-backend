@@ -35,6 +35,6 @@ private final case class IngredientsRepoLive(xa: Transactor)
       ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
     }
 
-object IngredientsRepoLive:
+object IngredientsRepo:
   val layer: RLayer[Transactor, IngredientsRepo] =
     ZLayer.fromFunction(IngredientsRepoLive(_))

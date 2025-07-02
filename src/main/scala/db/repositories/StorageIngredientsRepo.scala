@@ -51,6 +51,6 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
       e => DbError.UnexpectedDbError(e.getMessage()) // TODO actual error handling
     }
 
-object StorageIngredientsRepoLive:
+object StorageIngredientsRepo:
   val layer: RLayer[Transactor, StorageIngredientsRepo] =
     ZLayer.fromFunction(StorageIngredientsRepoLive(_))

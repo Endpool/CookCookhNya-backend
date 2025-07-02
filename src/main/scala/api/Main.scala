@@ -28,14 +28,13 @@ object Main extends ZIOAppDefault:
   override def run =
     Server.serve(app)
       .provide(
-        ZLayer.succeed(Server.Config.default.port(8080)),
-        Server.live,
+        Server.defaultWithPort(8080),
         DataSourceDescription.layerFromEnv >>> dbLayer,
-        IngredientsRepoLive.layer,
+        IngredientsRepo.layer,
         UsersRepo.layer,
-        StoragesRepoLive.layer,
-        StorageIngredientsRepoLive.layer,
-        StorageMembersRepoLive.layer,
+        StoragesRepo.layer,
+        StorageIngredientsRepo.layer,
+        StorageMembersRepo.layer,
         RecipesRepo.layer,
         RecipeIngredientsRepo.layer
       )

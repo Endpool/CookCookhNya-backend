@@ -44,6 +44,6 @@ private final case class StoragesRepoLive(xa: Transactor)
       deleteById(id)
     }.mapError(e => DbError.UnexpectedDbError(e.getMessage()))
 
-object StoragesRepoLive:
+object StoragesRepo:
   val layer: RLayer[Transactor, StoragesRepo] =
     ZLayer.fromFunction(StoragesRepoLive(_))
