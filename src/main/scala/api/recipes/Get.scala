@@ -1,50 +1,51 @@
 package api.recipes
 
-import api.{AppEnv, EndpointErrorVariants, handleFailedSqlQuery}
-import api.zSecuredServerLogic
+import api.{AppEnv, handleFailedSqlQuery, zSecuredServerLogic}
+import api.EndpointErrorVariants.{recipeNotFoundVariant, storageNotFoundVariant}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 import domain.RecipeError.NotFound
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio
+import com.augustnagro.magnum.magzio.*
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import com.augustnagro.magnum.magzio.*
 import zio.ZIO
 
-
 private case class IngredientSummary(
-                                    id: IngredientId,
-                                    name: String,
-                                    inStorages: Vector[StorageId]
-                                    )
-private case class RecipeResp(
-                             ingredients: Vector[IngredientSummary],
-                             name: String,
-                             sourceLink: String
-                             )
+  id: IngredientId,
+  name: String,
+  inStorages: Vector[StorageId]
+)
 
-// intermediate class to accept raw query result
-private case class RawRecipeResult(
-                                    name: String,
-                                    sourceLink: String,
-                                    ingredients: String // JSON string from PostgreSQL
-                                  )
+private case class RecipeResp(
+  ingredients: Vector[IngredientSummary],
+  name: String,
+  sourceLink: String
+)
 
 val get: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
     .securityIn(auth.bearer[UserId]())
     .get
     .in(path[RecipeId])
-    .errorOut(oneOf(EndpointErrorVariants.recipeNotFoundVariant, EndpointErrorVariants.storageNotFoundVariant))
+    .errorOut(oneOf(recipeNotFoundVariant, storageNotFoundVariant))
     .out(jsonBody[RecipeResp])
     .zSecuredServerLogic(getHandler)
 
-def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
+// intermediate class to accept raw query result
+private case class RawRecipeResult(
+  name: String,
+  sourceLink: String,
+  ingredients: String // JSON string from PostgreSQL
+)
+
+def getHandler(userId: UserId)(recipeId: RecipeId):
+  ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
   val dbEffect = ZIO.serviceWithZIO[magzio.Transactor](_.transact {
     val frag =
       sql"""
@@ -60,8 +61,7 @@ def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServ
                     SELECT JSON_AGG(DISTINCT si.storage_id)
                     FROM $storageIngredientsTable si
                     WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
-                      AND si.${storageIngredientsTable.storageId} IN
-                       (
+                      AND si.${storageIngredientsTable.storageId} IN (
                         SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
                         WHERE ${storageMembersTable.memberId} = $userId
 
@@ -70,7 +70,7 @@ def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServ
                         SELECT ${storagesTable.id}
                         FROM $storagesTable
                         WHERE ${storagesTable.ownerId} = $userId
-                       )
+                      )
                   ),
                   '[]'::json
                 )
@@ -84,7 +84,7 @@ def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServ
         ) AS ingredients
         FROM $recipesTable r
         WHERE r.${recipesTable.id} = $recipeId;
-        """
+      """
     frag.query[RawRecipeResult].run().headOption
   })
 
@@ -99,7 +99,7 @@ def getHandler(userId: UserId)(recipeId: RecipeId): ZIO[Transactor, InternalServ
         case Left(_) =>
           ZIO.fail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
     case None => ZIO.fail(NotFound(recipeId.toString))
-  }.catchAll {
-    case _: DbError => ZIO.fail(InternalServerError())
-    case e: (InternalServerError | NotFound) => ZIO.fail(e)
+  }.mapError {
+    case _: DbError => InternalServerError()
+    case e: (InternalServerError | NotFound) => e
   }
