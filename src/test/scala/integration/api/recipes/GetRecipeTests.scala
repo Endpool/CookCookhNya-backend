@@ -80,14 +80,75 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok) &&
               assertTrue(recipeIngredientsIds == recipeRespIngredientsIds) &&
               assertTrue(recipeResp.ingredients.forall(
-            ingredient =>
-              if ingredientIds1.contains(ingredient.id)
-              then ingredient.inStorages == Vector(storageId1)
-              else ingredient.inStorages == Vector(storageId2)
-        ))
+                ingredient =>
+                  if ingredientIds1.contains(ingredient.id)
+                  then ingredient.inStorages == Vector(storageId1)
+                  else ingredient.inStorages == Vector(storageId2)
+            ))
       },
-//      test("2 users, 1 shared storage and one personal storage for every user") {
-//
-//      }
+      test("2 users, 1 shared storage and 1 personal storage for every user") {
+        for
+          userId1 <- registerUser
+          userId2 <- registerUser
+
+          storageId1 <- createStorage(userId1)
+          storageId2 <- createStorage(userId2)
+          sharedStorageId <- createStorage(userId1)
+
+          ingredientIds1 <- createNIngredients(defaultIngredientAmount)
+          ingredientIds2 <- createNIngredients(defaultIngredientAmount)
+          sharedIngredientIds <- createNIngredients(defaultIngredientAmount)
+          extraIngredientIds1 <- createNIngredients(defaultIngredientAmount)
+          extraIngredientIds2 <- createNIngredients(defaultIngredientAmount)
+          extraSharedIngredients <- createNIngredients(defaultIngredientAmount) // used in the shared repo
+          commonIngredients <- createNIngredients(defaultIngredientAmount) // used in both non-shared repos
+
+          _ <- addIngredientsToStorage(storageId1, ingredientIds1 ++ extraIngredientIds1 ++ commonIngredients)
+          _ <- addIngredientsToStorage(storageId2, ingredientIds2 ++ extraIngredientIds2 ++ commonIngredients)
+          _ <- addIngredientsToStorage(sharedStorageId, sharedIngredientIds ++ extraSharedIngredients)
+
+          recipeIngredientsIds = ingredientIds1 ++ ingredientIds2 ++ sharedIngredientIds ++ commonIngredients
+          recipeId <- createRecipe(recipeIngredientsIds)
+
+          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(sharedStorageId, userId2))
+
+          // case 1: sending request as a 1st user
+          resp1 <- Client.batched(
+            Request.get(s"$defaultPath/$recipeId")
+              .addAuthorization(userId1)
+          )
+          strBody1 <- resp1.body.asString
+          recipeResp1 <- ZIO.fromEither(decode[RecipeResp](strBody1))
+          recipeRespIngredientsIds1 = recipeResp1.ingredients.map(_.id)
+
+          assertions1 = assertTrue(resp1.status == Status.Ok) &&
+                        assertTrue(recipeRespIngredientsIds1 == (ingredientIds1 ++ sharedIngredientIds ++ commonIngredients)) &&
+                        assertTrue(recipeResp1.ingredients.forall(
+                          ingredient =>
+                            if ingredientIds1.contains(ingredient.id)
+                            then ingredient.inStorages == Vector(storageId1)
+                            else ingredient.inStorages == Vector(sharedStorageId)
+                        ))
+          // case 2: sending request as a 2nd user
+          resp2 <- Client.batched(
+            Request.get(s"$defaultPath/$recipeId")
+              .addAuthorization(userId1)
+          )
+          strBody2 <- resp2.body.asString
+          recipeResp2 <- ZIO.fromEither(decode[RecipeResp](strBody2))
+          recipeRespIngredientsIds2 = recipeResp2.ingredients.map(_.id)
+
+          assertions2 = assertTrue(resp2.status == Status.Ok) &&
+                        assertTrue(recipeRespIngredientsIds2 == (ingredientIds2 ++ sharedIngredientIds ++ commonIngredients)) &&
+                        assertTrue(recipeResp1.ingredients.forall(
+                          ingredient =>
+                            if ingredientIds2.contains(ingredient.id)
+                            then ingredient.inStorages == Vector(storageId2)
+                            else ingredient.inStorages == Vector(sharedStorageId)
+                        ))
+
+        yield assertions1 && assertions2
+
+      }
     ).provideLayer(testLayer)
 
