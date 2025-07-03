@@ -55,6 +55,11 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       .flatMap(registerUser(_))
       .flatMap(registerUser)
 
+  protected def registerNUsers(n: Int): RIO[Client, Array[UserId]] =
+    ZIO.collectAll(
+      (1 to n).map(_ => registerUser).toArray
+    )
+
   protected def registerUser(userId: UserId): RIO[Client, UserId] = for
     alias <- Gen.alphaNumericStringBounded(3, 13).runHead
     fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.map(_.getOrElse("fullName"))
