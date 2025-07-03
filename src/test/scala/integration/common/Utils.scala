@@ -3,9 +3,8 @@ package integration.common
 import api.ingredients.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
-import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo}
-import domain.{IngredientId, InternalServerError, RecipeId, UserId}
-
+import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StoragesRepo}
+import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
 import io.circe.parser.decode
@@ -91,3 +90,10 @@ object Utils:
         _.addRecipe(name, link, ingredientIds)
       )
     yield recipeId
+    
+  def createStorage(ownerId: UserId): ZIO[StoragesRepo, DbError, StorageId] =
+    for 
+      name <- randomString
+      storageId <- ZIO.serviceWithZIO[StoragesRepo](_.createEmpty(name, ownerId))
+    yield storageId  
+    
