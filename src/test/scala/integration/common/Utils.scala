@@ -3,7 +3,7 @@ package integration.common
 import api.ingredients.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
-import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StoragesRepo}
+import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
@@ -97,3 +97,10 @@ object Utils:
       storageId <- ZIO.serviceWithZIO[StoragesRepo](_.createEmpty(name, ownerId))
     yield storageId  
     
+  def addIngredientsToStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
+    ZIO[StorageIngredientsRepo, DbError, Unit] = 
+    ZIO.foreach(ingredientIds)
+      (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
+    ZIO.succeed(())
+   
+  

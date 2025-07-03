@@ -38,8 +38,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           storageId <- createStorage(userId)
           ingredientIds <- createNIngredients(defaultIngredientAmount)
           extraIngredientIds <- createNIngredients(defaultIngredientAmount)
-          _ <- ZIO.foreach(ingredientIds ++ extraIngredientIds)
-            (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
+          _ <- addIngredientsToStorage(storageId, ingredientIds)
 
           recipeId <- createRecipe(ingredientIds)
           resp <- Client.batched(
