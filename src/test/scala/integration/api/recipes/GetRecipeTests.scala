@@ -49,9 +49,9 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
           recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
 
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(ingredientIds == recipeRespIngredientsIds)
-           && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
+        yield assertTrue(resp.status == Status.Ok) &&
+              assertTrue(ingredientIds == recipeRespIngredientsIds) &&
+              assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
       },
       test("1 user with 2 storages") {
         for
@@ -77,9 +77,9 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
           recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(recipeIngredientsIds == recipeRespIngredientsIds)
-           && assertTrue(recipeResp.ingredients.forall(
+        yield assertTrue(resp.status == Status.Ok) &&
+              assertTrue(recipeIngredientsIds == recipeRespIngredientsIds) &&
+              assertTrue(recipeResp.ingredients.forall(
             ingredient =>
               if ingredientIds1.contains(ingredient.id)
               then ingredient.inStorages == Vector(storageId1)
