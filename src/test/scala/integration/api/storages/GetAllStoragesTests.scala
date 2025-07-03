@@ -21,9 +21,11 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Get all storages tests")(
       test("When unauthorized should get 401") {
-        Client.batched(
-          get("my/storages")
-        ).map(resp => assertTrue(resp.status == Status.Unauthorized))
+        for
+          resp <- Client.batched(
+            get("my/storages")
+          )
+        yield assertTrue(resp.status == Status.Unauthorized)
       },
       test("When authorized and no storages should get 200 and empty list") {
         for
@@ -43,7 +45,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           n <- Gen.int(1, 10).runHead.map(_.getOrElse(4))
           storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
           _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(storageNames){ name => repo.createEmpty(name, userId) }
+            ZIO.foreach(storageNames){ repo.createEmpty(_, userId) }
           }
 
           resp <- Client.batched(
@@ -67,10 +69,10 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           n <- Gen.int(1, 10).runHead.map(_.getOrElse(4))
           storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
           storageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(storageNames){ name => repo.createEmpty(name, creatorId) }
+            ZIO.foreach(storageNames){ repo.createEmpty(_, creatorId) }
           }
           _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-            ZIO.foreach(storageIds){ id => repo.addMemberToStorageById(id, userId) }
+            ZIO.foreach(storageIds){ repo.addMemberToStorageById(_, userId) }
           }
 
           resp <- Client.batched(
@@ -96,15 +98,15 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
 
           userId <- registerUser
           _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(ownedStorageNames){ name => repo.createEmpty(name, userId) }
+            ZIO.foreach(ownedStorageNames){ repo.createEmpty(_, userId) }
           }
 
           creatorId <- registerUser
           memberedStorageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(memberedStorageNames){ name => repo.createEmpty(name, creatorId) }
+            ZIO.foreach(memberedStorageNames){ repo.createEmpty(_, creatorId) }
           }
           _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-            ZIO.foreach(memberedStorageIds){ id => repo.addMemberToStorageById(id, userId) }
+            ZIO.foreach(memberedStorageIds){ repo.addMemberToStorageById(_, userId) }
           }
 
           resp <- Client.batched(
@@ -130,15 +132,15 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
 
           memberId <- registerUser
           _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(ownedStorageNames){ name => repo.createEmpty(name, memberId) }
+            ZIO.foreach(ownedStorageNames){ repo.createEmpty(_, memberId) }
           }
 
           creatorId <- registerUser
           memberedStorageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-            ZIO.foreach(memberedStorageNames){ name => repo.createEmpty(name, creatorId) }
+            ZIO.foreach(memberedStorageNames){ repo.createEmpty(_, creatorId) }
           }
           _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-            ZIO.foreach(memberedStorageIds){ id => repo.addMemberToStorageById(id, memberId) }
+            ZIO.foreach(memberedStorageIds){ repo.addMemberToStorageById(_, memberId) }
           }
 
           userId <- registerUser(creatorId + memberId)
@@ -155,10 +157,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
       },
     ).provideLayer(testLayer)
 
-  val storageNameGen: Gen[Any, String] =
-    val baseNames = Gen.elements("Pantry", "Fridge", "Freezer", "Cupboard", "Shelf", "Кухня", "Шкаф", "Холодильник", "Морозилка", "Полка", "Общежитие", "Кампус", "Подвал")
-    val suffixes = Gen.elements("", "-1", "-2", "-Main", "-Backup", "-Запас", "-Основа")
-    for
-      base <- baseNames
-      suffix <- suffixes
-    yield base + suffix
+  val storageNameGen: Gen[Any, String] = for
+    base <- Gen.elements("Pantry", "Fridge", "Freezer", "Cupboard", "Shelf", "Кухня", "Шкаф", "Холодильник", "Морозилка", "Полка", "Общежитие", "Кампус", "Подвал")
+    suffix <- Gen.elements("", "-1", "-2", "-Main", "-Backup", "-Запас", "-Основа")
+  yield base + suffix
