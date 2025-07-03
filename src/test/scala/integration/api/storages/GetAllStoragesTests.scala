@@ -55,10 +55,8 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           bodyStr <- resp.body.asString
           storages <- ZIO.fromEither(decode[Vector[StorageSummaryResp]](bodyStr))
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storages.length == storageNames.length)
+           && assertTrue(storages.map(_.name).hasSameElementsAs(storageNames))
            && assertTrue(storages.forall(_.ownerId == userId))
-           && assertTrue(storages.map(_.name).forall(storageNames.contains))
-           && assertTrue(storageNames.forall(storages.map(_.name).contains))
       },
       test("When authorized with membered storages should get 200 and all storages") {
         for
@@ -81,9 +79,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           bodyStr <- resp.body.asString
           storages <- ZIO.fromEither(decode[Vector[StorageSummaryResp]](bodyStr))
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storages.length == storageNames.length)
-           && assertTrue(storages.map(_.name).forall(storageNames.contains))
-           && assertTrue(storageNames.forall(storages.map(_.name).contains))
+           && assertTrue(storages.map(_.name).hasSameElementsAs(storageNames))
       },
       test("When authorized with owned and membered storages should return 200 with all storages") {
         for
@@ -114,9 +110,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           bodyStr <- resp.body.asString
           storages <- ZIO.fromEither(decode[Vector[StorageSummaryResp]](bodyStr))
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storages.length == storageNames.length)
-           && assertTrue(storages.map(_.name).forall(storageNames.contains))
-           && assertTrue(storageNames.forall(storages.map(_.name).contains))
+           && assertTrue(storages.map(_.name).hasSameElementsAs(storageNames))
       },
       test("When there are only other user's storages should get 200 and no storages") {
         for

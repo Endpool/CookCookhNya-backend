@@ -23,9 +23,9 @@ object Utils:
         .withBody(Body.fromCharSequence(value.asJson.toString))
 
   extension[A](seq1: Seq[A])
-    def hasSameElementsAs(seq2: Seq[A]): Boolean
-      =  seq1.length == seq2.length
-      && seq1.toSet == seq2.toSet
+    def hasSameElementsAs(seq2: Seq[A])(using ord: Ordering[A]): Boolean
+      =  seq1.length == seq2.length // for optimization
+      && seq1.sorted == seq2.sorted
 
   // redefining here for the sake of having default value of body
   def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
@@ -106,6 +106,6 @@ object Utils:
     ZIO[StorageIngredientsRepo, DbError, Unit] =
     ZIO.foreach(ingredientIds)
       (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
-    ZIO.succeed(())
+    *> ZIO.unit
 
 
