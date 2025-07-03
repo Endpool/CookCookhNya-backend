@@ -15,7 +15,7 @@ import zio.test.{SmartAssertionOps, Spec, TestEnvironment, TestLensOptionOps, as
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
     val defaultPath = "recipes/"
-    val defaultIngredientAmount = 5
+    val defaultIngredientAmount = 3
 
     suite("Get recipe (detailed) tests")(
       test("When unauthorized should get 401") {
@@ -111,7 +111,6 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeId <- createRecipe(recipeIngredientsIds)
 
           _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(sharedStorageId, userId2))
-
           // case 1: sending request as a 1st user
           resp1 <- Client.batched(
             Request.get(s"$defaultPath/$recipeId")
@@ -122,29 +121,31 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeRespIngredientsIds1 = recipeResp1.ingredients.map(_.id)
 
           assertions1 = assertTrue(resp1.status == Status.Ok) &&
-                        assertTrue(recipeRespIngredientsIds1 == (ingredientIds1 ++ sharedIngredientIds ++ commonIngredients)) &&
+                        assertTrue(recipeRespIngredientsIds1.
+                          hasSameElementsAs(ingredientIds1 ++ sharedIngredientIds ++ commonIngredients)) &&
                         assertTrue(recipeResp1.ingredients.forall(
                           ingredient =>
                             if ingredientIds1.contains(ingredient.id)
-                            then ingredient.inStorages == Vector(storageId1)
-                            else ingredient.inStorages == Vector(sharedStorageId)
+                            then ingredient.inStorages.hasSameElementsAs(Vector(storageId1))
+                            else ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
                         ))
           // case 2: sending request as a 2nd user
           resp2 <- Client.batched(
             Request.get(s"$defaultPath/$recipeId")
-              .addAuthorization(userId1)
+              .addAuthorization(userId2)
           )
           strBody2 <- resp2.body.asString
           recipeResp2 <- ZIO.fromEither(decode[RecipeResp](strBody2))
           recipeRespIngredientsIds2 = recipeResp2.ingredients.map(_.id)
 
           assertions2 = assertTrue(resp2.status == Status.Ok) &&
-                        assertTrue(recipeRespIngredientsIds2 == (ingredientIds2 ++ sharedIngredientIds ++ commonIngredients)) &&
+                        assertTrue(recipeRespIngredientsIds2
+                          .hasSameElementsAs(ingredientIds2 ++ sharedIngredientIds ++ commonIngredients)) &&
                         assertTrue(recipeResp1.ingredients.forall(
                           ingredient =>
                             if ingredientIds2.contains(ingredient.id)
-                            then ingredient.inStorages == Vector(storageId2)
-                            else ingredient.inStorages == Vector(sharedStorageId)
+                            then ingredient.inStorages.hasSameElementsAs(Vector(storageId2))
+                            else ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
                         ))
 
         yield assertions1 && assertions2

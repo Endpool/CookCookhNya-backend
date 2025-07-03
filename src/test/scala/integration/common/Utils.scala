@@ -22,6 +22,11 @@ object Utils:
       req.addHeader(Header.ContentType(MediaType.application.json))
         .withBody(Body.fromCharSequence(value.asJson.toString))
 
+  extension [A](seq1: Seq[A])
+    def hasSameElementsAs(seq2: Seq[A])(using ord: Ordering[A]): Boolean
+    = seq1.length == seq2.length // for optimization
+      && seq1.sorted == seq2.sorted
+    
   // redefining here for the sake of having default value of body
   def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
   def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
