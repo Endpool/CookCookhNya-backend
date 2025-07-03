@@ -1,16 +1,11 @@
 package api.recipes
 
-import api.{
-  AppEnv,
-  handleFailedSqlQuery,
-  failIfIngredientNotFound
-}
-import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
+import api.{AppEnv, failIfIngredientNotFound, handleFailedSqlQuery}
+import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
-import domain.{IngredientId, InternalServerError}
+import domain.{IngredientId, InternalServerError, RecipeId}
 import domain.IngredientError.NotFound
-
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -23,11 +18,12 @@ val create: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
     .post
     .in(jsonBody[RecipeCreationEntity])
+    .out(plainBody[RecipeId])
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zServerLogic(createHandler)
 
 def createHandler(recipe: RecipeCreationEntity):
-ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError | NotFound, Unit] =
+ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError | NotFound, RecipeId] =
   ZIO.serviceWithZIO[RecipesRepo] {
     _.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
   }.catchAll {
@@ -36,6 +32,6 @@ ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError | NotFound, Unit] =
       missingEntry <- handleFailedSqlQuery(e)
       (keyName, keyValue, _) = missingEntry
       _ <- failIfIngredientNotFound(keyName, keyValue)
-      _ <- ZIO.fail(InternalServerError())
-    } yield ()
+      res <- ZIO.fail(InternalServerError())
+    } yield res 
   }
