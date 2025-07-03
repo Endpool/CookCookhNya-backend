@@ -84,8 +84,8 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
            && assertTrue(recipeResp.ingredients.forall(
             ingredient =>
               if ingredientIds1.contains(ingredient.id)
-              then ingredient.inStorages.eq(Vector(storageId1))
-              else ingredient.inStorages.eq(Vector(storageId2))
+              then ingredient.inStorages == Vector(storageId1)
+              else ingredient.inStorages == Vector(storageId2)
         ))
       },
 //      test("2 users, 1 shared storage and one personal storage for every user") {
