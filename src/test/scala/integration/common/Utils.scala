@@ -1,7 +1,11 @@
 package integration.common
 
+import api.ingredients.CreateIngredientReqBody
 import api.users.CreateUserReqBody
-import domain.UserId
+import db.DbError
+import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo}
+import domain.{IngredientId, InternalServerError, RecipeId, UserId}
+
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
 import io.circe.parser.decode
@@ -19,14 +23,18 @@ object Utils:
       req.addHeader(Header.ContentType(MediaType.application.json))
         .withBody(Body.fromCharSequence(value.asJson.toString))
 
+  // redefining here for the sake of having default value of body
+  def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
+  def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
+
   def registerUser: RIO[Client, UserId] =
     Gen.long(1, 100000000)
       .runHead.map(_.getOrElse(52L))
       .flatMap(registerUser)
 
-  def registerNUsers(n: Int): RIO[Client, Array[UserId]] =
+  def registerNUsers(n: Int): RIO[Client, Vector[UserId]] =
     ZIO.collectAll(
-      (1 to n).map(_ => registerUser).toArray
+      (1 to n).map(_ => registerUser).toVector
     )
 
   def registerUser(userId: UserId): RIO[Client, UserId] = for
@@ -40,7 +48,7 @@ object Utils:
     _ <- resp.body.asString
   yield userId
 
-  protected def registerUser(
+  def registerUser(
                               userId: UserId,
                               alias: Option[String],
                               fullName: String,
@@ -53,6 +61,33 @@ object Utils:
     _ <- resp.body.asString
   yield userId
 
-  // redefining here for the sake of having default value of body
-  def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
-  def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
+  def randomString: ZIO[Any, Nothing, String] =
+    Gen
+    .stringBounded(5, 30)(Gen.alphaNumericChar)
+    .runHead
+    .map(_.getOrElse("defaultIngredient"))
+
+  def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+    randomString.flatMap(name =>
+      ZIO.serviceWithZIO[IngredientsRepo] {
+        _.add(name).map(_.id)
+      }.mapError(_ => InternalServerError())
+    )
+
+  def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
+    ZIO.collectAll(
+      (1 to n).map(_ => createIngredient).toVector
+    )
+
+  def createRecipe(ingredientIds: Vector[IngredientId]): ZIO[
+    RecipesRepo & IngredientsRepo & RecipeIngredientsRepo,
+    InternalServerError | DbError,
+    RecipeId
+  ] =
+    for
+      name <- randomString
+      link <- randomString
+      recipeId <- ZIO.serviceWithZIO[RecipesRepo](
+        _.addRecipe(name, link, ingredientIds)
+      )
+    yield recipeId
