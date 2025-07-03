@@ -47,19 +47,49 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           )
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
-          recipeIngredientsIds = recipeResp.ingredients.map(_.id)
-          
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(recipeIngredientsIds.forall(ingredientIds.contains))
-           && assertTrue(ingredientIds.forall(recipeIngredientsIds.contains))
-           && assertTrue(recipeResp.ingredients.map(_.inStorages).forall(_.eq(Vector(storageId))))
+          recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
 
+        yield assertTrue(resp.status == Status.Ok)
+           && assertTrue(recipeRespIngredientsIds.forall(ingredientIds.contains))
+           && assertTrue(ingredientIds.forall(recipeRespIngredientsIds.contains))
+           && assertTrue(recipeResp.ingredients.forall(_.inStorages.eq(Vector(storageId))))
       },
       test("1 user with 2 storages") {
+        for
+          userId <- registerUser
 
+          storageId1 <- createStorage(userId)
+          storageId2 <- createStorage(userId)
+
+          ingredientIds1 <- createNIngredients(defaultIngredientAmount)
+          ingredientIds2 <- createNIngredients(defaultIngredientAmount)
+          extraIngredientIds1 <- createNIngredients(defaultIngredientAmount)
+          extraIngredientIds2 <- createNIngredients(defaultIngredientAmount)
+
+          _ <- addIngredientsToStorage(storageId1, ingredientIds1 ++ extraIngredientIds1)
+          _ <- addIngredientsToStorage(storageId2, ingredientIds2 ++ extraIngredientIds2)
+
+          recipeIngredientsIds = ingredientIds1 ++ ingredientIds2
+          recipeId <- createRecipe(recipeIngredientsIds)
+          resp <- Client.batched(
+            Request.get(s"$defaultPath/$recipeId")
+              .addAuthorization(userId)
+          )
+          strBody <- resp.body.asString
+          recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
+          recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
+        yield assertTrue(resp.status == Status.Ok)
+           && assertTrue(recipeRespIngredientsIds.forall(recipeIngredientsIds.contains))
+           && assertTrue(recipeIngredientsIds.forall(recipeRespIngredientsIds.contains))
+           && assertTrue(recipeResp.ingredients.forall(
+            ingredient =>
+              if ingredientIds1.contains(ingredient.id)
+              then ingredient.inStorages.eq(Vector(storageId1))
+              else ingredient.inStorages.eq(Vector(storageId2))
+        ))
       },
-      test("2 users, 1 shared storage and one personal storage for every user") {
-
-      }
+//      test("2 users, 1 shared storage and one personal storage for every user") {
+//
+//      }
     ).provideLayer(testLayer)
 
