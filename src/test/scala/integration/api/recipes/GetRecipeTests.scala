@@ -23,5 +23,15 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           Request.get(s"$defaultPath/1")
         ).map(resp => assertTrue(resp.status == Status.Unauthorized))
       },
+      test("When asked for non-existent recipe, 404 should be returned"){
+        for
+          userId <- registerUser
+          resp <- Client.batched(
+            Request.get(s"$defaultPath/1")
+              .addAuthorization(userId)
+          )
+        yield assertTrue(resp.status == Status.NotFound)
+      },
+
     ).provideLayer(testLayer)
 
