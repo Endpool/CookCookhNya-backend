@@ -47,9 +47,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           )
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
-
+          recipeIngredientsIds = recipeResp.ingredients.map(_.id)
+          
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(recipeResp.ingredients.map(_.id).forall(ingredientIds.contains))
+           && assertTrue(recipeIngredientsIds.forall(ingredientIds.contains))
+           && assertTrue(ingredientIds.forall(recipeIngredientsIds.contains))
            && assertTrue(recipeResp.ingredients.map(_.inStorages).forall(_.eq(Vector(storageId))))
 
       },
