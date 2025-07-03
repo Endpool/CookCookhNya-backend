@@ -18,28 +18,27 @@ import api.storages.StorageSummaryResp
 import db.repositories.StorageMembersRepo
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:
+  private val endpointPath: String = "my/storages"
+
   override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Get all storages tests")(
       test("When unauthorized should get 401") {
         for
-          resp <- Client.batched(
-            get("my/storages")
-          )
+          resp <- Client.batched(get(endpointPath))
         yield assertTrue(resp.status == Status.Unauthorized)
       },
-      test("When authorized and no storages should get 200 and empty list") {
+      test("When authorized with no storages should get 200 and empty list") {
         for
           userId <- registerUser
           resp <- Client.batched(
-            get("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+            get(endpointPath)
               .addAuthorization(userId)
           )
           bodyStr <- resp.body.asString
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(bodyStr == "[]")
       },
-      test("When authorized and there are owned storages should get 200 and all owned storages") {
+      test("When authorized with owned storages should get 200 and all storages") {
         for
           userId <- registerUser
           n <- Gen.int(1, 10).runHead.map(_.getOrElse(4))
@@ -49,8 +48,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           }
 
           resp <- Client.batched(
-            get("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+            get(endpointPath)
               .addAuthorization(userId)
           )
 
@@ -62,7 +60,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
            && assertTrue(storages.map(_.name).forall(storageNames.contains))
            && assertTrue(storageNames.forall(storages.map(_.name).contains))
       },
-      test("When authorized and there are membered storages should get 200 and all membered storages") {
+      test("When authorized with membered storages should get 200 and all storages") {
         for
           creatorId <- registerUser
           userId <- registerUser
@@ -76,8 +74,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           }
 
           resp <- Client.batched(
-            get("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+            get(endpointPath)
               .addAuthorization(userId)
           )
 
@@ -88,7 +85,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
            && assertTrue(storages.map(_.name).forall(storageNames.contains))
            && assertTrue(storageNames.forall(storages.map(_.name).contains))
       },
-      test("When there are owned and membered storages should get 200 and all owned and membered storages") {
+      test("When authorized with owned and membered storages should return 200 with all storages") {
         for
           n <- Gen.int(1, 5).runHead.map(_.getOrElse(2))
           ownedStorageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
@@ -110,8 +107,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           }
 
           resp <- Client.batched(
-            get("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+            get(endpointPath)
               .addAuthorization(userId)
           )
 
@@ -146,8 +142,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
           userId <- registerUser(creatorId + memberId)
 
           resp <- Client.batched(
-            get("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+            get(endpointPath)
               .addAuthorization(userId)
           )
 
