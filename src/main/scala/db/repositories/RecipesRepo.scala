@@ -8,7 +8,7 @@ import zio.{ZIO, ZLayer}
 
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, Unit]
+    ZIO[RecipeIngredientsRepo, DbError, RecipeId]
   def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]]
   def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit]
 
@@ -16,14 +16,14 @@ private final case class RecipesRepoLive(xa: Transactor)
   extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
 
   override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, Unit] = for
+    ZIO[RecipeIngredientsRepo, DbError, RecipeId] = for
       recipeId <- xa.transact {
         val recipe = DbRecipeCreator(name, sourceLink)
         val DbRecipe(recipeId, _, _) = insertReturning(recipe)
         recipeId
       }.mapError(handleDbError)
       _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.addIngredients(recipeId, ingredients))
-    yield ()
+    yield recipeId
 
   override def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]] =
     for
