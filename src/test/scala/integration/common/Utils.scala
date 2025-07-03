@@ -1,20 +1,57 @@
 package integration.common
 
+import api.users.CreateUserReqBody
 import domain.UserId
-
 import io.circe.Encoder
+import io.circe.generic.auto.deriveEncoder
 import io.circe.parser.decode
 import io.circe.syntax.*
-import zio.http.{Request, Body, Header, MediaType}
+import zio.{RIO, ZIO}
+import zio.http.{Body, Client, Header, MediaType, Request}
+import zio.test.Gen
 
 object Utils:
   extension(req: Request)
-    def addAuthorization(userId: UserId) =
+    def addAuthorization(userId: UserId): Request =
       req.addHeader(Header.Authorization.Bearer(userId.toString))
 
-    def withJsonBody[A](value: A)(using encoder: Encoder[A]) =
+    def withJsonBody[A](value: A)(using encoder: Encoder[A]): Request =
       req.addHeader(Header.ContentType(MediaType.application.json))
         .withBody(Body.fromCharSequence(value.asJson.toString))
+
+  def registerUser: RIO[Client, UserId] =
+    Gen.long(1, 100000000)
+      .runHead.map(_.getOrElse(52L))
+      .flatMap(registerUser)
+
+  def registerNUsers(n: Int): RIO[Client, Array[UserId]] =
+    ZIO.collectAll(
+      (1 to n).map(_ => registerUser).toArray
+    )
+
+  def registerUser(userId: UserId): RIO[Client, UserId] = for
+    alias <- Gen.alphaNumericStringBounded(3, 13).runHead
+    fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.map(_.getOrElse("fullName"))
+    resp <- Client.batched(
+      put("users")
+        .withJsonBody(CreateUserReqBody(alias, fullName))
+        .addAuthorization(userId)
+    )
+    _ <- resp.body.asString
+  yield userId
+
+  protected def registerUser(
+                              userId: UserId,
+                              alias: Option[String],
+                              fullName: String,
+                            ): RIO[Client, UserId] = for
+    resp <- Client.batched(
+      put("users")
+        .withJsonBody(CreateUserReqBody(alias, fullName))
+        .addAuthorization(userId)
+    )
+    _ <- resp.body.asString
+  yield userId
 
   // redefining here for the sake of having default value of body
   def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
