@@ -90,17 +90,16 @@ object Utils:
         _.addRecipe(name, link, ingredientIds)
       )
     yield recipeId
-    
+
   def createStorage(ownerId: UserId): ZIO[StoragesRepo, DbError, StorageId] =
-    for 
+    for
       name <- randomString
       storageId <- ZIO.serviceWithZIO[StoragesRepo](_.createEmpty(name, ownerId))
-    yield storageId  
-    
+    yield storageId
+
   def addIngredientsToStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
-    ZIO[StorageIngredientsRepo, DbError, Unit] = 
+    ZIO[StorageIngredientsRepo, DbError, Unit] =
     ZIO.foreach(ingredientIds)
       (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
-    ZIO.succeed(())
-   
-  
+      .as(())
+
