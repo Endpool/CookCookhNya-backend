@@ -53,6 +53,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
     Gen.long(1, 100000000)
       .runHead.map(_.getOrElse(52L))
       .flatMap(registerUser(_))
+      .flatMap(registerUser)
 
   protected def registerUser(userId: UserId): RIO[Client, UserId] = for
     alias <- Gen.alphaNumericStringBounded(3, 13).runHead
