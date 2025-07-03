@@ -52,7 +52,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(recipeRespIngredientsIds.forall(ingredientIds.contains))
            && assertTrue(ingredientIds.forall(recipeRespIngredientsIds.contains))
-           && assertTrue(recipeResp.ingredients.forall(_.inStorages.eq(Vector(storageId))))
+           && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
       },
       test("1 user with 2 storages") {
         for
