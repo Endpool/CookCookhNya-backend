@@ -5,7 +5,7 @@ import domain.{IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 import api.recipes.{IngredientSummary, RecipeResp}
-import db.repositories.StorageIngredientsRepo
+import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
 import io.circe.parser.*
 import io.circe.generic.auto.*
 import zio.http.{Client, Request, Status}
@@ -50,8 +50,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
 
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(recipeRespIngredientsIds.forall(ingredientIds.contains))
-           && assertTrue(ingredientIds.forall(recipeRespIngredientsIds.contains))
+           && assertTrue(ingredientIds == recipeRespIngredientsIds)
            && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
       },
       test("1 user with 2 storages") {
@@ -79,8 +78,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
           recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(recipeRespIngredientsIds.forall(recipeIngredientsIds.contains))
-           && assertTrue(recipeIngredientsIds.forall(recipeRespIngredientsIds.contains))
+           && assertTrue(recipeIngredientsIds == recipeRespIngredientsIds)
            && assertTrue(recipeResp.ingredients.forall(
             ingredient =>
               if ingredientIds1.contains(ingredient.id)
