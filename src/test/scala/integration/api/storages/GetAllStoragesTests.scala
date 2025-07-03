@@ -37,7 +37,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
     test("When authorized with owned storages should get 200 and all storages") {
       for
         userId <- registerUser
-        n <- Gen.int(1, 10).runHead.map(_.getOrElse(4))
+        n <- Gen.int(1, 10).runHead.some
         storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
         _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
           ZIO.foreach(storageNames){ repo.createEmpty(_, userId) }
@@ -58,7 +58,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
       for
         creatorId <- registerUser
         userId <- registerUser
-        n <- Gen.int(1, 10).runHead.map(_.getOrElse(4))
+        n <- Gen.int(1, 10).runHead.some
         storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
         storageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
           ZIO.foreach(storageNames){ repo.createEmpty(_, creatorId) }
@@ -79,9 +79,9 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
     },
     test("When authorized with owned and membered storages should return 200 with all storages") {
       for
-        n <- Gen.int(1, 5).runHead.map(_.getOrElse(2))
+        n <- Gen.int(1, 5).runHead.some
         ownedStorageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
-        m <- Gen.int(1, 5).runHead.map(_.getOrElse(2))
+        m <- Gen.int(1, 5).runHead.some
         memberedStorageNames <- storageNameGen.sample.map(_.value).take(m).runCollect
         storageNames = ownedStorageNames ++ memberedStorageNames
 
@@ -110,9 +110,9 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
     },
     test("When there are only other user's storages should get 200 and no storages") {
       for
-        n <- Gen.int(1, 5).runHead.map(_.getOrElse(2))
+        n <- Gen.int(1, 5).runHead.some
         ownedStorageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
-        m <- Gen.int(1, 5).runHead.map(_.getOrElse(2))
+        m <- Gen.int(1, 5).runHead.some
         memberedStorageNames <- storageNameGen.sample.map(_.value).take(m).runCollect
         storageNames = ownedStorageNames ++ memberedStorageNames
 
@@ -146,7 +146,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
         userB <- registerUser
         userC <- registerUser
 
-        storagesPerUser <- Gen.int(1, 4).runHead.map(_.getOrElse(2))
+        storagesPerUser <- Gen.int(1, 4).runHead.some
         userAOwnedNames <- storageNameGen.sample.map(_.value).take(storagesPerUser).runCollect
         userBOwnedNames <- storageNameGen.sample.map(_.value).take(storagesPerUser).runCollect
         userCOwnedNames <- storageNameGen.sample.map(_.value).take(storagesPerUser).runCollect

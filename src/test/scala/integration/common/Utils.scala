@@ -5,11 +5,12 @@ import api.users.CreateUserReqBody
 import db.DbError
 import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
+
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
 import io.circe.parser.decode
 import io.circe.syntax.*
-import zio.{RIO, ZIO}
+import zio.{RIO, UIO, ZIO}
 import zio.http.{Body, Client, Header, MediaType, Request}
 import zio.test.Gen
 
@@ -33,17 +34,15 @@ object Utils:
 
   def registerUser: RIO[Client, UserId] =
     Gen.long(1, 100000000)
-      .runHead.map(_.getOrElse(52L))
+      .runHead.someOrElse(52L)
       .flatMap(registerUser)
 
   def registerNUsers(n: Int): RIO[Client, Vector[UserId]] =
-    ZIO.collectAll(
-      (1 to n).map(_ => registerUser).toVector
-    )
+    ZIO.foreach((1 to n).toVector)(_ => registerUser)
 
   def registerUser(userId: UserId): RIO[Client, UserId] = for
     alias <- Gen.alphaNumericStringBounded(3, 13).runHead
-    fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.map(_.getOrElse("fullName"))
+    fullName <- Gen.alphaNumericStringBounded(3, 13).runHead.someOrElse("fullName")
     resp <- Client.batched(
       put("users")
         .withJsonBody(CreateUserReqBody(alias, fullName))
@@ -53,23 +52,22 @@ object Utils:
   yield userId
 
   def registerUser(
-                              userId: UserId,
-                              alias: Option[String],
-                              fullName: String,
-                            ): RIO[Client, UserId] = for
+    userId: UserId,
+    alias: Option[String],
+    fullName: String,
+  ): RIO[Client, UserId] = for
     resp <- Client.batched(
       put("users")
         .withJsonBody(CreateUserReqBody(alias, fullName))
         .addAuthorization(userId)
     )
-    _ <- resp.body.asString
   yield userId
 
-  def randomString: ZIO[Any, Nothing, String] =
+  def randomString: UIO[String] =
     Gen
     .stringBounded(5, 30)(Gen.alphaNumericChar)
     .runHead
-    .map(_.getOrElse("defaultIngredient"))
+    .someOrElse("randomString")
 
   def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
