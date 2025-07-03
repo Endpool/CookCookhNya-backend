@@ -32,6 +32,33 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           )
         yield assertTrue(resp.status == Status.NotFound)
       },
+      test("1 user with 1 storage") {
+        for
+          userId <- registerUser
+          storageId <- createStorage(userId)
+          ingredientIds <- createNIngredients(defaultIngredientAmount)
+          extraIngredientIds <- createNIngredients(defaultIngredientAmount)
+          _ <- ZIO.foreach(ingredientIds ++ extraIngredientIds)
+            (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
 
+          recipeId <- createRecipe(ingredientIds)
+          resp <- Client.batched(
+            Request.get(s"$defaultPath/$recipeId")
+              .addAuthorization(userId)
+          )
+          strBody <- resp.body.asString
+          recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
+
+        yield assertTrue(resp.status == Status.Ok)
+           && assertTrue(recipeResp.ingredients.map(_.id).forall(ingredientIds.contains))
+           && assertTrue(recipeResp.ingredients.map(_.inStorages).forall(_.eq(Vector(storageId))))
+
+      },
+      test("1 user with 2 storages") {
+
+      },
+      test("2 users, 1 shared storage and one personal storage for every user") {
+
+      }
     ).provideLayer(testLayer)
 
