@@ -16,13 +16,13 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private case class IngredientSummary(
+case class IngredientSummary(
   id: IngredientId,
   name: String,
   inStorages: Vector[StorageId]
 )
 
-private case class RecipeResp(
+case class RecipeResp(
   ingredients: Vector[IngredientSummary],
   name: String,
   sourceLink: String
