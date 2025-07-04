@@ -7,14 +7,14 @@ import api.recipes.{IngredientSummary, RecipeResp}
 import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
 import io.circe.parser.*
 import io.circe.generic.auto.*
-import zio.http.{Client, Request, Status}
+import zio.http.{Client, Path, Request, Status, URL}
 import zio.{Scope, ZIO}
 import zio.test.{Spec, TestEnvironment, assertTrue}
 
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
-    val defaultPath = "recipes/"
-    val defaultIngredientAmount = 1
+    val defaultPath = URL(Path.root / "recipes")
+    val defaultIngredientAmount = 3
 
     suite("Get recipe (detailed) tests")(
       test("When unauthorized should get 401") {
@@ -26,7 +26,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         for
           userId <- registerUser
           resp <- Client.batched(
-            Request.get(s"$defaultPath/1")
+            Request.get(defaultPath / "1")
               .addAuthorization(userId)
           )
         yield assertTrue(resp.status == Status.NotFound)
@@ -41,7 +41,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
           recipeId <- createRecipe(ingredientIds)
           resp <- Client.batched(
-            Request.get(s"$defaultPath/$recipeId")
+            Request.get(defaultPath / recipeId.toString)
               .addAuthorization(userId)
           )
           strBody <- resp.body.asString
@@ -70,7 +70,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeIngredientsIds = ingredientIds1 ++ ingredientIds2
           recipeId <- createRecipe(recipeIngredientsIds)
           resp <- Client.batched(
-            Request.get(s"$defaultPath/$recipeId")
+            Request.get(defaultPath / recipeId.toString)
               .addAuthorization(userId)
           )
           strBody <- resp.body.asString
@@ -112,7 +112,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(sharedStorageId, userId2))
           // case 1: sending request as a 1st user
           resp1 <- Client.batched(
-            Request.get(s"$defaultPath/$recipeId")
+            Request.get(defaultPath / recipeId.toString)
               .addAuthorization(userId1)
           )
           strBody1 <- resp1.body.asString
@@ -131,7 +131,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
                         ))
           // case 2: sending request as a 2nd user
           resp2 <- Client.batched(
-            Request.get(s"$defaultPath/$recipeId")
+            Request.get(defaultPath / recipeId.toString)
               .addAuthorization(userId2)
           )
           strBody2 <- resp2.body.asString
