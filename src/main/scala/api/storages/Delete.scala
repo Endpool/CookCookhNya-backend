@@ -4,7 +4,8 @@ import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import api.zSecuredServerLogic
 import db.repositories.StoragesRepo
-import domain.{StorageError, StorageId, UserId, DbError}
+import domain.{StorageId, UserId, InternalServerError}
+import db.DbError
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
@@ -19,5 +20,7 @@ private val delete: ZServerEndpoint[AppEnv, Any] =
   .zSecuredServerLogic(deleteHandler)
 
 private def deleteHandler(userId: UserId)(storageId: StorageId):
-  ZIO[StoragesRepo, DbError.UnexpectedDbError, Unit] =
-  ZIO.serviceWithZIO[StoragesRepo](_.removeById(storageId))
+  ZIO[StoragesRepo, InternalServerError, Unit] =
+  ZIO.serviceWithZIO[StoragesRepo](_.removeById(storageId)).mapError {
+    _ => InternalServerError()
+  }

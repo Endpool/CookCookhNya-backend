@@ -1,7 +1,7 @@
 package db.tables
 
 import db.CustomSqlNameMapper
-import domain.{User, UserId, Storage, Ingredient, IngredientId}
+import domain.{UserId, Storage, Ingredient, IngredientId}
 
 import com.augustnagro.magnum.*
 
@@ -13,4 +13,3 @@ final case class DbUser(
 ) derives DbCodec
 
 val usersTable = TableInfo[DbUser, DbUser, UserId]
-

@@ -1,40 +1,54 @@
 package db.repositories
 
 import db.tables.{DbIngredient, DbIngredientCreator}
-import domain.DbError
-import domain.IngredientId
-
+import domain.{IngredientId, UserId}
+import db.{DbError, handleDbError}
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
 trait IngredientsRepo:
   def add(name: String): IO[DbError, DbIngredient]
-  def getById(id: IngredientId): IO[DbError.UnexpectedDbError, Option[DbIngredient]]
+  def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
-  def getAll: IO[DbError, Vector[DbIngredient]]
+  def getAll: IO[DbError, Vector[DbIngredient]] 
+  def getAllOwnedBy(userId: UserId):
+    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] 
 
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
   override def add(name: String): IO[DbError, DbIngredient] =
-    xa.transact(insertReturning(DbIngredientCreator(name))).catchAll { e =>
-      ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
+    xa.transact(insertReturning(DbIngredientCreator(name))).mapError {
+      handleDbError
     }
 
-  override def getById(id: IngredientId): IO[DbError.UnexpectedDbError, Option[DbIngredient]] =
-    xa.transact(findById(id)).catchAll { e =>
-      ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
+  override def getById(id: IngredientId): IO[DbError, Option[DbIngredient]] =
+    xa.transact(findById(id)).mapError {
+      handleDbError
     }
 
   override def removeById(id: IngredientId): IO[DbError, Unit] =
-    xa.transact(deleteById(id)).catchAll { e =>
-      ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
+    xa.transact(deleteById(id)).mapError {
+      handleDbError
     }
 
   override def getAll: IO[DbError, Vector[DbIngredient]] =
-    xa.transact(findAll).catchAll { e =>
-      ZIO.fail(DbError.UnexpectedDbError(e.getMessage()))
+    xa.transact(findAll).mapError {
+      handleDbError
     }
+  
+  override def getAllOwnedBy(userId: UserId):
+    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
+    for 
+      userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorageIds(userId))
+      userIngredientIds <- ZIO.foreach(userStorageIds) {
+        storageId => ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
+      }.map(_.flatten)
+      userIngredients <- xa.transact {
+        userIngredientIds.map(findById).flatten
+      }.mapError(handleDbError) 
 
-object IngredientsRepoLive:
+    yield userIngredients
+      
+object IngredientsRepo:
   val layer: RLayer[Transactor, IngredientsRepo] =
     ZLayer.fromFunction(IngredientsRepoLive(_))

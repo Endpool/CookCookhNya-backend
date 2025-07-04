@@ -2,6 +2,7 @@ package api
 
 import _root_.db.dbLayer
 import _root_.db.repositories.*
+import _root_.db.DataSourceDescription
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -22,19 +23,20 @@ object Main extends ZIOAppDefault:
   val endpoints: Routes[AppEnv, Response] =
     ZioHttpInterpreter().toHttp(AppEndpoints.endpoints)
 
-  val app = endpoints ++ swaggerEndpoints
+  val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
 
   override def run =
     Server.serve(app)
       .provide(
-        ZLayer.succeed(Server.Config.default.port(8080)),
-        dbLayer,
-        IngredientsRepoLive.layer,
+        Server.defaultWithPort(8080),
+        DataSourceDescription.layerFromEnv >>> dbLayer,
+        IngredientsRepo.layer,
         UsersRepo.layer,
-        StoragesRepoLive.layer,
-        StorageIngredientsRepoLive.layer,
-        StorageMembersRepoLive.layer,
+        StoragesRepo.layer,
+        StorageIngredientsRepo.layer,
+        StorageMembersRepo.layer,
         RecipesRepo.layer,
         RecipeIngredientsRepo.layer,
-        Server.live
+        RecipesDomainRepo.layer,
+        ShoppingListsRepo.layer,
       )

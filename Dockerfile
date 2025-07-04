@@ -21,4 +21,4 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["./bin/cookcookhny-backend"]
+ENTRYPOINT ["./bin/cookcookhnya-backend"]

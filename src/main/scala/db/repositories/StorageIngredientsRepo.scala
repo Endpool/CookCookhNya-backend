@@ -1,34 +1,40 @@
 package db.repositories
 
 import db.tables.{DbStorageIngredient, storageIngredientsTable}
-import domain.{IngredientId, StorageError, IngredientError, StorageId, UserId, DbError}
+import domain.{IngredientId, StorageError, StorageId, UserId}
+import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{RLayer,  IO, ZLayer}
-import zio.ZIO
-import db.tables.storageMembersTable
+import zio.{RLayer, IO, ZIO, ZLayer}
 
 trait StorageIngredientsRepo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound | IngredientError.NotFound, Unit]
+    IO[DbError, Unit]
 
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound, Unit]
+    IO[DbError, Unit]
 
   def getAllIngredientsFromStorage(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[IngredientId]]
+    IO[DbError, Vector[IngredientId]]
+
+  def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean]
 
 private final case class StorageIngredientsRepoLive(xa: Transactor)
   extends Repo[DbStorageIngredient, DbStorageIngredient, (StorageId, UserId)] with StorageIngredientsRepo:
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound | IngredientError.NotFound, Unit] =
-    xa.transact(insert(DbStorageIngredient(storageId, ingredientId))).mapError {
-      _ => StorageError.NotFound(storageId) // TODO actual error handling
-    }
+    IO[DbError, Unit] =
+    xa.transact {
+      sql"""
+           insert into ${storageIngredientsTable}
+           values ($storageId, $ingredientId)
+           on conflict do nothing
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
-    IO[StorageError.NotFound, Unit] =
+    IO[DbError, Unit] =
     xa.transact {
       sql"""
         DELETE FROM $storageIngredientsTable
@@ -36,21 +42,29 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
           AND ${storageIngredientsTable.ingredientId} = $ingredientId
       """.update.run()
       ()
-    }.mapError {
-      _ => StorageError.NotFound(storageId) // TODO actual error handling
-    }
+    }.mapError(handleDbError)
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
-    IO[DbError.UnexpectedDbError, Vector[IngredientId]] =
+    IO[DbError, Vector[IngredientId]] =
     xa.transact {
       sql"""
         SELECT ${storageIngredientsTable.ingredientId} FROM ${storageIngredientsTable}
         WHERE ${storageIngredientsTable.storageId} = $storageId
       """.query[IngredientId].run()
     }.mapError {
-      e => DbError.UnexpectedDbError(e.getMessage()) // TODO actual error handling
+      handleDbError
     }
 
-object StorageIngredientsRepoLive:
+  override def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean] =
+    xa.transact {
+      val spec = Spec[DbStorageIngredient]
+        .where(sql"${storageIngredientsTable.storageId} = $storageId")
+        .where(sql"${storageIngredientsTable.ingredientId} = $ingredientId")
+        .limit(1)
+      val exists = ! findAll(spec).isEmpty
+      exists
+    }.mapError(handleDbError)
+
+object StorageIngredientsRepo:
   val layer: RLayer[Transactor, StorageIngredientsRepo] =
     ZLayer.fromFunction(StorageIngredientsRepoLive(_))
