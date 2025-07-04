@@ -1,7 +1,6 @@
 package integration.api.storages
 
-import api.storages.{CreateStorageReqBody, StorageSummaryResp}
-import db.dbLayer
+import api.storages.StorageSummaryResp
 import db.repositories.{StorageMembersRepo, StoragesRepo}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -11,8 +10,7 @@ import io.circe.parser.decode
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.get
 import zio.{Scope, ZIO}
-import zio.test.Assertion.*
-import zio.test.{Gen, TestEnvironment, assertTrue, Spec, SmartAssertionOps, SmartAssertMacros}
+import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:
   private val endpointPath: URL = URL(Path.root / "my" / "storages")
@@ -118,7 +116,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
 
         memberId <- registerUser
         _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(ownedStorageNames){ repo.createEmpty(_, memberId) }
+          ZIO.foreach(ownedStorageNames)(repo.createEmpty(_, memberId))
         }
 
         creatorId <- registerUser
@@ -173,7 +171,7 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
         }
 
         userAMemberedNames <- ZIO.serviceWithZIO[StoragesRepo] { repo =>
-          ZIO.foreach(userAMemberedStorageIds){ repo.getById(_) }
+          ZIO.foreach(userAMemberedStorageIds)(repo.getById)
             .map(_.flatten.map(_.name))
         }
         expectedStorageNames = userAOwnedNames ++ userAMemberedNames

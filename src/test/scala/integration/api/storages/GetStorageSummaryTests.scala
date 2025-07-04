@@ -10,7 +10,6 @@ import io.circe.generic.auto.*
 import io.circe.parser.decode
 import zio.http.Request.get
 import zio.http.{Client, Status, URL, Path}
-import zio.test.Assertion.*
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 import zio.{Scope, ZIO}
 

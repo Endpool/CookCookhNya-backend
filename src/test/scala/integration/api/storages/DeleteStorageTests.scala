@@ -8,7 +8,6 @@ import integration.common.ZIOIntegrationTestSpec
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.delete
 import zio.{Scope, ZIO}
-import zio.test.Assertion.*
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object DeleteStorageTests extends ZIOIntegrationTestSpec:
