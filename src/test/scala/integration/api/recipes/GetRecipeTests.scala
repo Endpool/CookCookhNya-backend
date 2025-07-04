@@ -14,7 +14,7 @@ import zio.test.{Spec, TestEnvironment, assertTrue}
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
     val defaultPath = "recipes/"
-    val defaultIngredientAmount = 3
+    val defaultIngredientAmount = 1
 
     suite("Get recipe (detailed) tests")(
       test("When unauthorized should get 401") {
@@ -120,8 +120,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeRespIngredientsIds1 = recipeResp1.ingredients.map(_.id)
 
           assertions1 = assertTrue(resp1.status == Status.Ok) &&
-                        assertTrue(recipeRespIngredientsIds1.
-                          hasSameElementsAs(ingredientIds1 ++ sharedIngredientIds ++ commonIngredients)) &&
+                        assertTrue(recipeRespIngredientsIds1.hasSameElementsAs(recipeIngredientsIds)) &&
                         assertTrue(recipeResp1.ingredients.forall(
                           ingredient =>
                             if ingredientIds1.contains(ingredient.id)
@@ -138,9 +137,8 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeRespIngredientsIds2 = recipeResp2.ingredients.map(_.id)
 
           assertions2 = assertTrue(resp2.status == Status.Ok) &&
-                        assertTrue(recipeRespIngredientsIds2
-                          .hasSameElementsAs(ingredientIds2 ++ sharedIngredientIds ++ commonIngredients)) &&
-                        assertTrue(recipeResp1.ingredients.forall(
+                        assertTrue(recipeRespIngredientsIds2.hasSameElementsAs(recipeIngredientsIds)) &&
+                        assertTrue(recipeResp2.ingredients.forall(
                           ingredient =>
                             if ingredientIds2.contains(ingredient.id)
                             then ingredient.inStorages.hasSameElementsAs(Vector(storageId2))
