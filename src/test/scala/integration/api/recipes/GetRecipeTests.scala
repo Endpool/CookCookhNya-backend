@@ -123,9 +123,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
                         assertTrue(recipeRespIngredientsIds1.hasSameElementsAs(recipeIngredientsIds)) &&
                         assertTrue(recipeResp1.ingredients.forall(
                           ingredient =>
-                            if ingredientIds1.contains(ingredient.id)
-                            then ingredient.inStorages.hasSameElementsAs(Vector(storageId1))
-                            else ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
+                            if ((ingredientIds1 ++ commonIngredients).contains(ingredient.id))
+                              ingredient.inStorages.hasSameElementsAs(Vector(storageId1))
+                            else if (sharedIngredientIds.contains(ingredient.id))
+                              ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
+                            else true
                         ))
           // case 2: sending request as a 2nd user
           resp2 <- Client.batched(
@@ -140,9 +142,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
                         assertTrue(recipeRespIngredientsIds2.hasSameElementsAs(recipeIngredientsIds)) &&
                         assertTrue(recipeResp2.ingredients.forall(
                           ingredient =>
-                            if ingredientIds2.contains(ingredient.id)
-                            then ingredient.inStorages.hasSameElementsAs(Vector(storageId2))
-                            else ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
+                            if ((ingredientIds2 ++ commonIngredients).contains(ingredient.id))
+                              ingredient.inStorages.hasSameElementsAs(Vector(storageId2))
+                            else if (sharedIngredientIds.contains(ingredient.id))
+                              ingredient.inStorages.hasSameElementsAs(Vector(sharedStorageId))
+                            else ingredient.inStorages.isEmpty
                         ))
 
         yield assertions1 && assertions2
