@@ -102,8 +102,6 @@ object Utils:
 
   def addIngredientsToStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
     ZIO[StorageIngredientsRepo, DbError, Unit] =
-    ZIO.foreach(ingredientIds)
-      (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
-    *> ZIO.unit
-
-
+    ZIO.serviceWithZIO[StorageIngredientsRepo](repo =>
+      ZIO.foreachDiscard(ingredientIds)(repo.addIngredientToStorage(storageId, _))
+    )

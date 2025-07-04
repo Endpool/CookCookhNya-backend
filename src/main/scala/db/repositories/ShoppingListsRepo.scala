@@ -3,6 +3,7 @@ package db.repositories
 import db.tables.{DbShoppingList, shoppingListTable}
 import db.{DbError, handleDbError}
 import domain.{IngredientId, Recipe, RecipeId, UserId}
+
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
 
@@ -23,12 +24,11 @@ private final case class ShoppingListsLive(xa: Transactor)
     xa.transact {
       ingredients.foreach { ingredientId =>
         sql"""
-             insert into ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-             values ($ownerId, $ingredientId)
-             on conflict (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-             do nothing
-           """.update.run()
-        ()
+          INSERT INTO ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+          VALUES ($ownerId, $ingredientId)
+          ON CONFLICT (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+          DO NOTHING
+        """.update.run()
       }
     }.mapError(handleDbError)
 
@@ -36,9 +36,9 @@ private final case class ShoppingListsLive(xa: Transactor)
   ZIO[ShoppingListsRepo, DbError, Vector[IngredientId]] =
     xa.transact {
       sql"""
-           select ${shoppingListTable.ingredientId} from $shoppingListTable
-           where ${shoppingListTable.ownerId} = $ownerId
-         """.query[IngredientId].run()
+        SELECT ${shoppingListTable.ingredientId} FROM $shoppingListTable
+        WHERE ${shoppingListTable.ownerId} = $ownerId
+      """.query[IngredientId].run()
     }.mapError(handleDbError)
 
   override def deleteIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
@@ -46,12 +46,11 @@ private final case class ShoppingListsLive(xa: Transactor)
     xa.transact {
       ingredients.foreach { ingredientId =>
         sql"""
-             delete from ${shoppingListTable}
-             where ${shoppingListTable.ownerId} = $ownerId
-             and ${shoppingListTable.ingredientId} = $ingredientId
-           """.update.run()
+          DELETE FROM ${shoppingListTable}
+          WHERE ${shoppingListTable.ownerId} = $ownerId
+          AND ${shoppingListTable.ingredientId} = $ingredientId
+        """.update.run()
       }
-      ()
     }.mapError(handleDbError)
 
 object ShoppingListsRepo:

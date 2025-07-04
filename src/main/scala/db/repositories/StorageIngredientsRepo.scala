@@ -1,8 +1,8 @@
 package db.repositories
 
 import db.tables.{DbStorageIngredient, storageIngredientsTable}
-import domain.{IngredientId, StorageError, StorageId, UserId}
 import db.{DbError, handleDbError}
+import domain.{IngredientId, StorageError, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{RLayer, IO, ZIO, ZLayer}
@@ -26,10 +26,10 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-           insert into ${storageIngredientsTable}
-           values ($storageId, $ingredientId)
-           on conflict do nothing
-         """.update.run()
+        INSERT INTO ${storageIngredientsTable}
+        VALUES ($storageId, $ingredientId)
+        ON CONFLICT DO NOTHING
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -51,9 +51,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
         SELECT ${storageIngredientsTable.ingredientId} FROM ${storageIngredientsTable}
         WHERE ${storageIngredientsTable.storageId} = $storageId
       """.query[IngredientId].run()
-    }.mapError {
-      handleDbError
-    }
+    }.mapError(handleDbError)
 
   override def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean] =
     xa.transact {

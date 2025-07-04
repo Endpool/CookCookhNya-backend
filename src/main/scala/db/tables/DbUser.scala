@@ -1,7 +1,7 @@
 package db.tables
 
 import db.CustomSqlNameMapper
-import domain.{UserId, Storage, Ingredient, IngredientId}
+import domain.{UserId, IngredientId}
 
 import com.augustnagro.magnum.*
 
