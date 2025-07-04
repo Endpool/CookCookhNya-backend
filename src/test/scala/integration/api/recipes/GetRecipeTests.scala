@@ -1,6 +1,5 @@
 package integration.api.recipes
 
-import api.AppEnv
 import domain.{IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -10,7 +9,7 @@ import io.circe.parser.*
 import io.circe.generic.auto.*
 import zio.http.{Client, Request, Status}
 import zio.{Scope, ZIO}
-import zio.test.{SmartAssertionOps, Spec, TestEnvironment, TestLensOptionOps, assertTrue}
+import zio.test.{Spec, TestEnvironment, assertTrue}
 
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] =
