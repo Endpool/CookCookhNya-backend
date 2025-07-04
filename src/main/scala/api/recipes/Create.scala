@@ -1,6 +1,6 @@
 package api.recipes
 
-import api.{AppEnv, failIfIngredientNotFound, handleFailedSqlQuery}
+import api.{AppEnv, toIngredientNotFound, handleFailedSqlQuery}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
@@ -22,13 +22,13 @@ final case class CreateRecipeReqBody(
 val create: ZServerEndpoint[AppEnv, Any] =
   recipesEndpoint
     .post
-    .in(jsonBody[RecipeCreationEntity])
+    .in(jsonBody[CreateRecipeReqBody])
     .out(plainBody[RecipeId])
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zServerLogic(createHandler)
 
 private def createHandler(recipe: CreateRecipeReqBody):
-  ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError | NotFound, Unit] =
+  ZIO[RecipesRepo & RecipeIngredientsRepo, InternalServerError | NotFound, RecipeId] =
   ZIO.serviceWithZIO[RecipesRepo] {
     _.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
   }.mapError {
