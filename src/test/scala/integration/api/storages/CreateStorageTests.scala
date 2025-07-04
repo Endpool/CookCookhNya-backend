@@ -1,7 +1,6 @@
 package integration.api.storages
 
 import api.storages.CreateStorageReqBody
-import db.dbLayer
 import db.repositories.StoragesRepo
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -9,12 +8,11 @@ import integration.common.ZIOIntegrationTestSpec
 import io.circe.generic.auto.*
 import zio.http.{Client, Status}
 import zio.{Scope, ZIO}
-import zio.test.Assertion.*
 import zio.test.{
   TestEnvironment,
-  assert, assertTrue,
+  assertTrue,
   Spec,
-  SmartAssertionOps, SmartAssertMacros, TestLensOptionOps
+  SmartAssertionOps, TestLensOptionOps
 }
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
@@ -37,7 +35,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok)
       },
       test("When authorized storage should be added to db") {
-        var storageName = "storage"
+        val storageName = "storage"
         for
           userId <- registerUser
 
@@ -50,12 +48,11 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
           storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
         yield assertTrue(resp.status == Status.Ok)
-           && assert(storage)(isSome)
            && assertTrue(storage.is(_.some).id == storageId)
            && assertTrue(storage.is(_.some).name == storageName)
       },
       test("When created storage should have creator as owner") {
-        var storageName = "storage"
+        val storageName = "storage"
         for
           userId <- registerUser
 
