@@ -2,18 +2,21 @@ package api.storages.ingredients
 
 import api.{
   AppEnv,
+  zSecuredServerLogic,
   handleFailedSqlQuery,
-  failIfIngredientNotFound,
-  failIfStorageNotFound
+  toIngredientNotFound,
+  toStorageNotFound,
 }
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
   serverErrorVariant,
-  storageNotFoundVariant}
-import api.zSecuredServerLogic
+  storageNotFoundVariant
+}
+import common.OptionExtensions.<|>
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
-import db.DbError.{DbNotRespondingError, FailedDbQuery}
+
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -23,11 +26,11 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
   .delete
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
-    .errorOut(oneOf(
-      serverErrorVariant,
-      ingredientNotFoundVariant,
-      storageNotFoundVariant,
-    ))
+  .errorOut(oneOf(
+    serverErrorVariant,
+    ingredientNotFoundVariant,
+    storageNotFoundVariant,
+  ))
   .zSecuredServerLogic(removeHandler)
 
 private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
@@ -36,13 +39,9 @@ private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: I
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.removeIngredientFromStorageById(storageId, ingredientId)
-  }.catchAll {
-    case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
-    case e: FailedDbQuery => for {
-        missingEntry <- handleFailedSqlQuery(e)
-        (keyName, keyValue, _) = missingEntry
-        _ <- failIfStorageNotFound(keyName, keyValue)
-        _ <- failIfIngredientNotFound(keyName, keyValue)
-        _ <- ZIO.fail(InternalServerError())
-      } yield ()
+  }.mapError {
+    case _: DbNotRespondingError => InternalServerError()
+    case e: FailedDbQuery => handleFailedSqlQuery(e)
+      .flatMap(fkv => toStorageNotFound(fkv) <|> toIngredientNotFound(fkv))
+      .getOrElse(InternalServerError())
   }
