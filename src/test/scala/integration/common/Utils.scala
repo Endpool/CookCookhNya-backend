@@ -26,7 +26,7 @@ object Utils:
     def hasSameElementsAs(seq2: Seq[A])(using ord: Ordering[A]): Boolean
     = seq1.length == seq2.length // for optimization
       && seq1.sorted == seq2.sorted
-    
+
   // redefining here for the sake of having default value of body
   def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
   def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
@@ -104,6 +104,7 @@ object Utils:
 
   def addIngredientsToStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
     ZIO[StorageIngredientsRepo, DbError, Unit] =
-    ZIO.foreachDiscard(ingredientIds)
-      (id => ZIO.serviceWithZIO[StorageIngredientsRepo](_.addIngredientToStorage(storageId, id)))
+    ZIO.serviceWithZIO[StorageIngredientsRepo](repo =>
+      ZIO.foreachDiscard(ingredientIds)(repo.addIngredientToStorage(storageId, _))
+    )
 
