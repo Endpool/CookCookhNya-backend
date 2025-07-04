@@ -60,14 +60,15 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           storage1Id <- createStorage(userId)
           storage2Id <- createStorage(userId)
 
-          usedStorage1IngredientIds <- createNIngredients(defaultIngredientAmount)
+          storage1UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
           storage2UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
-          recipeIngredientsIds = usedStorage1IngredientIds
+          recipeIngredientsIds = storage1UsedIngredientIds
                               ++ storage2UsedIngredientIds
 
-          _ <- addIngredientsToStorage(storage1Id, usedStorage1IngredientIds)
-          _ <- addIngredientsToStorage(storage2Id, storage2UsedIngredientIds)
           recipeId <- createRecipe(recipeIngredientsIds)
+
+          _ <- addIngredientsToStorage(storage1Id, storage1UsedIngredientIds)
+          _ <- addIngredientsToStorage(storage2Id, storage2UsedIngredientIds)
 
           // create some extra ingredients that are not used in the recipe
           _ <- createNIngredients(defaultIngredientAmount)
@@ -87,7 +88,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
            && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
            && assertTrue(recipeResp.ingredients.forall(ingredient =>
                 ingredient.inStorages == (
-                  if usedStorage1IngredientIds.contains(ingredient.id)
+                  if storage1UsedIngredientIds.contains(ingredient.id)
                     then Vector(storage1Id)
                   else if storage2UsedIngredientIds.contains(ingredient.id)
                     then Vector(storage2Id)
@@ -106,11 +107,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           user2StorageId  <- createStorage(userId2)
 
           temp <- for
-            commonIngredientIds <- createNIngredients(defaultIngredientAmount)
-            u1SIngredientIds    <- createNIngredients(defaultIngredientAmount)
-            u2SIngredientIds    <- createNIngredients(defaultIngredientAmount)
-          yield (u1SIngredientIds ++ commonIngredientIds,
-                 u2SIngredientIds ++ commonIngredientIds)
+            commonIngredientIds           <- createNIngredients(defaultIngredientAmount)
+            user1OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+            user2OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+          yield (user1OnlyStorageIngredientIds ++ commonIngredientIds,
+                 user2OnlyStorageIngredientIds ++ commonIngredientIds)
           (user1StorageIngredientIds, user2StorageIngredientIds) = temp
           _ <- addIngredientsToStorage(user1StorageId, user1StorageIngredientIds)
           _ <- addIngredientsToStorage(user2StorageId, user2StorageIngredientIds)
@@ -118,10 +119,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           sharedStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(sharedStorageId, sharedStorageIngredientIds)
 
-          recipeIngredientsIds
-            =  user1StorageIngredientIds
+          recipeIngredientsIds =
+            (  user1StorageIngredientIds
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
+            ).distinct
           recipeId <- createRecipe(recipeIngredientsIds)
 
           // create some extra ingredients that are not used in the recipe
@@ -145,36 +147,40 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
               recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
             yield assertTrue(resp.status == Status.Ok)
                && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
-               && assertTrue(recipeResp.ingredients.forall(
-                              ingredient =>
-                                if (user1StorageIngredientIds.contains(ingredient.id))
-                                  ingredient.inStorages == Vector(user1StorageId)
-                                else if (sharedStorageIngredientIds.contains(ingredient.id))
-                                  ingredient.inStorages == Vector(sharedStorageId)
-                                else true
-                            ))
+               && assertTrue(recipeResp.ingredients.forall( ingredient =>
+                   ingredient.inStorages == (
+                     if (user1StorageIngredientIds.contains(ingredient.id))
+                       Vector(user1StorageId)
+                     else if (sharedStorageIngredientIds.contains(ingredient.id))
+                       Vector(sharedStorageId)
+                     else
+                       Vector.empty
+                     )
+                   ))
           }
 
           // case 2: sending request as a 2nd user
           assertCase2 <- {
             for
-              resp2 <- Client.batched(
+              resp <- Client.batched(
                 Request.get(defaultPath / recipeId.toString)
                   .addAuthorization(userId2)
               )
 
-              strBody2 <- resp2.body.asString
-              recipeResp2 <- ZIO.fromEither(decode[RecipeResp](strBody2))
-              recipeRespIngredientsIds2 = recipeResp2.ingredients.map(_.id)
-           yield assertTrue(resp2.status == Status.Ok)
-              && assertTrue(recipeRespIngredientsIds2.hasSameElementsAs(recipeIngredientsIds))
-              && assertTrue(recipeResp2.ingredients.forall(
-                   ingredient =>
-                     if (user2StorageIngredientIds.contains(ingredient.id))
-                       ingredient.inStorages == Vector(user2StorageId)
-                     else if (sharedStorageIngredientIds.contains(ingredient.id))
-                       ingredient.inStorages == Vector(sharedStorageId)
-                     else ingredient.inStorages.isEmpty
+              strBody <- resp.body.asString
+              recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
+              recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
+           yield assertTrue(resp.status == Status.Ok)
+              && assertTrue(recipeRespIngredientsIds.hasSameElementsAs(recipeIngredientsIds))
+              && assertTrue(recipeResp.ingredients.forall( ingredient =>
+                  ingredient.inStorages == (
+                    if (user2StorageIngredientIds.contains(ingredient.id))
+                      Vector(user2StorageId)
+                    else if (sharedStorageIngredientIds.contains(ingredient.id))
+                      Vector(sharedStorageId)
+                    else
+                      Vector.empty
+                    )
                  ))
           }
         yield assertCase1 && assertCase2
