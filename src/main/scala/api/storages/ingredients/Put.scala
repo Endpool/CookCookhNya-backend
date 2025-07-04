@@ -12,6 +12,7 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
@@ -31,10 +32,6 @@ val put: ZServerEndpoint[AppEnv, Any] =
     storageNotFoundVariant,
   ))
   .zSecuredServerLogic(putHandler)
-
-extension[A] (optA: Option[A])
-  def <|>[B] (optB: Option[B]): Option[A | B] =
-    optA orElse optB
 
 private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
   ZIO[StorageIngredientsRepo,
