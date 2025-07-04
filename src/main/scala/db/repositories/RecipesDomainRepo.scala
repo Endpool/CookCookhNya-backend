@@ -17,17 +17,17 @@ import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 trait RecipesDomainRepo:
   protected type RecipeSummary = (RecipeId, String, Int, Int, Int)
   def getSuggestedIngredients(
-                               size: Int,
-                               offset: Int,
-                               storageIds: Vector[StorageId]
-                             ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
+    size: Int,
+    offset: Int,
+    storageIds: Vector[StorageId]
+  ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
 
 private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
   override def getSuggestedIngredients(
-                                        size: Int,
-                                        offset: Int,
-                                        storageIds: Vector[StorageId]
-                                      ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
+    size: Int,
+    offset: Int,
+    storageIds: Vector[StorageId]
+  ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
     val table = recipeIngredientsTable
     for
       allIngredients <- ZIO.collectAll(storageIds.map { storageId =>

@@ -3,18 +3,19 @@ package api.storages.ingredients
 import api.{
   AppEnv,
   handleFailedSqlQuery,
+  zSecuredServerLogic,
   failIfStorageNotFound,
-  failIfIngredientNotFound
+  failIfIngredientNotFound,
 }
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
   serverErrorVariant,
   storageNotFoundVariant
 }
-import api.zSecuredServerLogic
+import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
-import db.DbError.{DbNotRespondingError, FailedDbQuery}
+
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -31,19 +32,20 @@ val put: ZServerEndpoint[AppEnv, Any] =
   ))
   .zSecuredServerLogic(putHandler)
 
+extension[A] (optA: Option[A])
+  def <|>[B] (optB: Option[B]): Option[A | B] =
+    optA orElse optB
+
 private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
   ZIO[StorageIngredientsRepo,
-     InternalServerError | IngredientError.NotFound | StorageError.NotFound,
-     Unit] =
+      InternalServerError | IngredientError.NotFound | StorageError.NotFound,
+      Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
-    _.addIngredientToStorage(storageId, ingredientId).catchAll {
-      case DbNotRespondingError(_) => ZIO.fail(InternalServerError())
-      case e: FailedDbQuery => for {
-          missingEntry <- handleFailedSqlQuery(e)
-          (keyName, keyValue, _) = missingEntry
-          _ <- failIfStorageNotFound(keyName, keyValue)
-          _ <- failIfIngredientNotFound(keyName, keyValue)
-          _ <- ZIO.fail(InternalServerError())
-        } yield ()
-    }
+    _.addIngredientToStorage(storageId, ingredientId)
+  }.mapError {
+    case _: DbNotRespondingError => InternalServerError()
+    case e: FailedDbQuery => handleFailedSqlQuery(e)
+      .flatMap(fkv => failIfStorageNotFound(fkv) <|> failIfIngredientNotFound(fkv))
+      .getOrElse(InternalServerError())
   }
+
