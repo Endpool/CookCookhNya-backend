@@ -14,7 +14,7 @@ import zio.test.Assertion.*
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 import zio.{Scope, ZIO}
 
-object GetStorageTests extends ZIOIntegrationTestSpec:
+object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
     URL(Path.root / "my" / "storages" / storageId.toString)
 
