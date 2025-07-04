@@ -34,37 +34,22 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
           )
         yield assertTrue(resp.status == Status.Ok)
       },
-      test("When authorized storage should be added to db") {
+      test("When authorized, storage should be added to db & have its creator an owner") {
         val storageName = "storage"
         for
           userId <- registerUser
 
           resp <- Client.batched(
             post("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
+              .withJsonBody(CreateStorageReqBody(storageName))
               .addAuthorization(userId)
           )
 
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
           storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storage.is(_.some).id == storageId)
-           && assertTrue(storage.is(_.some).name == storageName)
-      },
-      test("When created storage should have creator as owner") {
-        val storageName = "storage"
-        for
-          userId <- registerUser
-
-          resp <- Client.batched(
-            post("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(userId)
-          )
-
-          storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
-          storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storage.is(_.some).ownerId == userId)
+        yield assertTrue(resp.status == Status.Ok) &&
+          assertTrue(storage.is(_.some).id == storageId) &&
+          assertTrue(storage.is(_.some).name == storageName) &&
+          assertTrue(storage.is(_.some).ownerId == userId)
       },
     ).provideLayer(testLayer)
