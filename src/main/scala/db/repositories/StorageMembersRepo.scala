@@ -1,9 +1,8 @@
 package db.repositories
 
 import db.tables.{DbStorageMember, storageMembersTable, storagesTable}
-import db.DbError
-import domain.{UserId, StorageId}
 import db.{DbError, handleDbError}
+import domain.{UserId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
@@ -15,10 +14,9 @@ trait StorageMembersRepo:
     IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
-
   def getAllUserStorageIds(userId: UserId):
     IO[DbError, Vector[StorageId]]
-  
+
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -27,11 +25,11 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-           insert into ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
-           values ($storageId, $memberId)
-           on conflict (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
-           do nothing
-         """.update.run()
+        INSERT INTO ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+        VALUES ($storageId, $memberId)
+        ON CONFLICT (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+        DO NOTHING
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -39,10 +37,10 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-       delete from $storageMembersTable
-       where ${storageMembersTable.storageId} = $storageId
-       and ${storageMembersTable.memberId} = $memberId
-         """.update.run()
+        DELETE FROM $storageMembersTable
+        WHERE ${storageMembersTable.storageId} = $storageId
+        and ${storageMembersTable.memberId} = $memberId
+      """.update.run()
       ()
     }.mapError(handleDbError)
 

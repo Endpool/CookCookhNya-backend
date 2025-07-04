@@ -1,8 +1,8 @@
 package db.repositories
 
 import db.tables.{DbStorage, DbStorageCreator, storageMembersTable, storagesTable}
-import domain.{StorageId, UserId}
 import db.{DbError, handleDbError}
+import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
@@ -20,9 +20,7 @@ private final case class StoragesRepoLive(xa: Transactor)
     xa.transact {
       val storage = insertReturning(DbStorageCreator(name, ownerId))
       storage.id
-    }.mapError {
-      handleDbError
-    }
+    }.mapError(handleDbError)
 
   override def getById(id: StorageId): IO[DbError, Option[DbStorage]] =
     xa.transact {
@@ -32,12 +30,12 @@ private final case class StoragesRepoLive(xa: Transactor)
   override def getAll(id: UserId): IO[DbError, Vector[DbStorage]] =
     xa.transact {
       sql"""
-           select distinct ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
-           from $storagesTable left join $storageMembersTable
-           on ${storagesTable.id} = ${storageMembersTable.storageId}
-           where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
-         """
-        .query[DbStorage].run()
+        SELECT DISTINCT ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+        FROM $storagesTable LEFT JOIN $storageMembersTable
+        ON ${storagesTable.id} = ${storageMembersTable.storageId}
+        WHERE $id = ${storagesTable.ownerId}
+           OR $id = ${storageMembersTable.memberId}
+      """.query[DbStorage].run()
     }.mapError(handleDbError)
 
   override def removeById(id: StorageId): IO[DbError, Unit] =

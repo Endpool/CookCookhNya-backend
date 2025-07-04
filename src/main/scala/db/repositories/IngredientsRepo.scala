@@ -18,36 +18,31 @@ trait IngredientsRepo:
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
   override def add(name: String): IO[DbError, DbIngredient] =
-    xa.transact(insertReturning(DbIngredientCreator(name))).mapError {
-      handleDbError
-    }
+    xa.transact(insertReturning(DbIngredientCreator(name)))
+      .mapError(handleDbError)
 
   override def getById(id: IngredientId): IO[DbError, Option[DbIngredient]] =
-    xa.transact(findById(id)).mapError {
-      handleDbError
-    }
+    xa.transact(findById(id))
+      .mapError(handleDbError)
 
   override def removeById(id: IngredientId): IO[DbError, Unit] =
-    xa.transact(deleteById(id)).mapError {
-      handleDbError
-    }
+    xa.transact(deleteById(id))
+      .mapError(handleDbError)
 
   override def getAll: IO[DbError, Vector[DbIngredient]] =
-    xa.transact(findAll).mapError {
-      handleDbError
-    }
+    xa.transact(findAll)
+      .mapError(handleDbError)
 
   override def getAllOwnedBy(userId: UserId):
     ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
     for
       userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorageIds(userId))
-      userIngredientIds <- ZIO.foreach(userStorageIds) {
-        storageId => ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
+      userIngredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo]{ repo =>
+        ZIO.foreach(userStorageIds)(repo.getAllIngredientsFromStorage)
       }.map(_.flatten)
       userIngredients <- xa.transact {
         userIngredientIds.map(findById).flatten
       }.mapError(handleDbError)
-
     yield userIngredients
 
 object IngredientsRepo:
