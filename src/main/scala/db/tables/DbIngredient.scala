@@ -1,7 +1,7 @@
 package db.tables
 
 import db.CustomSqlNameMapper
-import domain.{Ingredient, IngredientId}
+import domain.IngredientId
 
 import com.augustnagro.magnum.*
 
@@ -9,8 +9,7 @@ import com.augustnagro.magnum.*
 final case class DbIngredient(
   @Id id: IngredientId,
   name: String
-) derives DbCodec:
-  def toDomain = Ingredient(id, name)
+) derives DbCodec
 
 final case class DbIngredientCreator(name: String)
 
