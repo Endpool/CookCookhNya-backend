@@ -1,6 +1,6 @@
 package api.shoppinglist
 
-import api.{zSecuredServerLogic, AppEnv, handleFailedSqlQuery, failIfIngredientNotFound}
+import api.{zSecuredServerLogic, AppEnv, handleFailedSqlQuery, toIngredientNotFound}
 import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
 import domain.{InternalServerError, IngredientId, UserId}
 import domain.IngredientError.NotFound
@@ -26,6 +26,6 @@ private def addIngredientsHandler(userId: UserId)(ingredients: Vector[Ingredient
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(failIfIngredientNotFound)
+      .flatMap(toIngredientNotFound)
       .getOrElse(InternalServerError())
   }

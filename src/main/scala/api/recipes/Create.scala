@@ -3,7 +3,7 @@ package api.recipes
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  failIfIngredientNotFound
+  toIngredientNotFound
 }
 import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
@@ -37,6 +37,6 @@ private def createHandler(recipe: CreateRecipeReqBody):
   }.mapError {
     case DbNotRespondingError(_) => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(failIfIngredientNotFound)
+      .flatMap(toIngredientNotFound)
       .getOrElse(InternalServerError())
   }

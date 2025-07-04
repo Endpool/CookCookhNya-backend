@@ -3,7 +3,7 @@ package api.recipes
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  failIfStorageNotFound,
+  toStorageNotFound,
   ForeignKeyViolation,
 }
 import api.EndpointErrorVariants.{
@@ -49,7 +49,7 @@ private def getSuggestedHandler(
   yield SuggestedRecipesResp(recipesFound, suggested)
 }.mapError {
   case e: FailedDbQuery => handleFailedSqlQuery(e)
-    .flatMap(failIfStorageNotFound)
+    .flatMap(toStorageNotFound)
     .getOrElse(InternalServerError())
   case _: DbNotRespondingError => InternalServerError()
 }

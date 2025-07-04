@@ -4,14 +4,15 @@ import api.{
   AppEnv,
   zSecuredServerLogic,
   handleFailedSqlQuery,
-  failIfIngredientNotFound,
-  failIfStorageNotFound,
+  toIngredientNotFound,
+  toStorageNotFound,
 }
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
   serverErrorVariant,
   storageNotFoundVariant
 }
+import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
 import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
@@ -41,6 +42,6 @@ private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: I
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(fkv => failIfStorageNotFound(fkv) <|> failIfIngredientNotFound(fkv))
+      .flatMap(fkv => toStorageNotFound(fkv) <|> toIngredientNotFound(fkv))
       .getOrElse(InternalServerError())
   }

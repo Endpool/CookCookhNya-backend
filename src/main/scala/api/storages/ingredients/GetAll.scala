@@ -3,8 +3,8 @@ package api.storages.ingredients
 import api.{
   AppEnv,
   handleFailedSqlQuery,
-  failIfStorageNotFound,
-  failIfUserNotFound
+  toStorageNotFound,
+  toUserNotFound,
 }
 import api.EndpointErrorVariants.{
   serverErrorVariant,
@@ -60,7 +60,7 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
   case _: (DbNotRespondingError | InternalServerError) => InternalServerError()
   case e: NotFound => e
   case e: FailedDbQuery => handleFailedSqlQuery(e)
-    .flatMap(failIfStorageNotFound)
+    .flatMap(toStorageNotFound)
     .getOrElse(InternalServerError())
 }
 

@@ -4,8 +4,8 @@ import api.{
   AppEnv,
   zSecuredServerLogic,
   handleFailedSqlQuery,
-  failIfStorageNotFound,
-  failIfUserNotFound,
+  toStorageNotFound,
+  toUserNotFound,
 }
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import db.DbError.*
@@ -49,6 +49,6 @@ private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
   case e: StorageError.NotFound => e
   case _: DbNotRespondingError => InternalServerError()
   case e: FailedDbQuery => handleFailedSqlQuery(e)
-    .flatMap(failIfUserNotFound)
+    .flatMap(toUserNotFound)
     .getOrElse(InternalServerError())
 }

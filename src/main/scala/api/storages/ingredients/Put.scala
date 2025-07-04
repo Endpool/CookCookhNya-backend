@@ -4,8 +4,8 @@ import api.{
   AppEnv,
   handleFailedSqlQuery,
   zSecuredServerLogic,
-  failIfStorageNotFound,
-  failIfIngredientNotFound,
+  toStorageNotFound,
+  toIngredientNotFound,
 }
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
@@ -42,7 +42,7 @@ private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: Ingr
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(fkv => failIfStorageNotFound(fkv) <|> failIfIngredientNotFound(fkv))
+      .flatMap(fkv => toStorageNotFound(fkv) <|> toIngredientNotFound(fkv))
       .getOrElse(InternalServerError())
   }
 
