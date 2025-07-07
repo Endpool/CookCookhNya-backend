@@ -25,6 +25,5 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
 
 private def createHandler(reqBody: CreateUserReqBody):
   ZIO[AuthenticatedUser & CreateEnv, InternalServerError, Unit] =
-  val userId = ???
-  ZIO.serviceWithZIO[UsersRepo](_.saveUser(userId, reqBody.alias, reqBody.fullName))
+  ZIO.serviceWithZIO[UsersRepo](_.saveUser(reqBody.alias, reqBody.fullName))
     .mapError(e => InternalServerError(e.message))
