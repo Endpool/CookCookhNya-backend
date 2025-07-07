@@ -12,9 +12,9 @@ val storagesEndpoint =
   .securityIn(auth.bearer[UserId]())
 
 val storageEndpoints = List(
-  create,
-  delete,
-  getAll,
-  getSummary,
-) ++ storagesIngredientsEndpoints
-  ++ storagesMembersEndpoints
+  create.widen,
+  delete.widen,
+  getAll.widen,
+  getSummary.widen,
+) ++ storagesIngredientsEndpoints.map(_.widen)
+  ++ storagesMembersEndpoints.map(_.widen)

@@ -1,7 +1,6 @@
 package api.storages.ingredients
 
 import api.{
-  AppEnv,
   handleFailedSqlQuery,
   toStorageNotFound,
   toUserNotFound,
@@ -12,7 +11,7 @@ import api.EndpointErrorVariants.{
   userNotFoundVariant
 }
 import api.storages.checkForMembership
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.ingredients.IngredientResp
 import db.repositories.{StorageIngredientsRepo, StorageMembersRepo, StoragesRepo}
 import domain.{InternalServerError, UserError, IngredientId, StorageId, UserId}
@@ -28,7 +27,9 @@ import sttp.tapir.ztapir.*
 import zio.{ZIO, IO}
 import db.repositories.IngredientsRepo
 
-private val getAll: ZServerEndpoint[AppEnv, Any] =
+private type GetAllEnv = StorageIngredientsRepo & IngredientsRepo & StoragesRepo & StorageMembersRepo
+
+private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   storagesIngredientsEndpoint
   .get
   .out(statusCode(StatusCode.Ok))
@@ -40,13 +41,14 @@ private val getAll: ZServerEndpoint[AppEnv, Any] =
   ))
   .zSecuredServerLogic(getAllHandler)
 
-type Env = StorageIngredientsRepo & IngredientsRepo & StoragesRepo & StorageMembersRepo
-private def getAllHandler(userId: UserId)(storageId: StorageId):
-  ZIO[Env, InternalServerError | NotFound, Seq[IngredientResp]] = {
+
+private def getAllHandler(storageId: StorageId):
+  ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | NotFound, Seq[IngredientResp]] = {
+  val userId = ???
   for
     storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
       .someOrFail(NotFound(storageId.toString))
-    _ <- ZIO.unlessZIO[Env, NotFound | InternalServerError](checkForMembership(userId, storage)) {
+    _ <- ZIO.unlessZIO[GetAllEnv, NotFound | InternalServerError](checkForMembership(userId, storage)) {
       ZIO.fail(NotFound(storageId.toString))
     }
     ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo] {

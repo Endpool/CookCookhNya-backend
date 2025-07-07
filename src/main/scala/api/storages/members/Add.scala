@@ -1,12 +1,11 @@
 package api.storages.members
 
 import api.{
-  AppEnv,
-  zSecuredServerLogic,
   handleFailedSqlQuery,
   toStorageNotFound,
   toUserNotFound,
 }
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import db.DbError.*
 import db.repositories.{StorageMembersRepo, StoragesRepo}
@@ -20,7 +19,9 @@ import sttp.tapir.ValidationError
 import sttp.tapir.ztapir.*
 import zio.{IO, ZIO}
 
-private val add: ZServerEndpoint[AppEnv, Any] =
+private type AddEnv = StorageMembersRepo & StoragesRepo
+
+private val add: ZServerEndpoint[AddEnv, Any] =
   storagesMembersEndpoint
     .put
     .in(path[UserId]("memberId"))
@@ -28,8 +29,8 @@ private val add: ZServerEndpoint[AppEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, userNotFoundVariant, storageNotFoundVariant))
     .zSecuredServerLogic(addHandler)
 
-private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
-  ZIO[StorageMembersRepo & StoragesRepo,
+private def addHandler(storageId: StorageId, memberId: UserId):
+  ZIO[AuthenticatedUser & AddEnv,
       InternalServerError | UserError.NotFound | StorageError.NotFound,
       Unit] = {
   for

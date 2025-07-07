@@ -1,6 +1,7 @@
 package api.shoppinglist
 
-import api.{zSecuredServerLogic, AppEnv, handleFailedSqlQuery, toIngredientNotFound}
+import api.{handleFailedSqlQuery, toIngredientNotFound}
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
 import domain.{InternalServerError, IngredientId, UserId}
 import domain.IngredientError.NotFound
@@ -11,7 +12,9 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val addIngredients: ZServerEndpoint[AppEnv, Any] =
+private type AddIngredientsEnv = ShoppingListsRepo
+
+private val addIngredients: ZServerEndpoint[AddIngredientsEnv, Any] =
   shoppingListEndpoint
     .put
     .in(query[Vector[IngredientId]]("ingredient-id"))
@@ -19,8 +22,9 @@ private val addIngredients: ZServerEndpoint[AppEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zSecuredServerLogic(addIngredientsHandler)
 
-private def addIngredientsHandler(userId: UserId)(ingredients: Vector[IngredientId]):
-  ZIO[ShoppingListsRepo, InternalServerError | NotFound, Unit] =
+private def addIngredientsHandler(ingredients: Vector[IngredientId]):
+  ZIO[AddIngredientsEnv, InternalServerError | NotFound, Unit] =
+  val userId = ??? // TODO make ShoppingListsRepo require AuthenticatedUser from ZIO environment
   ZIO.serviceWithZIO[ShoppingListsRepo] {
     _.addIngredients(userId, ingredients)
   }.mapError {

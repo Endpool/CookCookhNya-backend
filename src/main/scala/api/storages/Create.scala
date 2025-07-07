@@ -1,7 +1,6 @@
 package api.storages
 
-import api.AppEnv
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.repositories.StoragesRepo
 import domain.{InternalServerError, StorageId, UserId}
 import db.DbError
@@ -14,7 +13,9 @@ import api.EndpointErrorVariants.serverErrorVariant
 
 final case class CreateStorageReqBody(name: String)
 
-val create: ZServerEndpoint[AppEnv, Any] =
+private type CreateEnv = StoragesRepo
+
+private val create: ZServerEndpoint[CreateEnv, Any] =
   storagesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
@@ -22,8 +23,9 @@ val create: ZServerEndpoint[AppEnv, Any] =
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(createHandler)
 
-private def createHandler(userId: UserId)(reqBody: CreateStorageReqBody):
-  ZIO[StoragesRepo, InternalServerError, StorageId] =
+private def createHandler(reqBody: CreateStorageReqBody):
+  ZIO[AuthenticatedUser & CreateEnv, InternalServerError, StorageId] =
+  val userId = ???
   ZIO.serviceWithZIO[StoragesRepo] {
     _.createEmpty(reqBody.name, userId)
   }.mapError(_ => InternalServerError())

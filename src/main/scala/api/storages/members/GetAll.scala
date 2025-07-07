@@ -1,8 +1,7 @@
 package api.storages.members
 
-import api.AppEnv
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.tables.{usersTable, storageMembersTable, storagesTable}
 import domain.{InternalServerError, StorageId, UserId}
 import domain.StorageError.NotFound
@@ -18,15 +17,18 @@ import zio.ZIO
 
 final case class UserResp(id: UserId, alias: Option[String], fullName: String)
 
-private val getAll: ZServerEndpoint[AppEnv, Any] =
+private type GetAllEnv = Transactor
+
+private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   storagesMembersEndpoint
   .get
   .out(jsonBody[Seq[UserResp]])
   .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
   .zSecuredServerLogic(getAllHandler)
 
-private def getAllHandler(userId: UserId)(storageId: StorageId):
-  ZIO[Transactor, InternalServerError | NotFound, Vector[UserResp]] = for
+private def getAllHandler(storageId: StorageId):
+  ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | NotFound, Vector[UserResp]] = for
+    userId <- ZIO.succeed(???)
     members <- ZIO.serviceWithZIO[Transactor] {
       _.transact {
         sql"""

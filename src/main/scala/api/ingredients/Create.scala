@@ -1,6 +1,5 @@
 package api.ingredients
 
-import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
@@ -13,7 +12,9 @@ import zio.ZIO
 
 case class CreateIngredientReqBody(name: String)
 
-private val create: ZServerEndpoint[AppEnv, Any] =
+private type CreateEnv = IngredientsRepo
+
+private val create: ZServerEndpoint[CreateEnv, Any] =
   ingredientsEndpoint
   .post
   .in(jsonBody[CreateIngredientReqBody])
@@ -23,7 +24,7 @@ private val create: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(createHandler)
 
 private def createHandler(reqBody: CreateIngredientReqBody):
-  ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+  ZIO[CreateEnv, InternalServerError, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo] {
     _.add(reqBody.name).map(_.id)
   }.mapError(_ => InternalServerError())

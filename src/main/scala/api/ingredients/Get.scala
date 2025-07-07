@@ -1,6 +1,5 @@
 package api.ingredients
 
-import api.AppEnv
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
@@ -12,7 +11,9 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val get: ZServerEndpoint[AppEnv, Any] =
+private type GetEnv = IngredientsRepo
+
+private val get: ZServerEndpoint[GetEnv, Any] =
   ingredientsEndpoint
   .get
   .in(path[IngredientId]("ingredientId"))
@@ -22,7 +23,7 @@ private val get: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(getHandler)
 
 private def getHandler(ingredientId: IngredientId):
-  ZIO[IngredientsRepo, InternalServerError | NotFound, IngredientResp] = 
+  ZIO[GetEnv, InternalServerError | NotFound, IngredientResp] =
   {
     for
       mIngredient <- ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))

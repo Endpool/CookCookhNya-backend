@@ -1,8 +1,6 @@
 package api.storages.ingredients
 
 import api.{
-  AppEnv,
-  zSecuredServerLogic,
   handleFailedSqlQuery,
   toIngredientNotFound,
   toStorageNotFound,
@@ -12,6 +10,7 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
@@ -21,7 +20,9 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val remove: ZServerEndpoint[AppEnv, Any] =
+private type RemoveEnv = StorageIngredientsRepo
+
+private val remove: ZServerEndpoint[RemoveEnv, Any] =
   storagesIngredientsEndpoint
   .delete
   .in(path[IngredientId]("ingredientId"))
@@ -33,8 +34,9 @@ private val remove: ZServerEndpoint[AppEnv, Any] =
   ))
   .zSecuredServerLogic(removeHandler)
 
-private def removeHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[StorageIngredientsRepo,
+// TODO this endpoint ignored auth
+private def removeHandler(storageId : StorageId, ingredientId: IngredientId):
+  ZIO[AuthenticatedUser & RemoveEnv,
       InternalServerError | StorageError.NotFound | IngredientError.NotFound,
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {

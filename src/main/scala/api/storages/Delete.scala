@@ -1,8 +1,7 @@
 package api.storages
 
-import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.repositories.StoragesRepo
 import domain.{StorageId, UserId, InternalServerError}
 import db.DbError
@@ -11,7 +10,9 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val delete: ZServerEndpoint[AppEnv, Any] =
+private type DeleteEnv = StoragesRepo
+
+private val delete: ZServerEndpoint[DeleteEnv, Any] =
   storagesEndpoint
   .delete
   .in(path[StorageId]("storageId"))
@@ -19,8 +20,9 @@ private val delete: ZServerEndpoint[AppEnv, Any] =
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(deleteHandler)
 
-private def deleteHandler(userId: UserId)(storageId: StorageId):
-  ZIO[StoragesRepo, InternalServerError, Unit] =
+// TODO this endpoint ignored auth
+private def deleteHandler(storageId: StorageId):
+  ZIO[AuthenticatedUser & DeleteEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[StoragesRepo](_.removeById(storageId)).mapError {
     _ => InternalServerError()
   }

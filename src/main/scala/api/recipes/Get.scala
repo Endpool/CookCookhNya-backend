@@ -1,11 +1,12 @@
 package api.recipes
 
-import api.{AppEnv, handleFailedSqlQuery, zSecuredServerLogic}
+import api.{handleFailedSqlQuery}
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, storageNotFoundVariant}
+import db.{DbError, handleDbError}
+import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 import domain.RecipeError.NotFound
-import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
-import db.{DbError, handleDbError}
 
 import com.augustnagro.magnum.magzio
 import com.augustnagro.magnum.magzio.*
@@ -28,11 +29,13 @@ case class RecipeResp(
   sourceLink: String
 )
 
-val get: ZServerEndpoint[AppEnv, Any] =
+private type GetEnv = Transactor
+
+private val get: ZServerEndpoint[GetEnv, Any] =
   recipesEndpoint
     .securityIn(auth.bearer[UserId]())
     .get
-    .in(path[RecipeId])
+    .in(path[RecipeId]("recipeId"))
     .errorOut(oneOf(recipeNotFoundVariant, storageNotFoundVariant))
     .out(jsonBody[RecipeResp])
     .zSecuredServerLogic(getHandler)
@@ -44,10 +47,11 @@ private case class RawRecipeResult(
   ingredients: String // JSON string from PostgreSQL
 )
 
-def getHandler(userId: UserId)(recipeId: RecipeId):
-  ZIO[Transactor, InternalServerError | NotFound, RecipeResp] =
-  val dbEffect = ZIO.serviceWithZIO[magzio.Transactor](_.transact {
-    val frag =
+private def getHandler(recipeId: RecipeId):
+  ZIO[AuthenticatedUser & GetEnv, InternalServerError | NotFound, RecipeResp] =
+  ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
+    val userId = authenticatedUser.userId
+    ZIO.serviceWithZIO[Transactor](_.transact(
       sql"""
         SELECT r.${recipesTable.name} AS "name", r.${recipesTable.sourceLink} AS sourceLink,
         COALESCE(
@@ -63,13 +67,13 @@ def getHandler(userId: UserId)(recipeId: RecipeId):
                     WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
                       AND si.${storageIngredientsTable.storageId} IN (
                         SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
-                        WHERE ${storageMembersTable.memberId} = $userId
+                        WHERE ${storageMembersTable.memberId} = userId
 
                         UNION
 
                         SELECT ${storagesTable.id}
                         FROM $storagesTable
-                        WHERE ${storagesTable.ownerId} = $userId
+                        WHERE ${storagesTable.ownerId} = userId
                       )
                   ),
                   '[]'::json
@@ -84,11 +88,9 @@ def getHandler(userId: UserId)(recipeId: RecipeId):
         ) AS ingredients
         FROM $recipesTable r
         WHERE r.${recipesTable.id} = $recipeId;
-      """
-    frag.query[RawRecipeResult].run().headOption
-  })
-
-  dbEffect.mapError(handleDbError).flatMap {
+      """.query[RawRecipeResult].run().headOption
+    ))
+  }.mapError(handleDbError).flatMap {
     case Some(rawResult) =>
       // Parse the JSON ingredients string
       decode[Vector[IngredientSummary]](rawResult.ingredients) match
