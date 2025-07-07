@@ -23,10 +23,9 @@ private val addIngredients: ZServerEndpoint[AddIngredientsEnv, Any] =
     .zSecuredServerLogic(addIngredientsHandler)
 
 private def addIngredientsHandler(ingredients: Vector[IngredientId]):
-  ZIO[AddIngredientsEnv, InternalServerError | NotFound, Unit] =
-  val userId = ??? // TODO make ShoppingListsRepo require AuthenticatedUser from ZIO environment
+  ZIO[AuthenticatedUser & AddIngredientsEnv, InternalServerError | NotFound, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
-    _.addIngredients(userId, ingredients)
+    _.addIngredients(ingredients)
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)

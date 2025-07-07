@@ -22,8 +22,7 @@ private val deleteIngredients: ZServerEndpoint[DeleteIngredientsEnv, Any] = shop
   .zSecuredServerLogic(deleteIngredientsHandler)
 
 private def deleteIngredientsHandler(ingredients: Vector[IngredientId]):
-  ZIO[DeleteIngredientsEnv, InternalServerError, Unit] =
-  val userId = ??? // TODO make ShoppingListsRepo require AuthenticatedUser from ZIO environment
+  ZIO[AuthenticatedUser & DeleteIngredientsEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
-    _.deleteIngredients(userId, ingredients)
+    _.deleteIngredients(ingredients)
   }.mapError(_ => InternalServerError())

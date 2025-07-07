@@ -24,10 +24,9 @@ private val getIngredients: ZServerEndpoint[GetIngredientsEnv, Any] = shoppingLi
   .zSecuredServerLogic(getIngredientsHandler)
 
 private def getIngredientsHandler(u: Unit):
-  ZIO[GetIngredientsEnv, InternalServerError | NotFound, Seq[IngredientResp]] = {
+  ZIO[AuthenticatedUser & GetIngredientsEnv, InternalServerError | NotFound, Seq[IngredientResp]] = {
   for
-    userId <- ZIO.succeed(???) // TODO make ShoppingListsRepo require AuthenticatedUser from ZIO environment
-    ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients(userId))
+    ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
     result <- ZIO.foreach(ingredientIds) {
       ingredientId =>
         ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId)).flatMap {
