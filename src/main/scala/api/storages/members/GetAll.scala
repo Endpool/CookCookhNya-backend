@@ -28,7 +28,7 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
 
 private def getAllHandler(storageId: StorageId):
   ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | NotFound, Vector[UserResp]] = for
-    userId <- ZIO.succeed(???)
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     members <- ZIO.serviceWithZIO[Transactor] {
       _.transact {
         sql"""
