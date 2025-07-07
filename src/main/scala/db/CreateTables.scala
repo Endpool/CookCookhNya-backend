@@ -43,7 +43,7 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-        CREATE TABLE IF NOT EXISTS $storageIngredientsTable}(
+        CREATE TABLE IF NOT EXISTS $storageIngredientsTable(
           ${storageIngredientsTable.storageId} BIGINT NOT NULL,
           ${storageIngredientsTable.ingredientId} BIGINT NOT NULL,
           PRIMARY KEY (${storageIngredientsTable.storageId}, ${storageIngredientsTable.ingredientId}),
@@ -78,7 +78,16 @@ def createTables(xa: Transactor) = {
           FOREIGN KEY (${shoppingListTable.ownerId}) REFERENCES $usersTable(${usersTable.id}) ON DELETE CASCADE,
           FOREIGN KEY (${shoppingListTable.ingredientId}) REFERENCES $ingredientsTable(${ingredientsTable.id}) ON DELETE CASCADE
          )
-       """
+       """,
+      
+      sql"""
+         CREATE TABLE IF NOT EXISTS $storageInvitationTable(
+          ${storageInvitationTable.storageId} BIGINT NOT NULL,
+          ${storageInvitationTable.invitation} VARCHAR(255) NOT NULL,
+          PRIMARY KEY (${storageInvitationTable.storageId}, ${storageInvitationTable.invitation}),
+          FOREIGN KEY (${storageInvitationTable.storageId}) REFERENCES $storagesTable(${storagesTable.id}) ON DELETE CASCADE
+         )
+       """ 
     )
 
     tableList.map(_.update.run())
