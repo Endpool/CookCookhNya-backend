@@ -9,7 +9,7 @@ val ingredientsEndpoint =
 val ingredientsEndpoints = List(
   create,
   delete,
-  getAll,
   get,
-  search
+  search,
+  searchAll
 )
