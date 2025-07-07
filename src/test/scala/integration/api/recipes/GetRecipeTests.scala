@@ -24,17 +24,17 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
       },
       test("When asked for non-existent recipe, 404 should be returned"){
         for
-          userId <- registerUser
+          user <- registerUser
           resp <- Client.batched(
             Request.get(defaultPath / "1")
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
         yield assertTrue(resp.status == Status.NotFound)
       },
       test("1 user with 1 storage") {
         for
-          userId <- registerUser
-          storageId <- createStorage(userId)
+          user <- registerUser
+          storageId <- createStorage(user)
           ingredientIds       <- createNIngredients(defaultIngredientAmount)
           _extraIngredientIds <- createNIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(storageId, ingredientIds)
@@ -43,7 +43,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
           resp <- Client.batched(
             Request.get(defaultPath / recipeId.toString)
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
 
           strBody <- resp.body.asString
@@ -55,10 +55,10 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
       },
       test("1 user with 2 storages") {
         for
-          userId <- registerUser
+          user <- registerUser
 
-          storage1Id <- createStorage(userId)
-          storage2Id <- createStorage(userId)
+          storage1Id <- createStorage(user)
+          storage2Id <- createStorage(user)
 
           storage1UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
           storage2UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
@@ -78,7 +78,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
           resp <- Client.batched(
             Request.get(defaultPath / recipeId.toString)
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
 
           strBody <- resp.body.asString
@@ -98,13 +98,15 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
       },
       test("2 users, 1 shared storage and 1 personal storage for every user") {
         for
-          userId1 <- registerUser
-          userId2 <- registerUser
+          user1 <- registerUser
+          user2 <- registerUser
 
-          user1StorageId  <- createStorage(userId1)
-          sharedStorageId <- createStorage(userId1)
-          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(sharedStorageId, userId2))
-          user2StorageId  <- createStorage(userId2)
+          user1StorageId  <- createStorage(user1)
+          sharedStorageId <- createStorage(user1)
+          _ <- ZIO.serviceWithZIO[StorageMembersRepo](
+            _.addMemberToStorageById(sharedStorageId, user2.userId)
+          )
+          user2StorageId  <- createStorage(user2)
 
           temp <- for
             commonIngredientIds           <- createNIngredients(defaultIngredientAmount)
@@ -139,7 +141,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             for
               resp <- Client.batched(
                 Request.get(defaultPath / recipeId.toString)
-                  .addAuthorization(userId1)
+                  .addAuthorization(user1)
               )
 
               strBody <- resp.body.asString
@@ -164,7 +166,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             for
               resp <- Client.batched(
                 Request.get(defaultPath / recipeId.toString)
-                  .addAuthorization(userId2)
+                  .addAuthorization(user2)
               )
 
               strBody <- resp.body.asString

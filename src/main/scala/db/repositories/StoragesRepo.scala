@@ -25,7 +25,6 @@ private final case class StoragesRepoLive(xa: Transactor)
     }.mapError(handleDbError)
   yield storageId
 
-  //TODO validate user
   override def getById(id: StorageId): ZIO[AuthenticatedUser, DbError, Option[DbStorage]] = for
     mStorage <- xa.transact {
       findById(id)
@@ -45,11 +44,21 @@ private final case class StoragesRepoLive(xa: Transactor)
     }.mapError(handleDbError)
   yield storages
 
-  //TODO validate user
-  override def removeById(id: StorageId): ZIO[AuthenticatedUser, DbError, Unit] =
-    xa.transact {
-      deleteById(id)
+  override def removeById(id: StorageId): ZIO[AuthenticatedUser, DbError, Unit] = for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    _ <- xa.transact {
+      sql"""
+        DELETE FROM $storagesTable
+        WHERE ${storagesTable.id} IN (
+          SELECT DISTINCT ${storagesTable.id}
+          FROM $storagesTable LEFT JOIN $storageMembersTable
+          ON ${storagesTable.id} = ${storageMembersTable.storageId}
+          WHERE $userId = ${storagesTable.ownerId}
+             OR $userId = ${storageMembersTable.memberId}
+        )
+      """
     }.mapError(handleDbError)
+  yield ()
 
 object StoragesRepo:
   val layer: RLayer[Transactor, StoragesRepo] =

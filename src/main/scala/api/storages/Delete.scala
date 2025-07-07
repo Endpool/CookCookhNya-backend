@@ -20,7 +20,6 @@ private val delete: ZServerEndpoint[DeleteEnv, Any] =
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(deleteHandler)
 
-// TODO this endpoint ignored auth
 private def deleteHandler(storageId: StorageId):
   ZIO[AuthenticatedUser & DeleteEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[StoragesRepo](_.removeById(storageId)).mapError {

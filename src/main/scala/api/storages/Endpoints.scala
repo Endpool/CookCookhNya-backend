@@ -9,7 +9,6 @@ import sttp.tapir.ztapir.*
 val storagesEndpoint =
   endpoint
   .in("my" / "storages")
-  .securityIn(auth.bearer[UserId]())
 
 val storageEndpoints = List(
   create.widen,
