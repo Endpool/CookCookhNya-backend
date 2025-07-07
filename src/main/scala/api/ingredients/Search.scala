@@ -31,6 +31,7 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in(query[StorageId]("storage-id"))
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
+    .in(query[Int]("threshold").default(50))
     .out(jsonBody[SearchResultsResp])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
@@ -39,7 +40,8 @@ private def searchHandler(
   query: String,
   storageId: StorageId,
   size: Int,
-  offset: Int
+  offset: Int,
+  threshold: Int
 ): ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
@@ -51,7 +53,7 @@ private def searchHandler(
     }
     res = allIngredientsAvailability
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
-      .filter((_, ratio) => ratio >= 70) // min ratio threshold
+      .filter((_, ratio) => ratio >= threshold)
       .sortBy(
         (i, ratio) => (
           -ratio, // negate the ratio to make order descending
