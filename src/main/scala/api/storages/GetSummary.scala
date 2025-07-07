@@ -27,14 +27,13 @@ private val getSummary: ZServerEndpoint[GetSummaryEnv, Any] =
   .zSecuredServerLogic(getSummaryHandler)
 
 private def getSummaryHandler(storageId: StorageId):
-  ZIO[GetSummaryEnv, InternalServerError | NotFound, StorageSummaryResp] = {
-  val userId = ???
+  ZIO[AuthenticatedUser & GetSummaryEnv, InternalServerError | NotFound, StorageSummaryResp] = {
   for
     mStorage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
     storage <- ZIO.fromOption(mStorage)
       .orElseFail(NotFound(storageId.toString))
-    _ <- checkForMembership(userId, storage)
-    result <- ZIO.ifZIO(checkForMembership(userId, storage))(
+    _ <- checkForMembership(storage)
+    result <- ZIO.ifZIO(checkForMembership(storage))(
       ZIO.succeed(StorageSummaryResp.fromDb(storage)),
       ZIO.fail(NotFound(storageId.toString))
     )

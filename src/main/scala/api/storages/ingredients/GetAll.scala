@@ -44,13 +44,13 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
 
 private def getAllHandler(storageId: StorageId):
   ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | NotFound, Seq[IngredientResp]] = {
-  val userId = ???
   for
     storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
       .someOrFail(NotFound(storageId.toString))
-    _ <- ZIO.unlessZIO[GetAllEnv, NotFound | InternalServerError](checkForMembership(userId, storage)) {
-      ZIO.fail(NotFound(storageId.toString))
-    }
+    _ <- ZIO.unlessZIO[AuthenticatedUser & GetAllEnv, NotFound | InternalServerError]
+      (checkForMembership(storage))(
+        ZIO.fail(NotFound(storageId.toString))
+      )
     ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo] {
       _.getAllIngredientsFromStorage(storageId)
     }

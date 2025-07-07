@@ -8,7 +8,7 @@ import zio.ZIO
 import zio.ZLayer
 
 object Authentication:
-  opaque type AuthenticatedUser = Long
+  opaque type AuthenticatedUser = UserId
   object AuthenticatedUser:
     extension (authenticatedUser: AuthenticatedUser)
       def userId: UserId = authenticatedUser
