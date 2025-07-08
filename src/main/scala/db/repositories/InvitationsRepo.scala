@@ -3,7 +3,7 @@ package db.repositories
 import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
 import db.tables.{DbStorageInvitation, storageInvitationTable}
-import domain.{IngredientId, InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId, UserId}
+import domain.{IngredientId, InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId, StorageNotFound, UserId}
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -23,12 +23,8 @@ private final case class InvitationsRepoLive(xa: Transactor)
   extends Repo[DbStorageInvitation, DbStorageInvitation, StorageId & String] with InvitationsRepo:
 
   def create(storageId: StorageId):
-    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String] =
+    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError, String] =
     for
-      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(userId, storageId))
-      _ <- ZIO.fail(StorageAccessForbidden(storageId.toString)).unless(isMemberOrOwner)
-
       secretKey <- System.env("SECRET_KEY").someOrFail(
         new IllegalStateException("SECRET_KEY environment variable not set")
       ).mapError(e => InternalServerError(e.getMessage))
@@ -44,10 +40,10 @@ private final case class InvitationsRepoLive(xa: Transactor)
     yield invitationHash
     
   def activate(invitationHash: String):
-    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit] =
+    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit] = 
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      row: DbStorageInvitation <- xa.transact {
+      row <- xa.transact {
         val spec = Spec[DbStorageInvitation]
           .where(sql"${storageInvitationTable.invitation} = $invitationHash")
         findAll(spec).headOption 
