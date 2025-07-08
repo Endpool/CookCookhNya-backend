@@ -25,6 +25,7 @@ import zio.test.ZIOSpecDefault
 import integration.common.Utils.addAuthorization
 import domain.UserId
 import zio.test.Gen
+import db.repositories.InvitationsRepo
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   protected def testLayer:
@@ -83,7 +84,8 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
         StorageIngredientsRepo.layer ++
         StorageMembersRepo.layer ++
         StoragesRepo.layer ++
-        UsersRepo.layer
+        UsersRepo.layer ++
+        InvitationsRepo.layer
       )
 
   private val testServerLayer: RLayer[Transactor, TestServer] = for
