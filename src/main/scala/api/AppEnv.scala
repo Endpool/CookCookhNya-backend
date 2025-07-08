@@ -9,7 +9,8 @@ import _root_.db.repositories.{
   RecipeIngredientsRepo,
   RecipesRepo,
   RecipesDomainRepo,
-  ShoppingListsRepo
+  ShoppingListsRepo,
+  InvitationsRepo
 }
 
 import com.augustnagro.magnum.magzio.Transactor
@@ -25,3 +26,4 @@ type AppEnv
   & RecipesRepo
   & RecipesDomainRepo
   & ShoppingListsRepo
+  & InvitationsRepo
