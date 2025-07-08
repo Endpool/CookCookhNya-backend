@@ -95,7 +95,7 @@ object DeleteStorageTests extends ZIOIntegrationTestSpec:
 
         storageExists <- ZIO.serviceWithZIO[StoragesRepo](_
           .getById(storageId)
-          .provideUser(user)
+          .provideUser(creator)
           .map(_.isDefined)
         )
       yield assertTrue(resp.status == Status.NoContent)

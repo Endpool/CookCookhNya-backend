@@ -24,8 +24,9 @@ extension (sc: StatusCode)
     oneOfVariant(statusCode(sc).and(jsonBody[E]))
 
 object EndpointErrorVariants:
-  val ingredientNotFoundVariant  = NotFound.variantJson[IngredientError.NotFound]
+  val ingredientNotFoundVariant = NotFound.variantJson[IngredientError.NotFound]
   val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
+  val storageAccessForbiddenVariant = Forbidden.variantJson[StorageError.AccessForbidden]
   val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
   val recipeNotFoundVariant = NotFound.variantJson[RecipeError.NotFound]
   val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]

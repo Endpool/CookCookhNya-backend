@@ -7,8 +7,7 @@ import db.DbError
 import db.repositories.StorageMembersRepo
 import db.repositories.StoragesRepo
 import db.tables.DbStorage
-import domain.{InternalServerError, StorageId, UserId}
-import domain.StorageError.NotFound
+import domain.{StorageError, InternalServerError, StorageId, UserId}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -27,18 +26,15 @@ private val getSummary: ZServerEndpoint[GetSummaryEnv, Any] =
   .zSecuredServerLogic(getSummaryHandler)
 
 private def getSummaryHandler(storageId: StorageId):
-  ZIO[AuthenticatedUser & GetSummaryEnv, InternalServerError | NotFound, StorageSummaryResp] = {
-  for
-    mStorage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-    storage <- ZIO.fromOption(mStorage)
-      .orElseFail(NotFound(storageId.toString))
-    _ <- checkForMembership(storage)
-    result <- ZIO.ifZIO(checkForMembership(storage))(
-      ZIO.succeed(StorageSummaryResp.fromDb(storage)),
-      ZIO.fail(NotFound(storageId.toString))
-    )
-  yield result
-}.mapError {
-  case e: NotFound => e
-  case _ => InternalServerError()
-}
+  ZIO[AuthenticatedUser & GetSummaryEnv,
+      InternalServerError | StorageError.NotFound,
+      StorageSummaryResp] =
+  ZIO.serviceWithZIO[StoragesRepo](_
+    .getById(storageId)
+    .someOrFail(StorageError.NotFound(storageId.toString))
+    .map(StorageSummaryResp.fromDb)
+    .mapError {
+      case e: StorageError.NotFound => e
+      case _ => InternalServerError()
+    }
+  )

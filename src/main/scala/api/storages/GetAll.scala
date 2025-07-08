@@ -22,6 +22,6 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
 
 private def getAllHandler(u : Unit):
   ZIO[AuthenticatedUser & GetAllEnv, InternalServerError, Seq[StorageSummaryResp]] =
-  ZIO.serviceWithZIO[StoragesRepo](_.getAll.map(_.map(StorageSummaryResp.fromDb))).mapError {
-    _ => InternalServerError()
-  }
+  ZIO.serviceWithZIO[StoragesRepo](
+    _.getAll.map(_.map(StorageSummaryResp.fromDb))
+  ).mapError(_ => InternalServerError())
