@@ -55,3 +55,6 @@ private final case class InvitationsRepoLive(xa: Transactor)
       }.mapError(handleDbError)
       _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(row.storageId, userId))
     yield ()
+
+object InvitationsRepo:
+  val layer = ZLayer.fromFunction(InvitationsRepoLive(_))
