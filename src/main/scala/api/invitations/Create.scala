@@ -1,27 +1,21 @@
 package api.invitations
 
-import api.handleFailedSqlQuery
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{serverErrorVariant, storageAccessForbiddenVariant, storageNotFoundVariant}
-import db.{DbError, handleDbError}
 import db.repositories.{InvitationsRepo, StorageMembersRepo, StoragesRepo}
-import domain.{InternalServerError, InvalidInvitationHash, StorageNotFound, StorageId, UserId}
+import domain.{InternalServerError, StorageNotFound, StorageId}
 
-import com.augustnagro.magnum.magzio.*
-import io.circe.generic.auto.*
-import sttp.tapir.generic.auto.*
-import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val create = invitationEndpoint
+private type CreateEnv = InvitationsRepo & StorageMembersRepo  & StoragesRepo
+val create: ZServerEndpoint[CreateEnv, Any] = invitationEndpoint
   .post
-  .in("to" / path[StorageId])
+  .in("to" / path[StorageId]("storageId"))
   .out(plainBody[String])
   .errorOut(oneOf(storageNotFoundVariant, storageAccessForbiddenVariant, serverErrorVariant))
   .zSecuredServerLogic(createHandler)
 
-private type CreateEnv = InvitationsRepo & StorageMembersRepo  & StoragesRepo
 def createHandler(storageId: StorageId): ZIO[AuthenticatedUser & CreateEnv, InternalServerError | StorageNotFound, String] =
   for
     storageExists <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
