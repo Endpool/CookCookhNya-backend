@@ -18,3 +18,6 @@ final case class RecipeNotFound(recipeId: String) extends ErrorResponse:
   val message = s"No recipe with id $recipeId"
 
 final case class InternalServerError(message: String = "Something went wrong on the server side") extends ErrorResponse
+
+final case class InvalidInvitationHash(hash: String) extends ErrorResponse:
+  val message = s"Invalid invitation hash: $hash"
