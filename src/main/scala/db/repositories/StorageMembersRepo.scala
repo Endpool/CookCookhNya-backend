@@ -75,10 +75,11 @@ private final case class StorageMembersRepoLive(xa: Transactor)
         sql"""SELECT 1
             FROM $storageMembersTable sm
             JOIN $storagesTable s
-            ON sm.${storageMembersTable.memberId} = s.${storagesTable.ownerId}
+            ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
             WHERE 
-            (sm.${storageMembersTable.storageId} = $storageId OR s.${storagesTable.id} = $storageId) AND
-            (sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId) 
+            sm.${storageMembersTable.storageId} = $storageId AND
+            (sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
+            LIMIT 1
         """.query[Int].run()
       }.map(_.nonEmpty)
       .mapError(handleDbError)
