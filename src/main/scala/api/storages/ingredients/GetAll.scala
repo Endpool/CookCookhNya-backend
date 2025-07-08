@@ -10,7 +10,6 @@ import api.EndpointErrorVariants.{
   storageNotFoundVariant,
   userNotFoundVariant
 }
-import api.storages.checkForMembership
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.ingredients.IngredientResp
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo, StorageMembersRepo, StoragesRepo}
@@ -39,7 +38,6 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   ))
   .zSecuredServerLogic(getAllHandler)
 
-
 private def getAllHandler(storageId: StorageId):
   ZIO[AuthenticatedUser & GetAllEnv,
       InternalServerError | StorageNotFound | UserNotFound,
@@ -47,16 +45,12 @@ private def getAllHandler(storageId: StorageId):
   for
     storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
       .someOrFail(StorageNotFound(storageId.toString))
-    _ <- ZIO.unlessZIO[AuthenticatedUser & GetAllEnv, StorageNotFound | InternalServerError]
-      (checkForMembership(storage))(
-        ZIO.fail(StorageNotFound(storageId.toString))
-      )
-    ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo] {
-      _.getAllIngredientsFromStorage(storageId)
-    }
-    ingredients <- ZIO.serviceWithZIO[IngredientsRepo] { repo =>
-      ZIO.foreach(ingredientIds) { repo.getById(_) }
-    }
+    ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo](_
+      .getAllIngredientsFromStorage(storageId)
+    )
+    ingredients <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
+      ZIO.foreach(ingredientIds)(repo.getById(_))
+    )
   yield ingredients.flatten.map(IngredientResp.fromDb)
 }.mapError {
   case _: (DbNotRespondingError | InternalServerError) => InternalServerError()
