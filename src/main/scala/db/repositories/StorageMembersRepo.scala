@@ -15,8 +15,8 @@ trait StorageMembersRepo:
     IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
-  def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]]
+  def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]]
   def checkForMembership(storageId: StorageId):
     ZIO[AuthenticatedUser, DbError, Boolean]
 
@@ -56,20 +56,20 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-  override def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]] =
-    xa.transact {
-      sql"""
-        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
-        WHERE ${storageMembersTable.memberId} = $userId
-
-        UNION
-
-        SELECT ${storagesTable.id}
-        FROM $storagesTable
-        WHERE ${storagesTable.ownerId} = $userId
-      """.query[UserId].run()
-    }.mapError(handleDbError)
+  override def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
+          SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+          WHERE ${storageMembersTable.memberId} = $userId
+          UNION
+          SELECT ${storagesTable.id} FROM $storagesTable
+          WHERE ${storagesTable.ownerId} = $userId
+        """.query[UserId].run()
+      }.mapError(handleDbError)
+    }
 
   override def checkForMembership(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Boolean] =
     ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
