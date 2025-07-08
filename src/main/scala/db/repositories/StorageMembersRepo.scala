@@ -16,7 +16,9 @@ trait StorageMembersRepo:
     IO[DbError, Vector[UserId]]
   def getAllUserStorageIds(userId: UserId):
     IO[DbError, Vector[StorageId]]
-
+  def checkForMembership(userId: UserId, storageId: StorageId):
+    IO[DbError, Boolean] 
+    
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -67,6 +69,19 @@ private final case class StorageMembersRepoLive(xa: Transactor)
         WHERE ${storagesTable.ownerId} = $userId
       """.query[UserId].run()
     }.mapError(handleDbError)
+
+  override def checkForMembership(userId: UserId, storageId: StorageId): IO[DbError, Boolean] =
+    xa.transact {
+        sql"""SELECT 1
+            FROM $storageMembersTable sm
+            JOIN $storagesTable s
+            ON sm.${storageMembersTable.memberId} = s.${storagesTable.ownerId}
+            WHERE 
+            (sm.${storageMembersTable.storageId} = $storageId OR s.${storagesTable.id} = $storageId) AND
+            (sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId) 
+        """.query[Int].run()
+      }.map(_.nonEmpty)
+      .mapError(handleDbError)
 
 object StorageMembersRepo:
   val layer: RLayer[Transactor, StorageMembersRepo] =
