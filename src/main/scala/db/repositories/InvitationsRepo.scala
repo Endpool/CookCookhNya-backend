@@ -9,20 +9,18 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, System, UIO, ZIO, ZLayer}
+import zio.{IO, RLayer, System, ZIO, ZLayer}
 
 trait InvitationsRepo:
   def create(storageId: StorageId):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String]
   def activate(hash: String):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit]
-  def getStorageIdByHash(invitationHash: String):
-    ZIO[AuthenticatedUser, DbError, Option[StorageId]]
 
 private final case class InvitationsRepoLive(xa: Transactor)
-  extends Repo[DbStorageInvitation, DbStorageInvitation, StorageId & String] with InvitationsRepo:
+  extends Repo[DbStorageInvitation, DbStorageInvitation, Null] with InvitationsRepo:
 
-  def create(storageId: StorageId):
+  override def create(storageId: StorageId):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError, String] =
     for
       secretKey <- System.env("SECRET_KEY").someOrFail(
@@ -38,22 +36,25 @@ private final case class InvitationsRepoLive(xa: Transactor)
         insert(DbStorageInvitation(storageId, invitationHash))
       }.mapError(handleDbError)
     yield invitationHash
-    
-  def activate(invitationHash: String):
-    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit] = 
+
+  override def activate(invitationHash: String):
+    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit] =
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      row <- xa.transact {
+      row: DbStorageInvitation <- xa.transact {
         val spec = Spec[DbStorageInvitation]
           .where(sql"${storageInvitationTable.invitation} = $invitationHash")
-        findAll(spec).headOption 
+        findAll(spec).headOption
       }.mapError(handleDbError).someOrFail(InvalidInvitationHash(invitationHash))
       isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(userId, row.storageId))
-      _ <- ZIO.succeed(()).when(isMemberOrOwner)
-      _ <- xa.transact {
-        delete(row)
-      }.mapError(handleDbError)
-      _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(row.storageId, userId))
+      _ <- ZIO.unless(isMemberOrOwner) {
+        for
+          _ <- xa.transact {
+            delete(row)
+          }.mapError(handleDbError)
+          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(row.storageId, userId))
+        yield ()
+      }
     yield ()
 
 object InvitationsRepo:
