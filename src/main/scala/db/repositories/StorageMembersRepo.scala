@@ -6,6 +6,7 @@ import domain.{UserId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
+import api.Authentication.AuthenticatedUser
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
@@ -16,9 +17,9 @@ trait StorageMembersRepo:
     IO[DbError, Vector[UserId]]
   def getAllUserStorageIds(userId: UserId):
     IO[DbError, Vector[StorageId]]
-  def checkForMembership(userId: UserId, storageId: StorageId):
-    IO[DbError, Boolean] 
-    
+  def checkForMembership(storageId: StorageId):
+    ZIO[AuthenticatedUser, DbError, Boolean]
+
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -70,19 +71,21 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-  override def checkForMembership(userId: UserId, storageId: StorageId): IO[DbError, Boolean] =
-    xa.transact {
-        sql"""SELECT 1
+  override def checkForMembership(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
             FROM $storageMembersTable sm
             JOIN $storagesTable s
             ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
-            WHERE 
+            WHERE
             sm.${storageMembersTable.storageId} = $storageId AND
             (sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
             LIMIT 1
-        """.query[Int].run()
-      }.map(_.nonEmpty)
-      .mapError(handleDbError)
+        """.query[Int].run().nonEmpty
+      }
+    }.mapError(handleDbError)
 
 object StorageMembersRepo:
   val layer: RLayer[Transactor, StorageMembersRepo] =

@@ -40,19 +40,17 @@ private final case class InvitationsRepoLive(xa: Transactor)
   override def activate(invitationHash: String):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit] =
     for
-      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      row: DbStorageInvitation <- xa.transact {
-        val spec = Spec[DbStorageInvitation]
+      dbInvitation <- xa.transact {
+        findAll(Spec[DbStorageInvitation]
           .where(sql"${storageInvitationTable.invitation} = $invitationHash")
-        findAll(spec).headOption
+        ).headOption
       }.mapError(handleDbError).someOrFail(InvalidInvitationHash(invitationHash))
-      isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(userId, row.storageId))
+      isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(dbInvitation.storageId))
       _ <- ZIO.unless(isMemberOrOwner) {
         for
-          _ <- xa.transact {
-            delete(row)
-          }.mapError(handleDbError)
-          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(row.storageId, userId))
+          _ <- xa.transact(delete(dbInvitation)).mapError(handleDbError)
+          userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(dbInvitation.storageId, userId))
         yield ()
       }
     yield ()
