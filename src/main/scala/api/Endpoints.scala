@@ -5,6 +5,7 @@ import api.storages.storageEndpoints
 import api.users.usersEndpoints
 import api.recipes.recipeEndpoints
 import api.shoppinglist.shoppingListEndpoints
+import api.invitations.invitationEndpoints
 
 import sttp.tapir.ztapir.ZServerEndpoint
 import sttp.tapir.ztapir.RichZServerEndpoint
@@ -16,3 +17,4 @@ object AppEndpoints:
     ++ usersEndpoints.map(_.widen)
     ++ recipeEndpoints.map(_.widen)
     ++ shoppingListEndpoints.map(_.widen)
+    ++ invitationEndpoints.map(_.widen)
