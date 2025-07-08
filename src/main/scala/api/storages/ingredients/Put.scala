@@ -14,7 +14,7 @@ import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import domain.{IngredientNotFound, IngredientId, InternalServerError, StorageNotFound, StorageId, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
@@ -37,7 +37,7 @@ private val put: ZServerEndpoint[PutEnv, Any] =
 // TODO this endpoint ignored auth
 private def putHandler(storageId : StorageId, ingredientId: IngredientId):
   ZIO[AuthenticatedUser & PutEnv,
-      InternalServerError | IngredientError.NotFound | StorageError.NotFound,
+      InternalServerError | IngredientNotFound | StorageNotFound,
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.addIngredientToStorage(storageId, ingredientId)

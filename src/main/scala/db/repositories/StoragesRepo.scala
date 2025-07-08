@@ -11,7 +11,6 @@ import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 trait StoragesRepo:
   def createEmpty(name: String): ZIO[AuthenticatedUser, DbError, StorageId]
   def removeById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Unit]
-
   def getById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Option[DbStorage]]
   def getAll : ZIO[AuthenticatedUser, DbError, Vector[DbStorage]]
 

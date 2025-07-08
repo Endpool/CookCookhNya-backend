@@ -1,11 +1,19 @@
 package api.recipes
 
-import api.{handleFailedSqlQuery}
+import api.{handleFailedSqlQuery, toStorageNotFound, toUserNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, storageNotFoundVariant, serverErrorVariant}
 import db.{DbError, handleDbError}
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
-import domain.{RecipeError, UserError, IngredientId, InternalServerError, RecipeId, StorageId, UserId}
+import domain.{
+  IngredientId,
+  InternalServerError,
+  RecipeId,
+  RecipeNotFound,
+  StorageId,
+  UserId,
+  UserNotFound,
+}
 
 import com.augustnagro.magnum.magzio
 import com.augustnagro.magnum.magzio.*
@@ -15,8 +23,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import api.toStorageNotFound
-import api.toUserNotFound
 
 case class IngredientSummary(
   id: IngredientId,
@@ -49,7 +55,7 @@ private case class RawRecipeResult(
 
 private def getHandler(recipeId: RecipeId):
   ZIO[AuthenticatedUser & GetEnv,
-      InternalServerError | RecipeError.NotFound | UserError.NotFound,
+      InternalServerError | RecipeNotFound | UserNotFound,
       RecipeResp] =
   ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
     val userId = authenticatedUser.userId
@@ -102,11 +108,11 @@ private def getHandler(recipeId: RecipeId):
           ))
         case Left(_) =>
           ZIO.fail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
-    case None => ZIO.fail(RecipeError.NotFound(recipeId.toString))
+    case None => ZIO.fail(RecipeNotFound(recipeId.toString))
   }.mapError {
     case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)
       .flatMap(toUserNotFound)
       .getOrElse(InternalServerError())
     case _: DbError => InternalServerError()
-    case e: (InternalServerError | RecipeError.NotFound | UserError.NotFound) => e
+    case e: (InternalServerError | RecipeNotFound | UserNotFound) => e
   }

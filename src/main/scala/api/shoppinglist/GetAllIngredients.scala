@@ -3,8 +3,7 @@ package api.shoppinglist
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import api.ingredients.IngredientResp
-import domain.{IngredientId, InternalServerError, UserId}
-import domain.IngredientError.NotFound
+import domain.{IngredientNotFound, IngredientId, InternalServerError, UserId}
 import db.repositories.{IngredientsRepo, ShoppingListsRepo}
 import db.DbError
 
@@ -24,18 +23,20 @@ private val getIngredients: ZServerEndpoint[GetIngredientsEnv, Any] = shoppingLi
   .zSecuredServerLogic(getIngredientsHandler)
 
 private def getIngredientsHandler(u: Unit):
-  ZIO[AuthenticatedUser & GetIngredientsEnv, InternalServerError | NotFound, Seq[IngredientResp]] = {
+  ZIO[AuthenticatedUser & GetIngredientsEnv,
+      InternalServerError | IngredientNotFound,
+      Seq[IngredientResp]] = {
   for
     ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
     result <- ZIO.foreach(ingredientIds) {
       ingredientId =>
         ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId)).flatMap {
           case Some(dbEntity) => ZIO.succeed(IngredientResp.fromDb(dbEntity))
-          case None => ZIO.fail[NotFound](NotFound(ingredientId.toString))
+          case None => ZIO.fail(IngredientNotFound(ingredientId.toString))
         }
     }
   yield result
 }.mapError {
   case _: DbError  => InternalServerError()
-  case e: NotFound => e
+  case e: IngredientNotFound => e
 }

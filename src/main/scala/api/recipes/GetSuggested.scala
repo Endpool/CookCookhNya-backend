@@ -11,7 +11,7 @@ import api.EndpointErrorVariants.{
 }
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
 import db.repositories.RecipesDomainRepo
-import domain.{InternalServerError, RecipeId, StorageId, StorageError}
+import domain.{InternalServerError, RecipeId, StorageId, StorageNotFound}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -41,7 +41,7 @@ private def getSuggestedHandler(
   size: Int,
   offset: Int,
   storageIds: Vector[StorageId]
-): ZIO[GetSuggestedEnv, InternalServerError | StorageError.NotFound, SuggestedRecipesResp] = {
+): ZIO[GetSuggestedEnv, InternalServerError | StorageNotFound, SuggestedRecipesResp] = {
   for
     suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
       _.getSuggestedIngredients(size, offset, storageIds)

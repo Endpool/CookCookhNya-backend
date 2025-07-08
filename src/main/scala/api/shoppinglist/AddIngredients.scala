@@ -3,8 +3,7 @@ package api.shoppinglist
 import api.{handleFailedSqlQuery, toIngredientNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
-import domain.{InternalServerError, IngredientId, UserId}
-import domain.IngredientError.NotFound
+import domain.{IngredientNotFound, InternalServerError, IngredientId, UserId}
 import db.repositories.ShoppingListsRepo
 import db.DbError.*
 
@@ -23,7 +22,7 @@ private val addIngredients: ZServerEndpoint[AddIngredientsEnv, Any] =
     .zSecuredServerLogic(addIngredientsHandler)
 
 private def addIngredientsHandler(ingredients: Vector[IngredientId]):
-  ZIO[AuthenticatedUser & AddIngredientsEnv, InternalServerError | NotFound, Unit] =
+  ZIO[AuthenticatedUser & AddIngredientsEnv, InternalServerError | IngredientNotFound, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
     _.addIngredients(ingredients)
   }.mapError {

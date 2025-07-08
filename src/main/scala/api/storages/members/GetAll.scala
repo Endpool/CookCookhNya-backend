@@ -3,8 +3,7 @@ package api.storages.members
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.tables.{usersTable, storageMembersTable, storagesTable}
-import domain.{InternalServerError, StorageId, UserId}
-import domain.StorageError.NotFound
+import domain.{InternalServerError, StorageNotFound, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.augustnagro.magnum.sql
@@ -27,7 +26,7 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   .zSecuredServerLogic(getAllHandler)
 
 private def getAllHandler(storageId: StorageId):
-  ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | NotFound, Vector[UserResp]] = for
+  ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | StorageNotFound, Vector[UserResp]] = for
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     members <- ZIO.serviceWithZIO[Transactor] {
       _.transact {
@@ -47,6 +46,6 @@ private def getAllHandler(storageId: StorageId):
       }
     }.mapError(_ => InternalServerError())
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
-      ZIO.fail[InternalServerError | NotFound](NotFound(storageId.toString))
+      ZIO.fail(StorageNotFound(storageId.toString))
     }
   yield members

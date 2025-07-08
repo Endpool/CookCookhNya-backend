@@ -4,8 +4,7 @@ import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, us
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.DbError
 import db.repositories.{StorageMembersRepo, StoragesRepo}
-import domain.{InternalServerError, StorageId, UserId}
-import domain.StorageError.NotFound
+import domain.{StorageNotFound, InternalServerError, StorageId, UserId}
 
 import sttp.tapir.ztapir.*
 import sttp.model.StatusCode
@@ -23,16 +22,16 @@ private val remove: ZServerEndpoint[RemoveEnv, Any] =
 
 // TODO this endpoint ignores auth
 private def removeHandler(storageId: StorageId, memberId: UserId):
-  ZIO[AuthenticatedUser & RemoveEnv, InternalServerError | NotFound, Unit] =
+  ZIO[AuthenticatedUser & RemoveEnv, InternalServerError | StorageNotFound, Unit] =
   {
     for
       mStorage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-      _ <- ZIO.fromOption(mStorage).orElseFail(NotFound(storageId.toString))
+      _ <- ZIO.fromOption(mStorage).orElseFail(StorageNotFound(storageId.toString))
       _ <- ZIO.serviceWithZIO[StorageMembersRepo] {
         _.removeMemberFromStorageById(storageId, memberId)
       }
     yield ()
   }.catchAll {
-    case _: DbError  => ZIO.fail(InternalServerError())
-    case e: NotFound => ZIO.fail(e)
+    case _: DbError => ZIO.fail(InternalServerError())
+    case e: StorageNotFound => ZIO.fail(e)
   }

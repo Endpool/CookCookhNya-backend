@@ -8,10 +8,10 @@ import db.tables.{
   storageMembersTable,
   storagesTable
 }
-import domain.StorageError.NotFound
 import db.{DbError, handleDbError}
-import domain.{RecipeId, StorageError, StorageId, UserId}
+import domain.{RecipeId, StorageId, UserId}
 import com.augustnagro.magnum.magzio.*
+
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
 trait RecipesDomainRepo:

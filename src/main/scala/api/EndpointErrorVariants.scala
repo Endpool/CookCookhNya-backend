@@ -2,10 +2,11 @@ package api
 
 import domain.{
   ErrorResponse,
-  IngredientError,
-  StorageError,
-  UserError,
-  RecipeError,
+  IngredientNotFound,
+  StorageNotFound,
+  StorageAccessForbidden,
+  UserNotFound,
+  RecipeNotFound,
   InternalServerError,
 }
 
@@ -24,9 +25,9 @@ extension (sc: StatusCode)
     oneOfVariant(statusCode(sc).and(jsonBody[E]))
 
 object EndpointErrorVariants:
-  val ingredientNotFoundVariant = NotFound.variantJson[IngredientError.NotFound]
-  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
-  val storageAccessForbiddenVariant = Forbidden.variantJson[StorageError.AccessForbidden]
-  val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
-  val recipeNotFoundVariant = NotFound.variantJson[RecipeError.NotFound]
+  val ingredientNotFoundVariant = NotFound.variantJson[IngredientNotFound]
+  val storageNotFoundVariant = NotFound.variantJson[StorageNotFound]
+  val storageAccessForbiddenVariant = Forbidden.variantJson[StorageAccessForbidden]
+  val userNotFoundVariant = NotFound.variantJson[UserNotFound]
+  val recipeNotFoundVariant = NotFound.variantJson[RecipeNotFound]
   val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]

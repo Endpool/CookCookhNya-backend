@@ -14,7 +14,7 @@ import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import domain.{IngredientNotFound, StorageNotFound, IngredientId, InternalServerError, StorageId, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
@@ -37,7 +37,7 @@ private val remove: ZServerEndpoint[RemoveEnv, Any] =
 // TODO this endpoint ignored auth
 private def removeHandler(storageId : StorageId, ingredientId: IngredientId):
   ZIO[AuthenticatedUser & RemoveEnv,
-      InternalServerError | StorageError.NotFound | IngredientError.NotFound,
+      InternalServerError | StorageNotFound | IngredientNotFound,
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.removeIngredientFromStorageById(storageId, ingredientId)

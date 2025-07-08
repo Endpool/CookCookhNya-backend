@@ -2,8 +2,8 @@ package api.ingredients
 
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
-import domain.{IngredientId, InternalServerError}
-import domain.IngredientError.NotFound
+import domain.{IngredientId, InternalServerError, IngredientNotFound}
+
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
@@ -23,15 +23,15 @@ private val get: ZServerEndpoint[GetEnv, Any] =
   .zServerLogic(getHandler)
 
 private def getHandler(ingredientId: IngredientId):
-  ZIO[GetEnv, InternalServerError | NotFound, IngredientResp] =
+  ZIO[GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
   {
     for
       mIngredient <- ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId))
       ingredient <- ZIO.fromOption(mIngredient)
-        .orElseFail(NotFound(ingredientId.toString))
+        .orElseFail(IngredientNotFound(ingredientId.toString))
     yield IngredientResp.fromDb(ingredient)
   }.mapError {
-    case e: NotFound => e
+    case e: IngredientNotFound => e
     case _ => InternalServerError()
   }
 
