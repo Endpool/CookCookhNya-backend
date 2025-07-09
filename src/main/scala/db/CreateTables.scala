@@ -7,10 +7,11 @@ import com.augustnagro.magnum.magzio.*
 def createTables(xa: Transactor) = {
   xa.transact {
     val tableList = List(
-      // alias cannot be referenced with magnum DDL due to its option type
       sql"""
          CREATE EXTENSION IF NOT EXISTS pgcrypto
        """,
+
+      // alias cannot be referenced with magnum DDL due to its option type
       sql"""
         CREATE TABLE IF NOT EXISTS $usersTable(
           ${usersTable.id} BIGINT PRIMARY KEY,

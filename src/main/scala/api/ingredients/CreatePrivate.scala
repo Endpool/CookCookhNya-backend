@@ -24,7 +24,9 @@ private val createPrivate: ZServerEndpoint[CreateEnv, Any] =
     .zSecuredServerLogic(createPrivateHandler)
 
 private def createPrivateHandler(reqBody: CreateIngredientReqBody):
-ZIO[AuthenticatedUser & CreateEnv, InternalServerError, IngredientId] =
-  ZIO.serviceWithZIO[IngredientsRepo] {
-    _.addPrivate(reqBody.name).map(_.id)
-  }.mapError(_ => InternalServerError())
+  ZIO[AuthenticatedUser & CreateEnv, InternalServerError, IngredientId] =
+  ZIO.serviceWithZIO[IngredientsRepo](_
+    .addPrivate(reqBody.name)
+    .map(_.id)
+    .orElseFail(InternalServerError())
+  )
