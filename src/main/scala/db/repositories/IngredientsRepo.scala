@@ -1,14 +1,15 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
 import db.tables.{DbIngredient, DbIngredientCreator}
 import domain.{IngredientId, UserId}
-
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import zio.{IO, RLayer, ZIO, ZLayer}
 
 trait IngredientsRepo:
   def add(name: String): IO[DbError, DbIngredient]
+  def addPrivate(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient]
   def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
   def getAll: IO[DbError, Vector[DbIngredient]]
@@ -16,8 +17,14 @@ trait IngredientsRepo:
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
   override def add(name: String): IO[DbError, DbIngredient] =
-    xa.transact(insertReturning(DbIngredientCreator(name)))
+    xa.transact(insertReturning(DbIngredientCreator(None, name)))
       .mapError(handleDbError)
+
+  override def addPrivate(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient] =
+    ZIO.serviceWithZIO[AuthenticatedUser] { case AuthenticatedUser(userId) =>
+      xa.transact(insertReturning(DbIngredientCreator(Some(userId), name)))
+        .mapError(handleDbError)
+    }
 
   override def getById(id: IngredientId): IO[DbError, Option[DbIngredient]] =
     xa.transact(findById(id))
