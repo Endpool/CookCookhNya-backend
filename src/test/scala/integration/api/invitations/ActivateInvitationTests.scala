@@ -42,4 +42,30 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
         resp <- activateInvitation(user, invitationHash)
       yield assertTrue(resp.status == Status.BadRequest)
     },
+    test("When activated valid invitation should get 200 and user should be added to storage members") {
+      for
+        creator <- registerUser
+
+        storageName <- randomString
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideUser(creator)
+        )
+
+        invitationHash <- ZIO.serviceWithZIO[InvitationsRepo](_
+          .create(storageId)
+          .provideUser(creator)
+        )
+
+        user <- registerUser
+
+        resp <- activateInvitation(user, invitationHash)
+
+        memberIds <- ZIO.serviceWithZIO[StorageMembersRepo](_
+          .getAllStorageMembers(storageId)
+          .provideUser(creator)
+        )
+      yield assertTrue(resp.status == Status.Ok)
+         && assertTrue(memberIds.contains(user.userId))
+    },
   ).provideLayer(testLayer)
