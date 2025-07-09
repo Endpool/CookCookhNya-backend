@@ -27,10 +27,12 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
       test("When asked for non-existent recipe, 404 should be returned"){
         for
           user <- registerUser
-          resp <- Client.batched(
-            Request.get(defaultPath / getRandomUUID.toString)
-              .addAuthorization(user)
-          )
+          resp <- getRandomUUID.flatMap { id =>
+            Client.batched(
+              Request.get(defaultPath / id.toString)
+                .addAuthorization(user)
+            )
+          }
         yield assertTrue(resp.status == Status.NotFound)
       },
       test("1 user with 1 storage") {
