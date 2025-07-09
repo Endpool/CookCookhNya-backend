@@ -76,7 +76,7 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       val userId = authenticatedUser.userId
       xa.transact {
         sql"""
-            SELECT
+            SELECT 1
             FROM $storageMembersTable sm
             JOIN $storagesTable s
               ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
