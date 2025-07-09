@@ -10,27 +10,24 @@ import java.security.MessageDigest
 import java.time.Instant
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, URLayer, Layer, System, ZIO, ZLayer}
-import api.InvitationsSecretKey
 
 trait InvitationsRepo:
   def create(storageId: StorageId):
-    ZIO[AuthenticatedUser & InvitationsSecretKey & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String]
+    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String]
   def activate(hash: String):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit]
 
-private final case class InvitationsRepoLive(xa: Transactor)
+private final case class InvitationsRepoLive(xa: Transactor, secretKey: InvitationsSecretKey)
   extends Repo[DbStorageInvitation, DbStorageInvitation, Null] with InvitationsRepo:
 
   override def create(storageId: StorageId):
-    ZIO[AuthenticatedUser & InvitationsSecretKey & StorageMembersRepo, DbError | InternalServerError, String] =
+    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError, String] =
+    val currentTime = Instant.now().toEpochMilli
+    val input = s"$currentTime:$storageId:${secretKey.value}"
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
+    val invitationHash = hashBytes.map("%02x".format(_)).mkString
     for
-      secretKey <- ZIO.service[InvitationsSecretKey]
-
-      currentTime = Instant.now().toEpochMilli
-      input = s"$currentTime:$storageId:${secretKey.value}"
-      digest = MessageDigest.getInstance("SHA-256")
-      hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
-      invitationHash = hashBytes.map("%02x".format(_)).mkString
       _ <- xa.transact {
         insert(DbStorageInvitation(storageId, invitationHash))
       }.mapError(handleDbError)
@@ -55,12 +52,21 @@ private final case class InvitationsRepoLive(xa: Transactor)
     yield ()
 
 object InvitationsRepo:
-  val layer: URLayer[Transactor, InvitationsRepoLive] =
-    ZLayer.fromFunction(InvitationsRepoLive(_))
+  val layer: URLayer[Transactor & InvitationsSecretKey, InvitationsRepoLive] =
+    ZLayer.fromZIO(
+      for
+        xa <- ZIO.service[Transactor]
+        secretKey <- ZIO.service[InvitationsSecretKey]
+      yield InvitationsRepoLive(xa, secretKey)
+    )
 
-  val secretKeyFromEnvLayer: Layer[SecurityException | IllegalStateException, InvitationsSecretKey] =
+final case class InvitationsSecretKey(value: String)
+
+object InvitationsSecretKey:
+  val layerFromEnv: Layer[SecurityException | IllegalStateException, InvitationsSecretKey] =
     ZLayer.fromZIO(
       System.env("INVITATIONS_SECRET_KEY").someOrFail[String, SecurityException | IllegalStateException](
         new IllegalStateException("INVITATIONS_SECRET_KEY environment variable not set")
       ).map(InvitationsSecretKey(_))
-    )
+  )
+

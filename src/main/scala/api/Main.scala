@@ -9,6 +9,7 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
+import com.augustnagro.magnum.magzio.Transactor
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
@@ -25,19 +26,34 @@ object Main extends ZIOAppDefault:
 
   val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
 
+  val reposLayer:
+    RLayer[Transactor & InvitationsSecretKey
+      , IngredientsRepo
+      & InvitationsRepo
+      & RecipesDomainRepo
+      & RecipesRepo
+      & RecipeIngredientsRepo
+      & ShoppingListsRepo
+      & StorageIngredientsRepo
+      & StorageMembersRepo
+      & StoragesRepo
+      & UsersRepo
+    ] =
+    IngredientsRepo.layer ++
+    InvitationsRepo.layer ++
+    RecipeIngredientsRepo.layer ++
+    RecipesDomainRepo.layer ++
+    RecipesRepo.layer ++
+    ShoppingListsRepo.layer ++
+    StorageIngredientsRepo.layer ++
+    StorageMembersRepo.layer ++
+    StoragesRepo.layer ++
+    UsersRepo.layer
+
   override def run =
     Server.serve(app)
-      .provide(
-        Server.defaultWithPort(8080),
-        DataSourceDescription.layerFromEnv >>> dbLayer,
-        IngredientsRepo.layer,
-        InvitationsRepo.layer, InvitationsRepo.secretKeyFromEnvLayer,
-        RecipeIngredientsRepo.layer,
-        RecipesDomainRepo.layer,
-        RecipesRepo.layer,
-        ShoppingListsRepo.layer,
-        StorageIngredientsRepo.layer,
-        StorageMembersRepo.layer,
-        StoragesRepo.layer,
-        UsersRepo.layer,
+      .provideSomeLayer(Server.defaultWithPort(8080))
+      .provideLayer(
+        DataSourceDescription.layerFromEnv >>> dbLayer >+>
+        (InvitationsSecretKey.layerFromEnv >>> reposLayer)
       )
