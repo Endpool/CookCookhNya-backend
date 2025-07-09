@@ -5,6 +5,8 @@ import api.users.CreateUserReqBody
 import db.{DataSourceDescription, dbLayer}
 import db.repositories.{
   IngredientsRepo,
+  InvitationsRepo,
+  InvitationsSecretKey,
   RecipeIngredientsRepo,
   RecipesDomainRepo,
   RecipesRepo,
@@ -14,18 +16,16 @@ import db.repositories.{
   StoragesRepo,
   UsersRepo,
 }
-import integration.common.Utils.{put, withJsonBody}
+import domain.UserId
+import integration.common.Utils.{addAuthorization, put, withJsonBody}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import io.circe.generic.auto.deriveEncoder
-import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
 import zio.http.{Client, Server, TestServer, URL}
-import zio.test.ZIOSpecDefault
-import integration.common.Utils.addAuthorization
-import domain.UserId
 import zio.test.Gen
-import db.repositories.InvitationsRepo
+import zio.test.ZIOSpecDefault
+import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   protected def testLayer:
@@ -33,22 +33,16 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       Client
       & Transactor
       & IngredientsRepo
-      & StorageMembersRepo
-      & StoragesRepo
+      & InvitationsRepo
       & RecipeIngredientsRepo
       & RecipesRepo
       & StorageIngredientsRepo
+      & StorageMembersRepo
+      & StoragesRepo
       & UsersRepo
     ] =
     psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >+> (
-      testServerLayer >>> clientLayer
-      ++ IngredientsRepo.layer
-      ++ RecipeIngredientsRepo.layer
-      ++ RecipesRepo.layer
-      ++ StorageIngredientsRepo.layer
-      ++ StorageMembersRepo.layer
-      ++ StoragesRepo.layer
-      ++ UsersRepo.layer
+      testServerLayer >>> clientLayer ++ testReposLayer
     )
 
 
@@ -59,9 +53,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
         container.start
         container
       }
-    ){ container =>
-      ZIO.attemptBlocking{ container.stop }.orDie
-    }
+    )(container => ZIO.attemptBlocking(container.stop).orDie)
   }
 
   private val dataSourceDescritptionLayer: URLayer[PostgreSQLContainer, DataSourceDescription] =
@@ -74,20 +66,12 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       )
     }
 
+  private val testReposLayer =
+    ZLayer.succeed(InvitationsSecretKey("Invit4ti0n553c7etK3yInv1t4t10n5Secret3ey")) >>> Main.reposLayer
+
   private def initTestServer(testServer: TestServer): RIO[Transactor, Unit] =
     testServer.addRoutes(Main.app)
-      .provideSomeLayer(
-        IngredientsRepo.layer ++
-        RecipeIngredientsRepo.layer ++
-        RecipesDomainRepo.layer ++
-        RecipesRepo.layer ++
-        ShoppingListsRepo.layer ++
-        StorageIngredientsRepo.layer ++
-        StorageMembersRepo.layer ++
-        StoragesRepo.layer ++
-        UsersRepo.layer ++
-        InvitationsRepo.layer
-      )
+      .provideSomeLayer(testReposLayer)
 
   private val testServerLayer: RLayer[Transactor, TestServer] = for
     testServer <- TestServer.default
