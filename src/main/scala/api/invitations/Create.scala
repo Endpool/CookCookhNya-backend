@@ -20,13 +20,9 @@ def createHandler(storageId: StorageId): ZIO[AuthenticatedUser & CreateEnv, Inte
   for
     storageExists <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
       .map(_.isDefined)
-      .mapError(_ => InternalServerError())
+      .orElseFail(InternalServerError())
     _ <- ZIO.fail(StorageNotFound(storageId.toString)).unless(storageExists)
 
-    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(storageId))
-      .orElseFail(InternalServerError())
-    _ <- ZIO.fail(StorageNotFound(storageId.toString)).unless(isMemberOrOwner)
     inviteHash <- ZIO.serviceWithZIO[InvitationsRepo](_.create(storageId))
-      .mapError(_ => InternalServerError())
+      .orElseFail(InternalServerError())
   yield inviteHash
