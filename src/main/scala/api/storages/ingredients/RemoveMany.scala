@@ -1,8 +1,6 @@
 package api.storages.ingredients
 
 import api.{
-  AppEnv,
-  zSecuredServerLogic,
   handleFailedSqlQuery,
   toIngredientNotFound,
   toStorageNotFound,
@@ -12,16 +10,17 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import domain.{IngredientNotFound, StorageNotFound, IngredientId, InternalServerError, StorageId, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private val removeMany: ZServerEndpoint[AppEnv, Any] =
+private val removeMany: ZServerEndpoint[RemoveEnv, Any] =
   storagesIngredientsEndpoint
     .delete
     .in(query[Vector[IngredientId]]("ingredient"))
@@ -33,11 +32,12 @@ private val removeMany: ZServerEndpoint[AppEnv, Any] =
     ))
     .zSecuredServerLogic(removeManyHandler)
 
-private def removeManyHandler(userId: UserId)(storageId : StorageId, ingredientIds: Vector[IngredientId]):
-ZIO[StorageIngredientsRepo,
-  InternalServerError | StorageError.NotFound | IngredientError.NotFound,
-  Unit] = {
-  ZIO.serviceWithZIO[StorageIngredientsRepo] { repo => 
+// TODO this endpoint ignored auth
+private def removeManyHandler(storageId : StorageId, ingredientIds: Vector[IngredientId]):
+ZIO[AuthenticatedUser & RemoveEnv,
+  InternalServerError | StorageNotFound | IngredientNotFound,
+  Unit] =
+  ZIO.serviceWithZIO[StorageIngredientsRepo] { repo =>
     ZIO.foreachDiscard(ingredientIds)(repo.removeIngredientFromStorageById(storageId, _))
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
@@ -45,4 +45,3 @@ ZIO[StorageIngredientsRepo,
       .flatMap(fkv => toStorageNotFound(fkv) <|> toIngredientNotFound(fkv))
       .getOrElse(InternalServerError())
   }
-}

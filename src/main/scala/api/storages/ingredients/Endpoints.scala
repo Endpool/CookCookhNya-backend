@@ -13,5 +13,5 @@ val storagesIngredientsEndpoints = List(
   put.widen,
   getAll.widen,
   remove.widen,
-  removeMany
+  removeMany.widen
 )
