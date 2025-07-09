@@ -76,12 +76,12 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       val userId = authenticatedUser.userId
       xa.transact {
         sql"""
+            SELECT
             FROM $storageMembersTable sm
             JOIN $storagesTable s
-            ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
-            WHERE
-            sm.${storageMembersTable.storageId} = $storageId AND
-            (sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
+              ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
+            WHERE sm.${storageMembersTable.storageId} = $storageId 
+              AND(sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
             LIMIT 1
         """.query[Int].run().nonEmpty
       }
