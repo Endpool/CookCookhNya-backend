@@ -1,9 +1,7 @@
 package api.storages.ingredients
 
 import api.{
-  AppEnv,
   handleFailedSqlQuery,
-  zSecuredServerLogic,
   toStorageNotFound,
   toIngredientNotFound,
 }
@@ -12,16 +10,19 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientError, IngredientId, InternalServerError, StorageError, StorageId, UserId}
+import domain.{IngredientNotFound, IngredientId, InternalServerError, StorageNotFound, StorageId, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-val put: ZServerEndpoint[AppEnv, Any] =
+private type PutEnv = StorageIngredientsRepo
+
+private val put: ZServerEndpoint[PutEnv, Any] =
   storagesIngredientsEndpoint
   .put
   .in(path[IngredientId]("ingredientId"))
@@ -33,9 +34,10 @@ val put: ZServerEndpoint[AppEnv, Any] =
   ))
   .zSecuredServerLogic(putHandler)
 
-private def putHandler(userId: UserId)(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[StorageIngredientsRepo,
-      InternalServerError | IngredientError.NotFound | StorageError.NotFound,
+// TODO this endpoint ignored auth
+private def putHandler(storageId : StorageId, ingredientId: IngredientId):
+  ZIO[AuthenticatedUser & PutEnv,
+      InternalServerError | IngredientNotFound | StorageNotFound,
       Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
     _.addIngredientToStorage(storageId, ingredientId)

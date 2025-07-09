@@ -9,7 +9,7 @@ import io.circe.generic.auto.*
 import io.circe.parser.decode
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.get
-import zio.{Scope, ZIO}
+import zio.{Scope, ZIO, ZLayer}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:
@@ -34,40 +34,40 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
     },
     test("When authorized with owned storages should get 200 and all storages") {
       for
-        userId <- registerUser
+        user <- registerUser
         n <- Gen.int(1, 10).runHead.some
         storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
         _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(storageNames){ repo.createEmpty(_, userId) }
+          ZIO.foreach(storageNames)(repo.createEmpty).provideUser(user)
         }
 
         resp <- Client.batched(
           get(endpointPath)
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
         bodyStr <- resp.body.asString
         storages <- ZIO.fromEither(decode[Vector[StorageSummaryResp]](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storages.map(_.name).hasSameElementsAs(storageNames))
-         && assertTrue(storages.forall(_.ownerId == userId))
+         && assertTrue(storages.forall(_.ownerId == user.userId))
     },
     test("When authorized with membered storages should get 200 and all storages") {
       for
-        creatorId <- registerUser
-        userId <- registerUser
+        creator <- registerUser
+        user <- registerUser
         n <- Gen.int(1, 10).runHead.some
         storageNames <- storageNameGen.sample.map(_.value).take(n).runCollect
         storageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(storageNames){ repo.createEmpty(_, creatorId) }
+          ZIO.foreach(storageNames)(repo.createEmpty).provideUser(creator)
         }
         _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-          ZIO.foreach(storageIds){ repo.addMemberToStorageById(_, userId) }
+          ZIO.foreach(storageIds){ repo.addMemberToStorageById(_, user.userId) }
         }
 
         resp <- Client.batched(
           get(endpointPath)
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
         bodyStr <- resp.body.asString
@@ -83,22 +83,22 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
         memberedStorageNames <- storageNameGen.sample.map(_.value).take(m).runCollect
         storageNames = ownedStorageNames ++ memberedStorageNames
 
-        userId <- registerUser
+        user <- registerUser
         _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(ownedStorageNames){ repo.createEmpty(_, userId) }
+          ZIO.foreach(ownedStorageNames)(repo.createEmpty).provideUser(user)
         }
 
-        creatorId <- registerUser
+        creator <- registerUser
         memberedStorageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(memberedStorageNames){ repo.createEmpty(_, creatorId) }
+          ZIO.foreach(memberedStorageNames)(repo.createEmpty).provideUser(user)
         }
         _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-          ZIO.foreach(memberedStorageIds){ repo.addMemberToStorageById(_, userId) }
+          ZIO.foreach(memberedStorageIds)(repo.addMemberToStorageById(_, user.userId))
         }
 
         resp <- Client.batched(
           get(endpointPath)
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
         bodyStr <- resp.body.asString
@@ -114,20 +114,20 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
         memberedStorageNames <- storageNameGen.sample.map(_.value).take(m).runCollect
         storageNames = ownedStorageNames ++ memberedStorageNames
 
-        memberId <- registerUser
+        member <- registerUser
         _ <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(ownedStorageNames)(repo.createEmpty(_, memberId))
+          ZIO.foreach(ownedStorageNames)(repo.createEmpty).provideUser(member)
         }
 
-        creatorId <- registerUser
+        creator <- registerUser
         memberedStorageIds <- ZIO.serviceWithZIO[StoragesRepo]{ repo =>
-          ZIO.foreach(memberedStorageNames){ repo.createEmpty(_, creatorId) }
+          ZIO.foreach(memberedStorageNames)(repo.createEmpty).provideUser(creator)
         }
         _ <- ZIO.serviceWithZIO[StorageMembersRepo]{ repo =>
-          ZIO.foreach(memberedStorageIds){ repo.addMemberToStorageById(_, memberId) }
+          ZIO.foreach(memberedStorageIds)(repo.addMemberToStorageById(_, member.userId))
         }
 
-        userId <- registerUser(creatorId + memberId)
+        userId <- registerUser(creator.userId + member.userId)
 
         resp <- Client.batched(
           get(endpointPath)
@@ -151,27 +151,28 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
 
         usersStoragesIds <- ZIO.serviceWithZIO[StoragesRepo] { repo =>
           for
-            a <- ZIO.foreach(userAOwnedNames) { repo.createEmpty(_, userA) }
-            b <- ZIO.foreach(userBOwnedNames) { repo.createEmpty(_, userB) }
-            c <- ZIO.foreach(userCOwnedNames) { repo.createEmpty(_, userC) }
+            a <- ZIO.foreach(userAOwnedNames)(repo.createEmpty).provideUser(userA)
+            b <- ZIO.foreach(userBOwnedNames)(repo.createEmpty).provideUser(userB)
+            c <- ZIO.foreach(userCOwnedNames)(repo.createEmpty).provideUser(userC)
           yield (a, b, c)
         }
         (userAStorageIds, userBStorageIds, userCStorageIds) = usersStoragesIds
 
         userAMemberedStorageIds = Seq(userBStorageIds.head, userCStorageIds.last)
-        _ <- ZIO.serviceWithZIO[StorageMembersRepo] { repo
+        _ <- ZIO.serviceWithZIO[StorageMembersRepo](repo
           // User A is a member of one of User B's storages
-          => ZIO.foreach(userAMemberedStorageIds){ repo.addMemberToStorageById(_, userA) }
+          => ZIO.foreach(userAMemberedStorageIds)(repo.addMemberToStorageById(_, userA.userId))
           // User B is a member of one of User A's storages
-          *> repo.addMemberToStorageById(userAStorageIds.head, userB)
+          *> repo.addMemberToStorageById(userAStorageIds.head, userB.userId)
           // User B is a member of one of User C's storages
-          *> repo.addMemberToStorageById(userCStorageIds.head, userB)
+          *> repo.addMemberToStorageById(userCStorageIds.head, userB.userId)
           // User C is a member of one of User B's storages
-          *> repo.addMemberToStorageById(userBStorageIds.last, userC)
-        }
+          *> repo.addMemberToStorageById(userBStorageIds.last, userC.userId)
+        )
 
         userAMemberedNames <- ZIO.serviceWithZIO[StoragesRepo] { repo =>
           ZIO.foreach(userAMemberedStorageIds)(repo.getById)
+            .provideUser(userA)
             .map(_.flatten.map(_.name))
         }
         expectedStorageNames = userAOwnedNames ++ userAMemberedNames

@@ -1,9 +1,9 @@
 package api.ingredients
 
-import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
+
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.model.StatusCode
@@ -12,12 +12,14 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.{query, *}
 import zio.ZIO
 
-private case class SearchAllResultsResp(
-                                      results: Vector[IngredientResp],
-                                      found: Int
-                                    )
+case class SearchAllResultsResp(
+  results: Vector[IngredientResp],
+  found: Int
+)
 
-private val searchAll: ZServerEndpoint[AppEnv, Any] =
+private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
+
+private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   ingredientsEndpoint
   .get
   .in(query[String]("query"))
@@ -29,11 +31,11 @@ private val searchAll: ZServerEndpoint[AppEnv, Any] =
   .zServerLogic(searchAllHandler)
 
 private def searchAllHandler(
-                           query: String,
-                           size: Int,
-                           offset: Int,
-                           threshold: Int
-                         ): ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchAllResultsResp] =
+  query: String,
+  size: Int,
+  offset: Int,
+  threshold: Int
+): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAll.mapError(_ => InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
@@ -47,6 +49,5 @@ private def searchAllHandler(
         )
       )
       .map(_._1)
-
   yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)
 

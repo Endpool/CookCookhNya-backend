@@ -1,16 +1,15 @@
 package api.storages.members
 
 import api.{
-  AppEnv,
-  zSecuredServerLogic,
   handleFailedSqlQuery,
   toStorageNotFound,
   toUserNotFound,
 }
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import db.DbError.*
 import db.repositories.{StorageMembersRepo, StoragesRepo}
-import domain.{ErrorResponse, InternalServerError, StorageError, StorageId, UserError, UserId}
+import domain.{ErrorResponse, InternalServerError, StorageNotFound, StorageId, UserNotFound, UserId}
 
 import io.circe.{Encoder, Json}
 import io.circe.syntax.*
@@ -20,7 +19,9 @@ import sttp.tapir.ValidationError
 import sttp.tapir.ztapir.*
 import zio.{IO, ZIO}
 
-private val add: ZServerEndpoint[AppEnv, Any] =
+private type AddEnv = StorageMembersRepo & StoragesRepo
+
+private val add: ZServerEndpoint[AddEnv, Any] =
   storagesMembersEndpoint
     .put
     .in(path[UserId]("memberId"))
@@ -28,16 +29,16 @@ private val add: ZServerEndpoint[AppEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, userNotFoundVariant, storageNotFoundVariant))
     .zSecuredServerLogic(addHandler)
 
-private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
-  ZIO[StorageMembersRepo & StoragesRepo,
-      InternalServerError | UserError.NotFound | StorageError.NotFound,
+private def addHandler(storageId: StorageId, memberId: UserId):
+  ZIO[AuthenticatedUser & AddEnv,
+      InternalServerError | UserNotFound | StorageNotFound,
       Unit] = {
   for
     mStorage <- ZIO.serviceWithZIO[StoragesRepo] {
       _.getById(storageId)
     }
     ownerId <- ZIO.fromOption(mStorage)
-      .orElseFail[StorageError.NotFound](StorageError.NotFound(storageId.toString))
+      .orElseFail(StorageNotFound(storageId.toString))
       .map(_.ownerId)
     _ <- ZIO.unless(ownerId == memberId) {
       ZIO.serviceWithZIO[StorageMembersRepo] {
@@ -46,7 +47,7 @@ private def addHandler(userId: UserId)(storageId: StorageId, memberId: UserId):
     }
   yield ()
 }.mapError {
-  case e: StorageError.NotFound => e
+  case e: StorageNotFound => e
   case _: DbNotRespondingError => InternalServerError()
   case e: FailedDbQuery => handleFailedSqlQuery(e)
     .flatMap(toUserNotFound)

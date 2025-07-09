@@ -7,7 +7,7 @@ import integration.common.ZIOIntegrationTestSpec
 
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.delete
-import zio.{Scope, ZIO}
+import zio.{Scope, ZIO, ZLayer}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object DeleteStorageTests extends ZIOIntegrationTestSpec:
@@ -34,50 +34,70 @@ object DeleteStorageTests extends ZIOIntegrationTestSpec:
     },
     test("When user owns the storage should get 204 and storage should be deleted") {
       for
-        userId <- registerUser
+        user <- registerUser
         storageName <- randomString
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, userId) }
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(user))
+        )
 
         resp <- Client.batched(
           delete(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
-        storageDoesNotExist <-
-          ZIO.serviceWithZIO[StoragesRepo] { _.getById(storageId).map(_.isEmpty) }
+        storageDoesNotExist <- ZIO.serviceWithZIO[StoragesRepo](_
+          .getById(storageId)
+          .provideLayer(ZLayer.succeed(user))
+          .map(_.isEmpty)
+        )
       yield assertTrue(resp.status == Status.NoContent)
          && assertTrue(storageDoesNotExist)
     },
     test("When user is a member should get 403 and storage should not be deleted") {
       for
-        creatorId <- registerUser
+        creator <- registerUser
         storageName <- randomString
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, creatorId) }
-        userId <- registerUser
-        _ <- ZIO.serviceWithZIO[StorageMembersRepo] { _.addMemberToStorageById(storageId, userId) }
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(creator))
+        )
+        user <- registerUser
+        _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(storageId, user.userId))
 
         resp <- Client.batched(
           delete(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
-        storageExists <- ZIO.serviceWithZIO[StoragesRepo] { _.getById(storageId).map(_.isDefined) }
+        storageExists <- ZIO.serviceWithZIO[StoragesRepo](_
+          .getById(storageId)
+          .provideLayer(ZLayer.succeed(user))
+          .map(_.isDefined)
+        )
       yield assertTrue(resp.status == Status.Forbidden)
          && assertTrue(storageExists)
     },
     test("When user is neither the owner not a member should get 204 and storage should not be deleted") {
       for
-        creatorId <- registerUser
+        creator <- registerUser
         storageName <- randomString
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, creatorId) }
-        userId <- registerUser
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(creator))
+        )
+        user <- registerUser
 
         resp <- Client.batched(
           delete(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
-        storageExists <- ZIO.serviceWithZIO[StoragesRepo] { _.getById(storageId).map(_.isDefined) }
+        storageExists <- ZIO.serviceWithZIO[StoragesRepo](_
+          .getById(storageId)
+          .provideUser(creator)
+          .map(_.isDefined)
+        )
       yield assertTrue(resp.status == Status.NoContent)
          && assertTrue(storageExists)
     }

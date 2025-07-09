@@ -6,6 +6,7 @@ import domain.{UserId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
+import api.Authentication.AuthenticatedUser
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
@@ -14,8 +15,10 @@ trait StorageMembersRepo:
     IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
-  def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]]
+  def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]]
+  def checkForMembership(storageId: StorageId):
+    ZIO[AuthenticatedUser, DbError, Boolean]
 
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
@@ -53,19 +56,35 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-  override def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]] =
-    xa.transact {
-      sql"""
-        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
-        WHERE ${storageMembersTable.memberId} = $userId
+  override def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
+          SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+          WHERE ${storageMembersTable.memberId} = $userId
+          UNION
+          SELECT ${storagesTable.id} FROM $storagesTable
+          WHERE ${storagesTable.ownerId} = $userId
+        """.query[UserId].run()
+      }.mapError(handleDbError)
+    }
 
-        UNION
-
-        SELECT ${storagesTable.id}
-        FROM $storagesTable
-        WHERE ${storagesTable.ownerId} = $userId
-      """.query[UserId].run()
+  override def checkForMembership(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
+            SELECT 1
+            FROM $storageMembersTable sm
+            JOIN $storagesTable s
+              ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
+            WHERE sm.${storageMembersTable.storageId} = $storageId 
+              AND(sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
+            LIMIT 1
+        """.query[Int].run().nonEmpty
+      }
     }.mapError(handleDbError)
 
 object StorageMembersRepo:

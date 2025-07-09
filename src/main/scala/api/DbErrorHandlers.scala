@@ -2,7 +2,7 @@ package api
 
 import _root_.db.DbError.FailedDbQuery
 import _root_.db.tables.*
-import domain.{IngredientError, InternalServerError, StorageError, UserError}
+import domain.{IngredientNotFound, InternalServerError, StorageNotFound, UserNotFound}
 
 import zio.{IO, ZIO}
 
@@ -19,16 +19,16 @@ def handleFailedSqlQuery(error: FailedDbQuery): Option[ForeignKeyViolation] =
   }
 
 def toIngredientNotFound(fkv: ForeignKeyViolation):
-  Option[IngredientError.NotFound] =
+  Option[IngredientNotFound] =
   Option.when(fkv.keyName == storageIngredientsTable.ingredientId.sqlName)
-    (IngredientError.NotFound(fkv.keyValue))
+    (IngredientNotFound(fkv.keyValue))
 
 def toStorageNotFound(fkv: ForeignKeyViolation):
-  Option[StorageError.NotFound] =
+  Option[StorageNotFound] =
   Option.when(fkv.keyName == storageMembersTable.storageId.sqlName)
-    (StorageError.NotFound(fkv.keyValue))
+    (StorageNotFound(fkv.keyValue))
 
 def toUserNotFound(fkv: ForeignKeyViolation):
-  Option[UserError.NotFound] =
+  Option[UserNotFound] =
   Option.when(fkv.keyName == storageMembersTable.memberId.sqlName)
-    (UserError.NotFound(fkv.keyValue))
+    (UserNotFound(fkv.keyValue))

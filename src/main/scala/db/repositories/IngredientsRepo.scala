@@ -12,8 +12,6 @@ trait IngredientsRepo:
   def getById(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def removeById(id: IngredientId): IO[DbError, Unit]
   def getAll: IO[DbError, Vector[DbIngredient]]
-  def getAllOwnedBy(userId: UserId):
-    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]]
 
 private final case class IngredientsRepoLive(xa: Transactor)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
@@ -32,18 +30,6 @@ private final case class IngredientsRepoLive(xa: Transactor)
   override def getAll: IO[DbError, Vector[DbIngredient]] =
     xa.transact(findAll)
       .mapError(handleDbError)
-
-  override def getAllOwnedBy(userId: UserId):
-    ZIO[StorageMembersRepo & StorageIngredientsRepo, DbError, Vector[DbIngredient]] =
-    for
-      userStorageIds <- ZIO.serviceWithZIO[StorageMembersRepo](_.getAllUserStorageIds(userId))
-      userIngredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo]{ repo =>
-        ZIO.foreach(userStorageIds)(repo.getAllIngredientsFromStorage)
-      }.map(_.flatten)
-      userIngredients <- xa.transact {
-        userIngredientIds.map(findById).flatten
-      }.mapError(handleDbError)
-    yield userIngredients
 
 object IngredientsRepo:
   val layer: RLayer[Transactor, IngredientsRepo] =

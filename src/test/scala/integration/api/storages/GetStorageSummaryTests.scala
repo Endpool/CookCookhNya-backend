@@ -11,7 +11,7 @@ import io.circe.parser.decode
 import zio.http.Request.get
 import zio.http.{Client, Status, URL, Path}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
-import zio.{Scope, ZIO}
+import zio.{Scope, ZIO, ZLayer}
 
 object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
@@ -37,13 +37,16 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
     },
     test("When authorized and user owns the storage should get 200 and the storage") {
       for
-        userId <- registerUser
+        user <- registerUser
         storageName <- storageNameGen.sample.map(_.value).runHead.some
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, userId) }
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(user))
+        )
 
         resp <- Client.batched(
           get(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
         bodyStr <- resp.body.asString
@@ -51,19 +54,22 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storage.id == storageId)
          && assertTrue(storage.name == storageName)
-         && assertTrue(storage.ownerId == userId)
+         && assertTrue(storage.ownerId == user.userId)
     },
     test("When authorized and user is a member of the storage should get 200 and the storage") {
       for
-        creatorId <- registerUser
-        userId <- registerUser
+        creator <- registerUser
+        user <- registerUser
         storageName <- storageNameGen.sample.map(_.value).runHead.some
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, creatorId) }
-        _ <- ZIO.serviceWithZIO[StorageMembersRepo] { _.addMemberToStorageById(storageId, userId) }
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(creator))
+        )
+        _ <- ZIO.serviceWithZIO[StorageMembersRepo](_.addMemberToStorageById(storageId, user.userId))
 
         resp <- Client.batched(
           get(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
 
         bodyStr <- resp.body.asString
@@ -71,23 +77,26 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storage.id == storageId)
          && assertTrue(storage.name == storageName)
-         && assertTrue(storage.ownerId == creatorId)
+         && assertTrue(storage.ownerId == creator.userId)
     },
     test("When authorized but user is neither the owner nor a member should get 404") {
       for
-        creatorId <- registerUser
+        creator <- registerUser
         n <- Gen.int(0, 10).runHead.some
-        memberIds <- registerNUsers(n)
-        userId <- registerUser
+        members <- registerNUsers(n)
+        user <- registerUser
         storageName <- storageNameGen.sample.map(_.value).runHead.some
-        storageId <- ZIO.serviceWithZIO[StoragesRepo] { _.createEmpty(storageName, creatorId) }
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideLayer(ZLayer.succeed(creator))
+        )
         _ <- ZIO.serviceWithZIO[StorageMembersRepo] { repo =>
-          ZIO.foreach(memberIds) { repo.addMemberToStorageById(storageId, _) }
+          ZIO.foreach(members)(mem => repo.addMemberToStorageById(storageId, mem.userId))
         }
 
         resp <- Client.batched(
           get(endpointPath(storageId))
-            .addAuthorization(userId)
+            .addAuthorization(user)
         )
       yield assertTrue(resp.status == Status.NotFound)
     }

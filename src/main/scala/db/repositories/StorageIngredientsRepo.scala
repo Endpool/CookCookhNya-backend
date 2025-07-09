@@ -2,7 +2,7 @@ package db.repositories
 
 import db.tables.{DbStorageIngredient, storageIngredientsTable}
 import db.{DbError, handleDbError}
-import domain.{IngredientId, StorageError, StorageId, UserId}
+import domain.{IngredientId, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{RLayer, IO, ZIO, ZLayer}
