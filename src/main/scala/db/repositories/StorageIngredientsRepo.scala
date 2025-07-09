@@ -14,6 +14,9 @@ trait StorageIngredientsRepo:
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit]
 
+  def removeIngredientsFromStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
+    IO[DbError, Unit]
+
   def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]]
 
@@ -41,6 +44,17 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
         WHERE ${storageIngredientsTable.storageId} = $storageId
           AND ${storageIngredientsTable.ingredientId} = $ingredientId
       """.update.run()
+      ()
+    }.mapError(handleDbError)
+
+  override def removeIngredientsFromStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
+    IO[DbError, Unit] =
+    xa.transact {
+      sql"""
+           DELETE FROM $storageIngredientsTable
+           WHERE ${storageIngredientsTable.storageId} = $storageId
+           AND ${storageIngredientsTable.ingredientId} IN $ingredientIds
+         """.update.run()
       ()
     }.mapError(handleDbError)
 
