@@ -35,4 +35,11 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
         resp <- Client.batched(post(endpointPath(invitationHash)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
+    test("When activated invalid invitation should get 400") {
+      val invitationHash = "invalidinvitationhash"
+      for
+        user <- registerUser
+        resp <- activateInvitation(user, invitationHash)
+      yield assertTrue(resp.status == Status.BadRequest)
+    },
   ).provideLayer(testLayer)
