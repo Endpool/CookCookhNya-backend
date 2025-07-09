@@ -1,6 +1,5 @@
 package domain
 
-type RecipeId = BaseId
 
 case class Recipe(
   id: RecipeId,
