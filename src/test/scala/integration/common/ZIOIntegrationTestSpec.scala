@@ -31,6 +31,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   protected def testLayer:
     TaskLayer[
       Client
+      & Transactor
       & IngredientsRepo
       & StorageMembersRepo
       & StoragesRepo
@@ -39,7 +40,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       & StorageIngredientsRepo
       & UsersRepo
     ] =
-    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >>> (
+    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >+> (
       testServerLayer >>> clientLayer
       ++ IngredientsRepo.layer
       ++ RecipeIngredientsRepo.layer
