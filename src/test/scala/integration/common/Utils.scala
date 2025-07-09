@@ -14,8 +14,14 @@ import io.circe.syntax.*
 import zio.{RIO, UIO, ZIO, ZLayer}
 import zio.http.{Path, URL, Body, Client, Header, MediaType, Request}
 import zio.test.Gen
+import java.util.UUID
 
 object Utils:
+  def getRandomUUID: ZIO[Any, Option[Nothing], UUID] = Gen.uuid.runHead.some
+
+  extension(str: String)
+    def toUUID: UUID = UUID.fromString(str)
+
   extension(req: Request)
     def addAuthorization(authorizedUser: AuthenticatedUser): Request =
       req.addHeader(Header.Authorization.Bearer(authorizedUser.userId.toString))
