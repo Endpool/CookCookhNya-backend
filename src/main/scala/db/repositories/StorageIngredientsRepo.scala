@@ -5,13 +5,16 @@ import db.{DbError, handleDbError}
 import domain.{IngredientId, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{RLayer, IO, ZIO, ZLayer}
+import zio.{RLayer, IO, ZLayer}
 
 trait StorageIngredientsRepo:
   def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit]
 
   def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
+    IO[DbError, Unit]
+
+  def removeIngredientsFromStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
     IO[DbError, Unit]
 
   def getAllIngredientsFromStorage(storageId: StorageId):
@@ -26,10 +29,10 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-        INSERT INTO ${storageIngredientsTable}
-        VALUES ($storageId, $ingredientId)
-        ON CONFLICT DO NOTHING
-      """.update.run()
+          INSERT INTO $storageIngredientsTable
+          VALUES ($storageId, $ingredientId)
+          ON CONFLICT DO NOTHING
+        """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -37,12 +40,24 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-        DELETE FROM $storageIngredientsTable
-        WHERE ${storageIngredientsTable.storageId} = $storageId
-          AND ${storageIngredientsTable.ingredientId} = $ingredientId
-      """.update.run()
+          DELETE FROM $storageIngredientsTable
+          WHERE ${storageIngredientsTable.storageId} = $storageId
+            AND ${storageIngredientsTable.ingredientId} = $ingredientId
+        """.update.run()
       ()
     }.mapError(handleDbError)
+
+  override def removeIngredientsFromStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
+    IO[DbError, Unit] = {
+    xa.transact {
+      sql"""
+       DELETE FROM $storageIngredientsTable
+       WHERE ${storageIngredientsTable.storageId} = $storageId
+       AND ${storageIngredientsTable.ingredientId} = ANY(${ingredientIds.toArray})
+         """.update.run()
+      ()
+    }.mapError(handleDbError)
+  }
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]] =
