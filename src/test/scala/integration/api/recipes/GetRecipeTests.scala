@@ -18,9 +18,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
     suite("Get recipe (detailed) tests")(
       test("When unauthorized should get 401") {
-        Client.batched(
-          Request.get(s"$defaultPath/$getRandomUUID")
-        ).map(resp => assertTrue(resp.status == Status.Unauthorized))
+        getRandomUUID.flatMap { id =>
+          Client.batched(
+            Request.get(s"$defaultPath/$id")
+          ).map(resp => assertTrue(resp.status == Status.Unauthorized))
+        }
       },
       test("When asked for non-existent recipe, 404 should be returned"){
         for

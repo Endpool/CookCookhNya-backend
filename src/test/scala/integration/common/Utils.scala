@@ -17,7 +17,7 @@ import zio.test.Gen
 import java.util.UUID
 
 object Utils:
-  def getRandomUUID: ZIO[Any, Option[Nothing], IngredientId] = Gen.uuid.runHead.some
+  def getRandomUUID: ZIO[Any, Option[Nothing], UUID] = Gen.uuid.runHead.some
 
   extension(str: String)
     def toUUID: UUID = UUID.fromString(str)
