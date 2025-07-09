@@ -97,4 +97,31 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(invitationIsDeleted)
     },
+    test("When activated valid invitation to owned storage should get 200 and invitation should NOT be deleted from db") {
+      for
+        creator <- registerUser
+
+        storageName <- randomString
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideUser(creator)
+        )
+
+        invitationHash <- ZIO.serviceWithZIO[InvitationsRepo](_
+          .create(storageId)
+          .provideUser(creator)
+        )
+
+        resp <- activateInvitation(creator, invitationHash)
+
+        invitationExists <- ZIO.serviceWithZIO[Transactor](_.transact(
+          sql"""
+            SELECT 1
+            FROM $storageInvitationTable
+            WHERE ${storageInvitationTable.invitation} = $invitationHash
+          """.query[Int].run().headOption.isDefined
+        ))
+      yield assertTrue(resp.status == Status.Ok)
+         && assertTrue(invitationExists)
+    },
   ).provideLayer(testLayer)
