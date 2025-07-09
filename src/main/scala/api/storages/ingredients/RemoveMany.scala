@@ -37,8 +37,8 @@ private def removeManyHandler(storageId : StorageId, ingredientIds: Vector[Ingre
 ZIO[AuthenticatedUser & RemoveEnv,
   InternalServerError | StorageNotFound | IngredientNotFound,
   Unit] =
-  ZIO.serviceWithZIO[StorageIngredientsRepo] { repo =>
-    ZIO.foreachDiscard(ingredientIds)(repo.removeIngredientFromStorageById(storageId, _))
+  ZIO.serviceWithZIO[StorageIngredientsRepo] {
+    _.removeIngredientsFromStorage(storageId, ingredientIds)
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
