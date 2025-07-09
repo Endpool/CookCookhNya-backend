@@ -23,14 +23,11 @@ private final case class ShoppingListsLive(xa: Transactor)
     ZIO[AuthenticatedUser, DbError, Unit] = for
     ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     _ <- xa.transact {
-      ingredients.foreach { ingredientId =>
         sql"""
-          INSERT INTO ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-          VALUES ($ownerId, $ingredientId)
-          ON CONFLICT (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-          DO NOTHING
-        """.update.run()
-      }
+           INSERT INTO $shoppingListTable (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+           SELECT $ownerId, unnest(${ingredients.toArray})
+           ON CONFLICT DO NOTHING
+         """.update.run()
     }.mapError(handleDbError)
   yield ()
 
@@ -48,13 +45,11 @@ private final case class ShoppingListsLive(xa: Transactor)
     ZIO[AuthenticatedUser, DbError, Unit] = for
     ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     _ <- xa.transact {
-      ingredients.foreach { ingredientId =>
-        sql"""
-          DELETE FROM ${shoppingListTable}
-          WHERE ${shoppingListTable.ownerId} = $ownerId
-          AND ${shoppingListTable.ingredientId} = $ingredientId
-        """.update.run()
-      }
+      sql"""
+        DELETE FROM $shoppingListTable
+        WHERE ${shoppingListTable.ownerId} = $ownerId
+        AND ${shoppingListTable.ingredientId} = ANY(${ingredients.toArray})
+      """.update.run()
     }.mapError(handleDbError)
   yield ()
 
