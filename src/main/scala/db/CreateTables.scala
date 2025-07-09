@@ -9,6 +9,9 @@ def createTables(xa: Transactor) = {
     val tableList = List(
       // alias cannot be referenced with magnum DDL due to its option type
       sql"""
+         CREATE EXTENSION IF NOT EXISTS pgcrypto
+       """,
+      sql"""
         CREATE TABLE IF NOT EXISTS $usersTable(
           ${usersTable.id} BIGINT PRIMARY KEY,
           alias VARCHAR(255),

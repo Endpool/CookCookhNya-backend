@@ -1,5 +1,7 @@
 package integration.api.invitations
 
+import java.util.UUID
+
 import domain.{IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -32,7 +34,7 @@ object CreateInvitationTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Create invitation tests")(
     test("When unauthorized should get 401") {
       for
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- Gen.uuid.runHead.some
         resp <- Client.batched(post(endpointPath(storageId)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
@@ -80,7 +82,7 @@ object CreateInvitationTests extends ZIOIntegrationTestSpec:
     test("When create invitation to non-existent storage should get 404 and invitation should not be created"){
       for
         user <- registerUser
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- Gen.uuid.runHead.some
 
         resp <- createInvitation(user, storageId)
 

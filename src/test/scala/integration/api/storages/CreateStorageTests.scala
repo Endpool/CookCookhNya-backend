@@ -47,8 +47,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
               .withJsonBody(CreateStorageReqBody(storageName))
               .addAuthorization(user)
           )
-
-          storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
+          storageId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
           storage <- ZIO.serviceWithZIO[StoragesRepo](_
             .getById(storageId)
             .provideUser(user)

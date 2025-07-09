@@ -17,14 +17,14 @@ object DeleteStorageTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Delete storage tests")(
     test("When unauthorized should get 401") {
       for
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- getRandomUUID
         resp <- Client.batched(delete(endpointPath(storageId)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
     test("When authorized and storage does not exist should get 204") {
       for
         userId <- registerUser
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- getRandomUUID
 
         resp <- Client.batched(
           delete(endpointPath(storageId))
