@@ -12,7 +12,7 @@ import io.circe.generic.auto.deriveEncoder
 import io.circe.parser.decode
 import io.circe.syntax.*
 import zio.{RIO, UIO, ZIO, ZLayer}
-import zio.http.{Body, Client, Header, MediaType, Request}
+import zio.http.{Path, URL, Body, Client, Header, MediaType, Request}
 import zio.test.Gen
 
 object Utils:
@@ -34,8 +34,8 @@ object Utils:
       zio.provideSomeLayer(ZLayer.succeed(user))
 
   // redefining here for the sake of having default value of body
-  def put(url: String, body: Body = Body.empty): Request = Request.put(url, body)
-  def post(url: String, body: Body = Body.empty): Request = Request.post(url, body)
+  def put(url: URL, body: Body = Body.empty): Request = Request.put(url, body)
+  def post(url: URL, body: Body = Body.empty): Request = Request.post(url, body)
 
   def registerUser: RIO[Client, AuthenticatedUser] =
     Gen.long(1, 100000000)
@@ -59,7 +59,7 @@ object Utils:
     val authUser = AuthenticatedUser.createFromUserId(userId)
     for
       _ <- Client.batched(
-        put("users")
+        put(URL(Path.root / "users"))
           .withJsonBody(CreateUserReqBody(alias, fullName))
           .addAuthorization(authUser)
       )

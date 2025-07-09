@@ -6,7 +6,7 @@ import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.generic.auto.*
-import zio.http.{Client, Status}
+import zio.http.{Client, Status, URL, Path}
 import zio.{Scope, ZIO, ZLayer}
 import zio.test.{
   TestEnvironment,
@@ -16,11 +16,14 @@ import zio.test.{
 }
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
+  private def endpointPath: URL =
+    URL(Path.root / "my" / "storages")
+
   override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Create storage tests")(
       test("When unauthorized should get 401") {
         Client.batched(
-          post("my/storages")
+          post(endpointPath)
             .withJsonBody(CreateStorageReqBody("storage"))
         ).map(resp => assertTrue(resp.status == Status.Unauthorized))
       },
@@ -28,7 +31,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
         for
           user <- registerUser
           resp <- Client.batched(
-            post("my/storages")
+            post(endpointPath)
               .withJsonBody(CreateStorageReqBody("storage"))
               .addAuthorization(user)
           )
@@ -40,7 +43,7 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
           user <- registerUser
 
           resp <- Client.batched(
-            post("my/storages")
+            post(endpointPath)
               .withJsonBody(CreateStorageReqBody(storageName))
               .addAuthorization(user)
           )
