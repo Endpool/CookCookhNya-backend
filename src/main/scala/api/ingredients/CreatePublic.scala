@@ -14,16 +14,16 @@ case class CreateIngredientReqBody(name: String)
 
 private type CreateEnv = IngredientsRepo
 
-private val create: ZServerEndpoint[CreateEnv, Any] =
+private val createPublic: ZServerEndpoint[CreateEnv, Any] =
   ingredientsEndpoint
   .post
   .in(jsonBody[CreateIngredientReqBody])
   .out(jsonBody[IngredientId])
   .out(statusCode(StatusCode.Created))
   .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(createHandler)
+  .zServerLogic(createPublicHandler)
 
-private def createHandler(reqBody: CreateIngredientReqBody):
+private def createPublicHandler(reqBody: CreateIngredientReqBody):
   ZIO[CreateEnv, InternalServerError, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo] {
     _.add(reqBody.name).map(_.id)
