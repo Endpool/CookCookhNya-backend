@@ -67,7 +67,7 @@ private final case class StorageMembersRepoLive(xa: Transactor)
           UNION
           SELECT ${storagesTable.id} FROM $storagesTable
           WHERE ${storagesTable.ownerId} = $userId
-        """.query[UserId].run()
+        """.query[StorageId].run()
       }.mapError(handleDbError)
     }
 
