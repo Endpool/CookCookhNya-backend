@@ -31,7 +31,7 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Activate invitation tests")(
     test("When unauthorized should get 401") {
       for
-        invitationHash <- Gen.string.runHead.someOrElse("aboba")
+        invitationHash <- Gen.string.runHead.some
         resp <- Client.batched(post(endpointPath(invitationHash)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
@@ -120,6 +120,39 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
             FROM $storageInvitationTable
             WHERE ${storageInvitationTable.invitation} = $invitationHash
           """.query[Int].run().headOption.isDefined
+        ))
+      yield assertTrue(resp.status == Status.Ok)
+         && assertTrue(invitationExists)
+    },
+    test("When activated valid invitation to membered storage should get 200 and invitation should NOT be deleted from db") {
+      for
+        creator <- registerUser
+
+        storageName <- randomString
+        storageId <- ZIO.serviceWithZIO[StoragesRepo](_
+          .createEmpty(storageName)
+          .provideUser(creator)
+        )
+
+        invitationHash <- ZIO.serviceWithZIO[InvitationsRepo](_
+          .create(storageId)
+          .provideUser(creator)
+        )
+
+        member <- registerUser
+        _ <- ZIO.serviceWithZIO[StorageMembersRepo](_
+          .addMemberToStorageById(storageId, member.userId)
+          .provideUser(creator)
+        )
+
+        resp <- activateInvitation(member, invitationHash)
+
+        invitationExists <- ZIO.serviceWithZIO[Transactor](_.transact(
+          sql"""
+            SELECT 1
+            FROM $storageInvitationTable
+            WHERE ${storageInvitationTable.invitation} = $invitationHash
+          """.query[Int].run().nonEmpty
         ))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(invitationExists)
