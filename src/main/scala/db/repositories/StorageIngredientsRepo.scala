@@ -26,7 +26,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-        INSERT INTO ${storageIngredientsTable}
+        INSERT INTO $storageIngredientsTable
         VALUES ($storageId, $ingredientId)
         ON CONFLICT DO NOTHING
       """.update.run()

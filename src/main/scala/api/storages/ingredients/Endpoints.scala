@@ -12,5 +12,6 @@ val storagesIngredientsEndpoint =
 val storagesIngredientsEndpoints = List(
   put,
   getAll,
-  remove
+  remove,
+  removeMany
 )
