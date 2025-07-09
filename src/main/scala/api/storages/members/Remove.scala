@@ -20,7 +20,6 @@ private val remove: ZServerEndpoint[RemoveEnv, Any] =
   .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
   .zSecuredServerLogic(removeHandler)
 
-// TODO this endpoint ignores auth
 private def removeHandler(storageId: StorageId, memberId: UserId):
   ZIO[AuthenticatedUser & RemoveEnv, InternalServerError | StorageNotFound, Unit] =
   {
