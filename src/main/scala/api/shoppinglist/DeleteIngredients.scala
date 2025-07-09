@@ -1,7 +1,6 @@
 package api.shoppinglist
 
-import api.AppEnv
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
 import domain.{IngredientId, InternalServerError, UserId}
 import db.repositories.ShoppingListsRepo
@@ -13,15 +12,17 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.{Exit, ZIO}
 
-private val deleteIngredients: ZServerEndpoint[AppEnv, Any] = shoppingListEndpoint
+private type DeleteIngredientsEnv = ShoppingListsRepo
+
+private val deleteIngredients: ZServerEndpoint[DeleteIngredientsEnv, Any] = shoppingListEndpoint
   .delete
   .in(query[Vector[IngredientId]]("ingredient-id"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(deleteIngredientsHandler)
 
-private def deleteIngredientsHandler(userId: UserId)(ingredients: Vector[IngredientId]):
-ZIO[ShoppingListsRepo, InternalServerError, Unit] =
+private def deleteIngredientsHandler(ingredients: Vector[IngredientId]):
+  ZIO[AuthenticatedUser & DeleteIngredientsEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[ShoppingListsRepo] {
-    _.deleteIngredients(userId, ingredients)
+    _.deleteIngredients(ingredients)
   }.mapError(_ => InternalServerError())

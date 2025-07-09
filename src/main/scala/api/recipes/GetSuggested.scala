@@ -1,7 +1,6 @@
 package api.recipes
 
 import api.{
-  AppEnv,
   handleFailedSqlQuery,
   toStorageNotFound,
   ForeignKeyViolation,
@@ -12,18 +11,23 @@ import api.EndpointErrorVariants.{
 }
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
 import db.repositories.RecipesDomainRepo
-import domain.{InternalServerError, RecipeId, StorageId, StorageError}
+import domain.{InternalServerError, RecipeId, StorageId, StorageNotFound}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
+import db.repositories.StorageIngredientsRepo
+import zio.RIO
+import sttp.tapir.server.ServerEndpoint
 
-private case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
-private case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
+case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
+case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
 
-val getSuggested =
+private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo
+
+private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
   recipesEndpoint
     .get
     .in(query[Int]("size").default(2))
@@ -37,7 +41,7 @@ private def getSuggestedHandler(
   size: Int,
   offset: Int,
   storageIds: Vector[StorageId]
-): ZIO[AppEnv, InternalServerError | StorageError.NotFound, SuggestedRecipesResp] = {
+): ZIO[GetSuggestedEnv, InternalServerError | StorageNotFound, SuggestedRecipesResp] = {
   for
     suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
       _.getSuggestedIngredients(size, offset, storageIds)

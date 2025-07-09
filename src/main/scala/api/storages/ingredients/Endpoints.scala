@@ -10,7 +10,7 @@ val storagesIngredientsEndpoint =
   .in(path[StorageId]("storageId") / "ingredients")
 
 val storagesIngredientsEndpoints = List(
-  put,
-  getAll,
-  remove
+  put.widen,
+  getAll.widen,
+  remove.widen,
 )

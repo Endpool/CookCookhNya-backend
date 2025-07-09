@@ -7,7 +7,7 @@ val recipesEndpoint =
     .in("recipes")
 
 val recipeEndpoints = List(
-  create,
-  getSuggested,
-  get
+  create.widen,
+  getSuggested.widen,
+  get.widen,
 )

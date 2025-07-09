@@ -7,7 +7,7 @@ import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.generic.auto.*
 import zio.http.{Client, Status}
-import zio.{Scope, ZIO}
+import zio.{Scope, ZIO, ZLayer}
 import zio.test.{
   TestEnvironment,
   assertTrue,
@@ -26,30 +26,33 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
       },
       test("When authorized should get 200") {
         for
-          userId <- registerUser
+          user <- registerUser
           resp <- Client.batched(
             post("my/storages")
               .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
         yield assertTrue(resp.status == Status.Ok)
       },
       test("When authorized, storage should be added to db & have its creator an owner") {
         val storageName = "storage"
         for
-          userId <- registerUser
+          user <- registerUser
 
           resp <- Client.batched(
             post("my/storages")
               .withJsonBody(CreateStorageReqBody(storageName))
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
 
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
-          storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
+          storage <- ZIO.serviceWithZIO[StoragesRepo](_
+            .getById(storageId)
+            .provideUser(user)
+          )
         yield assertTrue(resp.status == Status.Ok) &&
           assertTrue(storage.is(_.some).id == storageId) &&
           assertTrue(storage.is(_.some).name == storageName) &&
-          assertTrue(storage.is(_.some).ownerId == userId)
+          assertTrue(storage.is(_.some).ownerId == user.userId)
       },
     ).provideLayer(testLayer)

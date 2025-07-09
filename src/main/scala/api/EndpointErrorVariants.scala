@@ -2,11 +2,13 @@ package api
 
 import domain.{
   ErrorResponse,
-  IngredientError,
-  StorageError,
-  UserError,
-  RecipeError,
+  IngredientNotFound,
+  StorageNotFound,
+  StorageAccessForbidden,
+  UserNotFound,
+  RecipeNotFound,
   InternalServerError,
+  InvalidInvitationHash
 }
 
 import io.circe.generic.auto.*
@@ -24,8 +26,10 @@ extension (sc: StatusCode)
     oneOfVariant(statusCode(sc).and(jsonBody[E]))
 
 object EndpointErrorVariants:
-  val ingredientNotFoundVariant  = NotFound.variantJson[IngredientError.NotFound]
-  val storageNotFoundVariant = NotFound.variantJson[StorageError.NotFound]
-  val userNotFoundVariant = NotFound.variantJson[UserError.NotFound]
-  val recipeNotFoundVariant = NotFound.variantJson[RecipeError.NotFound]
+  val ingredientNotFoundVariant = NotFound.variantJson[IngredientNotFound]
+  val storageNotFoundVariant = NotFound.variantJson[StorageNotFound]
+  val storageAccessForbiddenVariant = Forbidden.variantJson[StorageAccessForbidden]
+  val userNotFoundVariant = NotFound.variantJson[UserNotFound]
+  val recipeNotFoundVariant = NotFound.variantJson[RecipeNotFound]
   val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]
+  val invalidInvitationHashVariant = StatusCode.Forbidden.variantJson[InvalidInvitationHash]

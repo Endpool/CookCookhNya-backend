@@ -1,11 +1,9 @@
 package api.storages.members
 
-import api.AppEnv
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
-import api.zSecuredServerLogic
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.tables.{usersTable, storageMembersTable, storagesTable}
-import domain.{InternalServerError, StorageId, UserId}
-import domain.StorageError.NotFound
+import domain.{InternalServerError, StorageNotFound, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.augustnagro.magnum.sql
@@ -18,15 +16,18 @@ import zio.ZIO
 
 final case class UserResp(id: UserId, alias: Option[String], fullName: String)
 
-private val getAll: ZServerEndpoint[AppEnv, Any] =
+private type GetAllEnv = Transactor
+
+private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   storagesMembersEndpoint
   .get
   .out(jsonBody[Seq[UserResp]])
   .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
   .zSecuredServerLogic(getAllHandler)
 
-private def getAllHandler(userId: UserId)(storageId: StorageId):
-  ZIO[Transactor, InternalServerError | NotFound, Vector[UserResp]] = for
+private def getAllHandler(storageId: StorageId):
+  ZIO[AuthenticatedUser & GetAllEnv, InternalServerError | StorageNotFound, Vector[UserResp]] = for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     members <- ZIO.serviceWithZIO[Transactor] {
       _.transact {
         sql"""
@@ -45,6 +46,6 @@ private def getAllHandler(userId: UserId)(storageId: StorageId):
       }
     }.mapError(_ => InternalServerError())
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
-      ZIO.fail[InternalServerError | NotFound](NotFound(storageId.toString))
+      ZIO.fail(StorageNotFound(storageId.toString))
     }
   yield members

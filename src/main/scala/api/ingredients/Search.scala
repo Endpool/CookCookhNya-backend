@@ -1,6 +1,5 @@
 package api.ingredients
 
-import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError, StorageId, UserId}
@@ -12,18 +11,20 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private case class IngredientSearchResult(
+case class IngredientSearchResult(
   id: IngredientId,
   name: String,
   available: Boolean
 )
 
-private case class SearchResultsResp(
+case class SearchResultsResp(
   results: Vector[IngredientSearchResult],
   found: Int
 )
 
-private val search: ZServerEndpoint[AppEnv, Any] =
+private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
+
+private val search: ZServerEndpoint[SearchEnv, Any] =
   endpoint
     .get
     .in("ingredients-for-storage")
@@ -36,13 +37,14 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
 
+// TODO this should be authenticated
 private def searchHandler(
   query: String,
   storageId: StorageId,
   size: Int,
   offset: Int,
   threshold: Int
-): ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchResultsResp] =
+): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
