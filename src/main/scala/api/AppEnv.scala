@@ -18,12 +18,14 @@ import com.augustnagro.magnum.magzio.Transactor
 type AppEnv
   = Transactor
   & IngredientsRepo
+  & InvitationsRepo & InvitationsSecretKey
+  & RecipeIngredientsRepo
+  & RecipesDomainRepo
+  & RecipesRepo
+  & ShoppingListsRepo
   & StorageIngredientsRepo
   & StorageMembersRepo
   & StoragesRepo
   & UsersRepo
-  & RecipeIngredientsRepo
-  & RecipesRepo
-  & RecipesDomainRepo
-  & ShoppingListsRepo
-  & InvitationsRepo
+
+final case class InvitationsSecretKey(value: String)

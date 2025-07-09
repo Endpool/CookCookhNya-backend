@@ -9,11 +9,12 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, System, ZIO, ZLayer}
+import zio.{IO, URLayer, Layer, System, ZIO, ZLayer}
+import api.InvitationsSecretKey
 
 trait InvitationsRepo:
   def create(storageId: StorageId):
-    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String]
+    ZIO[AuthenticatedUser & InvitationsSecretKey & StorageMembersRepo, DbError | InternalServerError | StorageAccessForbidden, String]
   def activate(hash: String):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, Unit]
 
@@ -21,14 +22,12 @@ private final case class InvitationsRepoLive(xa: Transactor)
   extends Repo[DbStorageInvitation, DbStorageInvitation, Null] with InvitationsRepo:
 
   override def create(storageId: StorageId):
-    ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError, String] =
+    ZIO[AuthenticatedUser & InvitationsSecretKey & StorageMembersRepo, DbError | InternalServerError, String] =
     for
-      secretKey <- System.env("SECRET_KEY").someOrFail(
-        new IllegalStateException("SECRET_KEY environment variable not set")
-      ).mapError(e => InternalServerError(e.getMessage))
+      secretKey <- ZIO.service[InvitationsSecretKey]
 
       currentTime = Instant.now().toEpochMilli
-      input = s"$currentTime:$storageId:$secretKey"
+      input = s"$currentTime:$storageId:${secretKey.value}"
       digest = MessageDigest.getInstance("SHA-256")
       hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
       invitationHash = hashBytes.map("%02x".format(_)).mkString
@@ -56,4 +55,12 @@ private final case class InvitationsRepoLive(xa: Transactor)
     yield ()
 
 object InvitationsRepo:
-  val layer = ZLayer.fromFunction(InvitationsRepoLive(_))
+  val layer: URLayer[Transactor, InvitationsRepoLive] =
+    ZLayer.fromFunction(InvitationsRepoLive(_))
+
+  val secretKeyFromEnvLayer: Layer[SecurityException | IllegalStateException, InvitationsSecretKey] =
+    ZLayer.fromZIO(
+      System.env("INVITATIONS_SECRET_KEY").someOrFail[String, SecurityException | IllegalStateException](
+        new IllegalStateException("INVITATIONS_SECRET_KEY environment variable not set")
+      ).map(InvitationsSecretKey(_))
+    )
