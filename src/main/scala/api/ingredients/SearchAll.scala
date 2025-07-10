@@ -13,19 +13,19 @@ import sttp.tapir.ztapir.{query, *}
 import zio.ZIO
 
 case class SearchAllResultsResp(
-                                 results: Vector[IngredientResp],
-                                 found: Int
-                               )
+  results: Vector[IngredientResp],
+  found: Int
+)
 
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
 private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   ingredientsEndpoint
     .get
-    .searchInput 
+    .inSearchParams
     .out(jsonBody[SearchAllResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchAllHandler.inputToSearchParams)
+    .zServerLogic(searchAllHandler)
 
 private def searchAllHandler(sp: SearchParams):
   ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =

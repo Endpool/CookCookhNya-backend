@@ -27,18 +27,16 @@ private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 private val search: ZServerEndpoint[SearchEnv, Any] =
   endpoint
     .get
-    .searchInput
+    .inSearchParams
     .in(query[StorageId]("storage-id"))
     .out(jsonBody[SearchResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic {
-      case (q, s, o, t, storageId) => searchHandler(SearchParams(q, s, o, t), storageId)
-    }
+    .zServerLogic(searchHandler)
 
 // TODO this should be authenticated
 private def searchHandler(
-                           si: SearchParams,
-                           storageId: StorageId,
+  si: SearchParams,
+  storageId: StorageId,
 ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))

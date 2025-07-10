@@ -21,10 +21,10 @@ private type SearchAllEnv = RecipesRepo & StorageIngredientsRepo
 private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   recipesEndpoint
     .get
-    .searchInput
+    .inSearchParams
     .out(jsonBody[SearchAllRecipesResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchAllRecipesHandler.inputToSearchParams)
+    .zServerLogic(searchAllRecipesHandler)
 
 private def searchAllRecipesHandler(sp: SearchParams):
   ZIO[SearchAllEnv, InternalServerError, SearchAllRecipesResp] =
