@@ -78,9 +78,11 @@ object Utils:
 
   def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
-      ZIO.serviceWithZIO[IngredientsRepo] {
-        _.addGlobal(name).map(_.id)
-      }.mapError(_ => InternalServerError())
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addGlobal(name)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
     )
 
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =

@@ -5,6 +5,7 @@ import api.EndpointErrorVariants.serverErrorVariant
 import api.ingredients.{IngredientResp, SearchAllResultsResp}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
+
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
@@ -26,13 +27,13 @@ private val searchPersonal: ZServerEndpoint[SearchAllEnv, Any] =
     .zSecuredServerLogic(searchPersonalHandler)
 
 private def searchPersonalHandler(
- query: String,
- size: Int,
- offset: Int,
- threshold: Int
+  query: String,
+  size: Int,
+  offset: Int,
+  threshold: Int
 ): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllPersonal.mapError(_ => InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllPersonal.orElseFail(InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
     res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))

@@ -46,12 +46,12 @@ private def searchHandler(
   threshold: Int
 ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllGlobal.mapError(_ => InternalServerError()))
+    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllGlobal.orElseFail(InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
       ingredient =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
           .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
-          .mapError(_ => InternalServerError())
+          .orElseFail(InternalServerError())
     }
     res = allIngredientsAvailability
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))

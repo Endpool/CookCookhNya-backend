@@ -23,6 +23,7 @@ private val deleteIngredients: ZServerEndpoint[DeleteIngredientsEnv, Any] = shop
 
 private def deleteIngredientsHandler(ingredients: Vector[IngredientId]):
   ZIO[AuthenticatedUser & DeleteIngredientsEnv, InternalServerError, Unit] =
-  ZIO.serviceWithZIO[ShoppingListsRepo] {
-    _.deleteIngredients(ingredients)
-  }.mapError(_ => InternalServerError())
+  ZIO.serviceWithZIO[ShoppingListsRepo](_
+    .deleteIngredients(ingredients)
+    .orElseFail(InternalServerError())
+  )

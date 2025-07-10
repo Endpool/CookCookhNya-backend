@@ -32,7 +32,7 @@ private def searchGlobalHandler(
   threshold: Int
 ): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.mapError(_ => InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.orElseFail(InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
     res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
