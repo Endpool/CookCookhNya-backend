@@ -21,6 +21,7 @@ import zio.ZIO
 import db.repositories.StorageIngredientsRepo
 import zio.RIO
 import sttp.tapir.server.ServerEndpoint
+import api.common.search.PaginationParams
 
 case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
 case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
@@ -31,21 +32,19 @@ private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
   recipesEndpoint
     .in("suggested")
     .get
-    .in(query[Int]("size").default(2))
-    .in(query[Int]("offset").default(0))
+    .in(PaginationParams.query)
     .in(query[Vector[StorageId]]("storageId"))
     .out(jsonBody[SuggestedRecipesResp])
     .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
     .zServerLogic(getSuggestedHandler)
 
 private def getSuggestedHandler(
-  size: Int,
-  offset: Int,
+  paginationParams: PaginationParams,
   storageIds: Vector[StorageId]
 ): ZIO[GetSuggestedEnv, InternalServerError | StorageNotFound, SuggestedRecipesResp] = {
   for
     suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
-      _.getSuggestedIngredients(size, offset, storageIds)
+      _.getSuggestedIngredients(paginationParams, storageIds)
     }
     suggested = suggestedTuples.map { (id, name, available, totalIngredients, _) =>
       SuggestedRecipeResp(id, name, available, totalIngredients)
