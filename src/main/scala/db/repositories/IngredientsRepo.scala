@@ -44,10 +44,10 @@ private final case class IngredientsRepoLive(xa: Transactor)
       ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       result  <- xa.transact {
         sql"""
-           SELECT * FROM $ingredientsTable
-           WHERE ${ingredientsTable.id} = $id
-           AND ${ingredientsTable.ownerId} = $ownerId
-           """.query[DbIngredient].run().headOption
+          SELECT * FROM $ingredientsTable
+          WHERE ${ingredientsTable.id} = $id
+          AND ${ingredientsTable.ownerId} = $ownerId
+        """.query[DbIngredient].run().headOption
       }.mapError(handleDbError)
     yield result
 
@@ -60,9 +60,9 @@ private final case class IngredientsRepoLive(xa: Transactor)
   override def removeGlobal(id: IngredientId): IO[DbError, Unit] =
     xa.transact {
       sql"""
-         DELETE FROM $ingredientsTable
-         WHERE ${ingredientsTable.id} = $id AND ${ingredientsTable.ownerId} IS NULL
-       """.update.run()
+        DELETE FROM $ingredientsTable
+        WHERE ${ingredientsTable.id} = $id AND ${ingredientsTable.ownerId} IS NULL
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -70,11 +70,11 @@ private final case class IngredientsRepoLive(xa: Transactor)
     for
       ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       _       <- xa.transact {
-           sql"""
-             DELETE FROM $ingredientsTable
-             WHERE ${ingredientsTable.id} = $id
-             AND ${ingredientsTable.ownerId} = $ownerId
-           """.update.run()
+        sql"""
+          DELETE FROM $ingredientsTable
+          WHERE ${ingredientsTable.id} = $id
+          AND ${ingredientsTable.ownerId} = $ownerId
+        """.update.run()
       }.mapError(handleDbError)
     yield ()
 

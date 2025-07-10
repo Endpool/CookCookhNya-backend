@@ -9,7 +9,7 @@ import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
-import sttp.tapir.ztapir.{query, *}
+import sttp.tapir.ztapir.*
 import zio.ZIO
 
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
