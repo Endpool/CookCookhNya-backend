@@ -3,6 +3,7 @@ package api.ingredients.global
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
+
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
@@ -19,8 +20,7 @@ private val deleteGlobal: ZServerEndpoint[DeleteEnv, Any] =
 
 private def deleteGlobalHandler(ingredientId: IngredientId):
   ZIO[DeleteEnv, InternalServerError, Unit] =
-  ZIO.serviceWithZIO[IngredientsRepo] {
-    _.removeGlobal(ingredientId).mapError {
-      _ => InternalServerError()
-    }
-  }
+  ZIO.serviceWithZIO[IngredientsRepo](_
+    .removeGlobal(ingredientId)
+    .orElseFail(InternalServerError())
+  )
