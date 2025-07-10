@@ -47,7 +47,7 @@ private def searchHandler(
 ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
-    allIngredientsAvailability <- ZIO.foreach(allIngredients) {
+    allIngredientsAvailability <- ZIO.foreachPar(allIngredients) {
       ingredient =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
           .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
