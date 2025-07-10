@@ -1,5 +1,6 @@
-package api.ingredients
+package api.ingredients.open
 
+import api.ingredients.CreateIngredientReqBody
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
@@ -10,12 +11,12 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-case class CreateIngredientReqBody(name: String)
 
-private type CreateEnv = IngredientsRepo
 
-private val createPublic: ZServerEndpoint[CreateEnv, Any] =
-  ingredientsEndpoint
+private[ingredients] type CreateEnv = IngredientsRepo
+
+private[ingredients] val createPublic: ZServerEndpoint[CreateEnv, Any] =
+  publicIngredientsEndpoint
   .post
   .in(jsonBody[CreateIngredientReqBody])
   .out(jsonBody[IngredientId])

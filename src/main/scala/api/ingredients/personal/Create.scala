@@ -1,7 +1,8 @@
-package api.ingredients
+package api.ingredients.personal
 
-import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
+import api.ingredients.CreateIngredientReqBody
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
 import io.circe.generic.auto.*
@@ -13,9 +14,8 @@ import zio.ZIO
 
 private type CreateEnv = IngredientsRepo
 
-private val createPrivate: ZServerEndpoint[CreateEnv, Any] =
-  endpoint
-    .in("my" / "ingredients")
+private[ingredients] val createPrivate: ZServerEndpoint[CreateEnv, Any] =
+  privateIngredientsEndpoint
     .post
     .in(jsonBody[CreateIngredientReqBody])
     .out(jsonBody[IngredientId])

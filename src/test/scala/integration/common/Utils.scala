@@ -1,7 +1,7 @@
 package integration.common
 
 import api.Authentication.AuthenticatedUser
-import api.ingredients.CreateIngredientReqBody
+import api.ingredients.open.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
 import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}

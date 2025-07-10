@@ -1,12 +1,11 @@
-package api.ingredients
+package api.ingredients.open
 
 import api.EndpointErrorVariants.serverErrorVariant
+import api.ingredients.IngredientResp
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
-
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
-import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.{query, *}
@@ -19,8 +18,8 @@ case class SearchAllResultsResp(
 
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
-private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
-  ingredientsEndpoint
+private[ingredients] val searchPublic: ZServerEndpoint[SearchAllEnv, Any] =
+  publicIngredientsEndpoint
   .get
   .in(query[String]("query"))
   .in(query[Int]("size").default(2))
@@ -28,16 +27,16 @@ private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   .in(query[Int]("threshold").default(50))
   .out(jsonBody[SearchAllResultsResp])
   .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchAllHandler)
+  .zServerLogic(searchPublicHandler)
 
-private def searchAllHandler(
+private def searchPublicHandler(
   query: String,
   size: Int,
   offset: Int,
   threshold: Int
 ): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAll.mapError(_ => InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllPublic.mapError(_ => InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
     res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))

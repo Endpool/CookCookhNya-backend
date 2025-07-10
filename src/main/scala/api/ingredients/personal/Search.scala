@@ -1,21 +1,16 @@
-package api.ingredients
+package api.ingredients.personal
 
+import api.ingredients.IngredientSearchResult
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError, StorageId, UserId}
-
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-
-case class IngredientSearchResult(
-  id: IngredientId,
-  name: String,
-  available: Boolean
-)
 
 case class SearchResultsResp(
   results: Vector[IngredientSearchResult],
@@ -24,10 +19,10 @@ case class SearchResultsResp(
 
 private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 
-private val search: ZServerEndpoint[SearchEnv, Any] =
-  endpoint
+private[ingredients] val searchPrivate: ZServerEndpoint[SearchEnv, Any] =
+  privateIngredientsEndpoint
+    .in("for-storage")
     .get
-    .in("ingredients-for-storage")
     .in(query[String]("query"))
     .in(query[StorageId]("storage-id"))
     .in(query[Int]("size").default(2))
@@ -35,16 +30,15 @@ private val search: ZServerEndpoint[SearchEnv, Any] =
     .in(query[Int]("threshold").default(50))
     .out(jsonBody[SearchResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchHandler)
+    .zSecuredServerLogic(searchPrivateHandler)
 
-// TODO this should be authenticated
-private def searchHandler(
+private def searchPrivateHandler(
   query: String,
   storageId: StorageId,
   size: Int,
   offset: Int,
   threshold: Int
-): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
+): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {

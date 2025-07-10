@@ -42,21 +42,20 @@ private def getAllHandler(storageId: StorageId):
   ZIO[AuthenticatedUser & GetAllEnv,
       InternalServerError | StorageNotFound | UserNotFound,
       Seq[IngredientResp]] = {
-  for
-    storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-      .someOrFail(StorageNotFound(storageId.toString))
-    ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo](_
-      .getAllIngredientsFromStorage(storageId)
-    )
-    ingredients <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
-      ZIO.foreach(ingredientIds)(repo.getById(_))
-    )
-  yield ingredients.flatten.map(IngredientResp.fromDb)
-}.mapError {
-  case _: (DbNotRespondingError | InternalServerError) => InternalServerError()
-  case e: StorageNotFound => e
-  case e: FailedDbQuery => handleFailedSqlQuery(e)
-    .flatMap(fkv => toStorageNotFound(fkv) <|> toUserNotFound(fkv))
-    .getOrElse(InternalServerError())
-}
-
+    for
+      storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
+        .someOrFail(StorageNotFound(storageId.toString))
+      ingredientIds <- ZIO.serviceWithZIO[StorageIngredientsRepo](_
+        .getAllIngredientsFromStorage(storageId)
+      )
+      ingredients <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
+        ZIO.foreach(ingredientIds)(repo.getById)
+      )
+    yield ingredients.flatten.map(IngredientResp.fromDb)
+  }.mapError {
+    case _: (DbNotRespondingError | InternalServerError) => InternalServerError()
+    case e: StorageNotFound => e
+    case e: FailedDbQuery => handleFailedSqlQuery(e)
+      .flatMap(fkv => toStorageNotFound(fkv) <|> toUserNotFound(fkv))
+      .getOrElse(InternalServerError())
+  }

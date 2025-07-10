@@ -1,20 +1,16 @@
-package api.ingredients
+package api.ingredients.open
 
-import api.EndpointErrorVariants.{
-  ingredientNotFoundVariant,
-  serverErrorVariant
-}
+import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
-import domain.{InternalServerError, IngredientId}
-
+import domain.{IngredientId, InternalServerError}
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
 private type DeleteEnv = IngredientsRepo
 
-private val delete: ZServerEndpoint[DeleteEnv, Any] =
-  ingredientsEndpoint
+private[ingredients] val deletePublic: ZServerEndpoint[DeleteEnv, Any] =
+  publicIngredientsEndpoint
   .delete
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
@@ -24,7 +20,7 @@ private val delete: ZServerEndpoint[DeleteEnv, Any] =
 private def deleteHandler(ingredientId: IngredientId):
   ZIO[DeleteEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[IngredientsRepo] {
-    _.removeById(ingredientId).mapError {
+    _.removePublicById(ingredientId).mapError {
       _ => InternalServerError()
     }
   }
