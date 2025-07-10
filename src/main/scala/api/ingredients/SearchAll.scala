@@ -1,53 +1,37 @@
 package api.ingredients
 
 import api.EndpointErrorVariants.serverErrorVariant
+import api.common.search.*
+import api.ingredients.{IngredientResp, ingredientsEndpoint}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
 
 import io.circe.generic.auto.*
-import me.xdrop.fuzzywuzzy.FuzzySearch
-import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.{query, *}
 import zio.ZIO
 
 case class SearchAllResultsResp(
-  results: Vector[IngredientResp],
-  found: Int
-)
+                                 results: Vector[IngredientResp],
+                                 found: Int
+                               )
 
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
 private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   ingredientsEndpoint
-  .get
-  .in(query[String]("query"))
-  .in(query[Int]("size").default(2))
-  .in(query[Int]("offset").default(0))
-  .in(query[Int]("threshold").default(50))
-  .out(jsonBody[SearchAllResultsResp])
-  .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchAllHandler)
+    .get
+    .searchInput 
+    .out(jsonBody[SearchAllResultsResp])
+    .errorOut(oneOf(serverErrorVariant))
+    .zServerLogic(searchAllHandler.inputToSearchParams)
 
-private def searchAllHandler(
-  query: String,
-  size: Int,
-  offset: Int,
-  threshold: Int
-): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
+private def searchAllHandler(sp: SearchParams):
+  ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAll.mapError(_ => InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
-    res = allIngredients
-      .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
-      .filter((_, ratio) => ratio >= threshold)
-      .sortBy(
-        (i, ratio) => (
-          -ratio, // negate the ratio to make order descending
-          (i.name.length - query.length).abs // secondary sort by length difference
-        )
-      )
-      .map(_._1)
-  yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)
+    res = Searchable.search(allIngredients, sp.query, sp.size, sp.offset, sp.threshold)
+  yield SearchAllResultsResp(res.slice(sp.offset, sp.offset + sp.size), res.length)
 
