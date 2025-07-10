@@ -4,6 +4,7 @@ import sttp.tapir.ztapir.*
 
 val recipesEndpoint =
   endpoint
+    .tag("Recipes")
     .in("recipes")
 
 val recipeEndpoints = List(
