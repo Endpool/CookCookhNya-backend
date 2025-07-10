@@ -8,7 +8,8 @@ import sttp.tapir.ztapir.*
 
 val storagesEndpoint =
   endpoint
-  .in("my" / "storages")
+    .tag("Storages")
+    .in("my" / "storages")
 
 val storageEndpoints = List(
   create.widen,
