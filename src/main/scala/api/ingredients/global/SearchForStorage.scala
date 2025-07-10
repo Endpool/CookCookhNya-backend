@@ -12,9 +12,9 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 final case class IngredientSearchResult(
- id: IngredientId,
- name: String,
- available: Boolean
+  id: IngredientId,
+  name: String,
+  available: Boolean
 )
 
 case class SearchResultsResp(
@@ -26,25 +26,25 @@ private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 
 private val searchForStorage: ZServerEndpoint[SearchEnv, Any] =
   endpoint
-    .get
-    .in("ingredients-for-storage")
-    .in(query[String]("query"))
-    .in(query[StorageId]("storage-id"))
-    .in(query[Int]("size").default(2))
-    .in(query[Int]("offset").default(0))
-    .in(query[Int]("threshold").default(50))
-    .out(jsonBody[SearchResultsResp])
-    .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchHandler)
+  .get
+  .in("ingredients-for-storage")
+  .in(query[String]("query"))
+  .in(query[StorageId]("storage-id"))
+  .in(query[Int]("size").default(2))
+  .in(query[Int]("offset").default(0))
+  .in(query[Int]("threshold").default(50))
+  .out(jsonBody[SearchResultsResp])
+  .errorOut(oneOf(serverErrorVariant))
+  .zServerLogic(searchHandler)
 
 // TODO this should be authenticated
 private def searchHandler(
-                           query: String,
-                           storageId: StorageId,
-                           size: Int,
-                           offset: Int,
-                           threshold: Int
-                         ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
+  query: String,
+  storageId: StorageId,
+  size: Int,
+  offset: Int,
+  threshold: Int
+): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllGlobal.mapError(_ => InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
@@ -63,5 +63,4 @@ private def searchHandler(
         )
       )
       .map(_._1)
-
   yield SearchResultsResp(res.slice(offset, offset + size), res.length)

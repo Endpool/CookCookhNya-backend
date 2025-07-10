@@ -21,7 +21,7 @@ private val deletePersonal: ZServerEndpoint[DeleteEnv, Any] =
 
 private def deletePersonalHandler(ingredientId: IngredientId):
 ZIO[AuthenticatedUser & DeleteEnv, InternalServerError, Unit] =
-  ZIO.serviceWithZIO[IngredientsRepo] {_
+  ZIO.serviceWithZIO[IngredientsRepo](_
     .removePersonal(ingredientId)
     .orElseFail(InternalServerError())
-  }
+  )

@@ -26,13 +26,12 @@ private val getPersonal: ZServerEndpoint[GetEnv, Any] =
 
 private def getPersonalHandler(ingredientId: IngredientId):
 ZIO[AuthenticatedUser & GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
-  {
-    for
-      mIngredient <- ZIO.serviceWithZIO[IngredientsRepo](_.getPersonal(ingredientId))
-      ingredient <- ZIO.fromOption(mIngredient)
-        .orElseFail(IngredientNotFound(ingredientId.toString))
-    yield IngredientResp.fromDb(ingredient)
-  }.mapError {
-    case e: IngredientNotFound => e
-    case _ => InternalServerError()
-  }
+  ZIO.serviceWithZIO[IngredientsRepo](_
+    .getPersonal(ingredientId)
+    .someOrFail(IngredientNotFound(ingredientId.toString))
+    .map(IngredientResp.fromDb)
+    .mapError {
+      case e: IngredientNotFound => e
+      case _ => InternalServerError()
+    }
+  )
