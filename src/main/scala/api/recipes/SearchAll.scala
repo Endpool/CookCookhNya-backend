@@ -11,25 +11,30 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 case class RecipeSearchResp(name: String, sourceLink: String) extends Searchable
+
 case class SearchAllRecipesResp(
-                                 results: Vector[RecipeSearchResp],
-                                 found: Int
-                               )
+  results: Vector[RecipeSearchResp],
+  found: Int
+)
 
 private type SearchAllEnv = RecipesRepo & StorageIngredientsRepo
 
 private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
   recipesEndpoint
     .get
-    .inSearchParams
+    .in(SearchParams.query)
+    .in(PaginationParams.query)
     .out(jsonBody[SearchAllRecipesResp])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchAllRecipesHandler)
 
-private def searchAllRecipesHandler(sp: SearchParams):
+private def searchAllRecipesHandler(searchParams: SearchParams, pagination: PaginationParams):
   ZIO[SearchAllEnv, InternalServerError, SearchAllRecipesResp] =
   for
-    allDbRecipes <- ZIO.serviceWithZIO[RecipesRepo] (_.getAll.mapError(_ => InternalServerError()))
-    allRecipes= allDbRecipes.map(dbRecipe => RecipeSearchResp(dbRecipe.name, dbRecipe.sourceLink))
-    res = Searchable.search(allRecipes, sp.query, sp.size, sp.offset, sp.threshold)
-  yield SearchAllRecipesResp(res.slice(sp.offset, sp.offset + sp.size), res.length)
+    allDbRecipes <- ZIO.serviceWithZIO[RecipesRepo](_
+      .getAll
+      .orElseFail(InternalServerError())
+    )
+    allRecipes = allDbRecipes.map(dbRecipe => RecipeSearchResp(dbRecipe.name, dbRecipe.sourceLink))
+    res = Searchable.search(allRecipes, searchParams)
+  yield SearchAllRecipesResp(res.slice(pagination.offset, pagination.offset + pagination.size), res.length)

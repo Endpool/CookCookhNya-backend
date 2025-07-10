@@ -27,7 +27,8 @@ private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 private val search: ZServerEndpoint[SearchEnv, Any] =
   endpoint
     .get
-    .inSearchParams
+    .in(SearchParams.query)
+    .in(PaginationParams.query)
     .in(query[StorageId]("storage-id"))
     .out(jsonBody[SearchResultsResp])
     .errorOut(oneOf(serverErrorVariant))
@@ -35,19 +36,21 @@ private val search: ZServerEndpoint[SearchEnv, Any] =
 
 // TODO this should be authenticated
 private def searchHandler(
-  si: SearchParams,
+  searchParams: SearchParams,
+  pagination: PaginationParams,
   storageId: StorageId,
 ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
-    allIngredientsAvailability <- ZIO.foreach(allIngredients) {
-      ingredient =>
-        ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
-          .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
-          .mapError(_ => InternalServerError())
-    }
-    res = Searchable.search(
-      allIngredientsAvailability, si.query, si.size, si.offset, si.threshold
+    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
+      .getAll
+      .orElseFail(InternalServerError())
     )
-
-  yield SearchResultsResp(res.slice(si.offset, si.offset + si.size), res.length)
+    allIngredientsAvailability <- ZIO.foreach(allIngredients) { ingredient =>
+      ZIO.serviceWithZIO[StorageIngredientsRepo](_
+        .inStorage(storageId, ingredient.id)
+        .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
+        .orElseFail(InternalServerError())
+      )
+    }
+    res = Searchable.search(allIngredientsAvailability, searchParams)
+  yield SearchResultsResp(res.slice(pagination.offset, pagination.offset + pagination.size), res.length)

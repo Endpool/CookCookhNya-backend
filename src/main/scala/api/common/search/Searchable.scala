@@ -7,14 +7,12 @@ trait Searchable:
 
 object Searchable:
   def search[A <: Searchable](
-              searchables: Vector[A],
-              query: String,
-              size: Int,
-              offset: Int,
-              threshold: Int
-            ): Vector[A] =
-   searchables
-    .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
+    searchables: Vector[A],
+    searchParams: SearchParams
+  ): Vector[A] =
+    val SearchParams(query, threshold) = searchParams
+    searchables
+      .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
       .filter((_, ratio) => ratio >= threshold)
       .sortBy(
         (i, ratio) => (
