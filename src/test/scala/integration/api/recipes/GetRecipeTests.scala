@@ -1,10 +1,11 @@
 package integration.api.recipes
 
+import api.recipes.{IngredientSummary, RecipeResp}
+import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
 import domain.{IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
-import api.recipes.{IngredientSummary, RecipeResp}
-import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
+
 import io.circe.parser.*
 import io.circe.generic.auto.*
 import zio.http.{Client, Path, Request, Status, URL}
