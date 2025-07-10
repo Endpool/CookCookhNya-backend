@@ -4,6 +4,7 @@ import api.ingredients.CreateIngredientReqBody
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
+
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
@@ -24,6 +25,8 @@ private val createGlobal: ZServerEndpoint[CreateEnv, Any] =
 
 private def createGlobalHandler(reqBody: CreateIngredientReqBody):
   ZIO[CreateEnv, InternalServerError, IngredientId] =
-  ZIO.serviceWithZIO[IngredientsRepo] {
-    _.addGlobal(reqBody.name).map(_.id)
-  }.mapError(_ => InternalServerError())
+  ZIO.serviceWithZIO[IngredientsRepo](_
+    .addGlobal(reqBody.name)
+    .map(_.id)
+    .orElseFail(InternalServerError())
+  )
