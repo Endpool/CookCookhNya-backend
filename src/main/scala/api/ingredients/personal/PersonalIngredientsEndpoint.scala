@@ -2,6 +2,6 @@ package api.ingredients.personal
 
 import sttp.tapir.ztapir.*
 
-private val privateIngredientsEndpoint =
+private val personalIngredientsEndpoint =
   endpoint
     .in("my" / "ingredients")

@@ -5,6 +5,7 @@ import api.EndpointErrorVariants.serverErrorVariant
 import api.ingredients.CreateIngredientReqBody
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
+
 import io.circe.generic.auto.*
 import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
@@ -14,19 +15,19 @@ import zio.ZIO
 
 private type CreateEnv = IngredientsRepo
 
-private[ingredients] val createPrivate: ZServerEndpoint[CreateEnv, Any] =
-  privateIngredientsEndpoint
+private val createPersonal: ZServerEndpoint[CreateEnv, Any] =
+  personalIngredientsEndpoint
     .post
     .in(jsonBody[CreateIngredientReqBody])
     .out(jsonBody[IngredientId])
     .out(statusCode(StatusCode.Created))
     .errorOut(oneOf(serverErrorVariant))
-    .zSecuredServerLogic(createPrivateHandler)
+    .zSecuredServerLogic(createPersonalHandler)
 
-private def createPrivateHandler(reqBody: CreateIngredientReqBody):
+private def createPersonalHandler(reqBody: CreateIngredientReqBody):
   ZIO[AuthenticatedUser & CreateEnv, InternalServerError, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo](_
-    .addPrivate(reqBody.name)
+    .addPersonal(reqBody.name)
     .map(_.id)
     .orElseFail(InternalServerError())
   )

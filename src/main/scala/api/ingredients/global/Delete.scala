@@ -1,4 +1,4 @@
-package api.ingredients.open
+package api.ingredients.global
 
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
@@ -9,18 +9,18 @@ import zio.ZIO
 
 private type DeleteEnv = IngredientsRepo
 
-private[ingredients] val deletePublic: ZServerEndpoint[DeleteEnv, Any] =
-  publicIngredientsEndpoint
+private val deleteGlobal: ZServerEndpoint[DeleteEnv, Any] =
+  globalIngredientsEndpoint
   .delete
   .in(path[IngredientId]("ingredientId"))
   .out(statusCode(StatusCode.NoContent))
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-  .zServerLogic(deleteHandler)
+  .zServerLogic(deleteGlobalHandler)
 
-private def deleteHandler(ingredientId: IngredientId):
+private def deleteGlobalHandler(ingredientId: IngredientId):
   ZIO[DeleteEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[IngredientsRepo] {
-    _.removePublicById(ingredientId).mapError {
+    _.removeGlobal(ingredientId).mapError {
       _ => InternalServerError()
     }
   }

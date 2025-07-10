@@ -1,0 +1,10 @@
+package api.ingredients.personal
+
+import sttp.tapir.ztapir.*
+
+val personalEndpoints = List(
+  createPersonal.widen,
+  getPersonal.widen,
+  deletePersonal.widen,
+  searchPersonal.widen
+)

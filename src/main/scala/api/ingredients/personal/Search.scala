@@ -1,53 +1,39 @@
 package api.ingredients.personal
 
-import api.ingredients.IngredientSearchResult
-import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
+import api.ingredients.{IngredientResp, SearchAllResultsResp}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
-import domain.{IngredientId, InternalServerError, StorageId, UserId}
+import domain.{IngredientId, InternalServerError}
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
-import sttp.tapir.ztapir.*
+import sttp.tapir.ztapir.{query, *}
 import zio.ZIO
 
-case class SearchResultsResp(
-  results: Vector[IngredientSearchResult],
-  found: Int
-)
+private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
-private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
-
-private[ingredients] val searchPrivate: ZServerEndpoint[SearchEnv, Any] =
-  privateIngredientsEndpoint
-    .in("for-storage")
+private val searchPersonal: ZServerEndpoint[SearchAllEnv, Any] =
+  personalIngredientsEndpoint
     .get
     .in(query[String]("query"))
-    .in(query[StorageId]("storage-id"))
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
     .in(query[Int]("threshold").default(50))
-    .out(jsonBody[SearchResultsResp])
+    .out(jsonBody[SearchAllResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zSecuredServerLogic(searchPrivateHandler)
+    .zServerLogic(searchGlobalHandler)
 
-private def searchPrivateHandler(
-  query: String,
-  storageId: StorageId,
-  size: Int,
-  offset: Int,
-  threshold: Int
-): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchResultsResp] =
+private def searchGlobalHandler(
+                                 query: String,
+                                 size: Int,
+                                 offset: Int,
+                                 threshold: Int
+                               ): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
-    allIngredientsAvailability <- ZIO.foreach(allIngredients) {
-      ingredient =>
-        ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
-          .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
-          .mapError(_ => InternalServerError())
-    }
-    res = allIngredientsAvailability
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.mapError(_ => InternalServerError()))
+    allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
+    res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
       .filter((_, ratio) => ratio >= threshold)
       .sortBy(
@@ -57,5 +43,4 @@ private def searchPrivateHandler(
         )
       )
       .map(_._1)
-
-  yield SearchResultsResp(res.slice(offset, offset + size), res.length)
+  yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)

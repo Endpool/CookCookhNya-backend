@@ -1,9 +1,10 @@
-package api.ingredients.open
+package api.ingredients.global
 
 import api.EndpointErrorVariants.serverErrorVariant
-import api.ingredients.IngredientResp
+import api.ingredients.{IngredientResp, SearchAllResultsResp}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
+
 import io.circe.generic.auto.*
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
@@ -11,15 +12,10 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.{query, *}
 import zio.ZIO
 
-case class SearchAllResultsResp(
-  results: Vector[IngredientResp],
-  found: Int
-)
-
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
-private[ingredients] val searchPublic: ZServerEndpoint[SearchAllEnv, Any] =
-  publicIngredientsEndpoint
+private val searchGlobal: ZServerEndpoint[SearchAllEnv, Any] =
+  globalIngredientsEndpoint
   .get
   .in(query[String]("query"))
   .in(query[Int]("size").default(2))
@@ -27,16 +23,16 @@ private[ingredients] val searchPublic: ZServerEndpoint[SearchAllEnv, Any] =
   .in(query[Int]("threshold").default(50))
   .out(jsonBody[SearchAllResultsResp])
   .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchPublicHandler)
+  .zServerLogic(searchGlobalHandler)
 
-private def searchPublicHandler(
+private def searchGlobalHandler(
   query: String,
   size: Int,
   offset: Int,
   threshold: Int
 ): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllPublic.mapError(_ => InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.mapError(_ => InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
     res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
@@ -49,4 +45,3 @@ private def searchPublicHandler(
       )
       .map(_._1)
   yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)
-

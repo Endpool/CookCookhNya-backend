@@ -1,7 +1,7 @@
 package integration.common
 
 import api.Authentication.AuthenticatedUser
-import api.ingredients.open.CreateIngredientReqBody
+import api.ingredients.global.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
 import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
@@ -80,7 +80,7 @@ object Utils:
   def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
       ZIO.serviceWithZIO[IngredientsRepo] {
-        _.add(name).map(_.id)
+        _.addGlobal(name).map(_.id)
       }.mapError(_ => InternalServerError())
     )
 
