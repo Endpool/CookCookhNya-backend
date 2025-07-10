@@ -1,58 +1,62 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.tables.{DbShoppingList, shoppingListTable}
 import db.{DbError, handleDbError}
 import domain.{IngredientId, Recipe, RecipeId, UserId}
+
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
+import org.checkerframework.checker.units.qual.A
 
 trait ShoppingListsRepo:
-  def addIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
-  ZIO[ShoppingListsRepo, DbError, Unit]
+  def addIngredients(ingredients: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
 
-  def getIngredients(ownerId: UserId): ZIO[ShoppingListsRepo, DbError, Vector[IngredientId]]
+  def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]]
 
-  def deleteIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
-  ZIO[ShoppingListsRepo, DbError, Unit]
+  def deleteIngredients(ingredients: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
 
 private final case class ShoppingListsLive(xa: Transactor)
   extends Repo[DbShoppingList, DbShoppingList, Null] with ShoppingListsRepo:
 
-  override def addIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
-  ZIO[ShoppingListsRepo, DbError, Unit] =
-    xa.transact {
+  override def addIngredients(ingredients: Seq[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, Unit] = for
+    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    _ <- xa.transact {
       ingredients.foreach { ingredientId =>
         sql"""
-             insert into ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-             values ($ownerId, $ingredientId)
-             on conflict (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-             do nothing
-           """.update.run()
-        ()
+          INSERT INTO ${shoppingListTable} (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+          VALUES ($ownerId, $ingredientId)
+          ON CONFLICT (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
+          DO NOTHING
+        """.update.run()
       }
     }.mapError(handleDbError)
+  yield ()
 
-  override def getIngredients(ownerId: UserId):
-  ZIO[ShoppingListsRepo, DbError, Vector[IngredientId]] =
-    xa.transact {
+  override def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]] = for
+    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    ingredientIds <- xa.transact {
       sql"""
-           select ${shoppingListTable.ingredientId} from $shoppingListTable
-           where ${shoppingListTable.ownerId} = $ownerId
-         """.query[IngredientId].run()
+        SELECT ${shoppingListTable.ingredientId} FROM $shoppingListTable
+        WHERE ${shoppingListTable.ownerId} = $ownerId
+      """.query[IngredientId].run()
     }.mapError(handleDbError)
+  yield ingredientIds
 
-  override def deleteIngredients(ownerId: UserId, ingredients: Seq[IngredientId]):
-  ZIO[ShoppingListsRepo, DbError, Unit] =
-    xa.transact {
+  override def deleteIngredients(ingredients: Seq[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, Unit] = for
+    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    _ <- xa.transact {
       ingredients.foreach { ingredientId =>
         sql"""
-             delete from ${shoppingListTable}
-             where ${shoppingListTable.ownerId} = $ownerId
-             and ${shoppingListTable.ingredientId} = $ingredientId
-           """.update.run()
+          DELETE FROM ${shoppingListTable}
+          WHERE ${shoppingListTable.ownerId} = $ownerId
+          AND ${shoppingListTable.ingredientId} = $ingredientId
+        """.update.run()
       }
-      ()
     }.mapError(handleDbError)
+  yield ()
 
 object ShoppingListsRepo:
   val layer = ZLayer.fromFunction(ShoppingListsLive(_))

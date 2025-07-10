@@ -1,73 +1,61 @@
 package integration.api.storages
 
 import api.storages.CreateStorageReqBody
-import db.dbLayer
 import db.repositories.StoragesRepo
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.generic.auto.*
-import zio.http.{Client, Status}
-import zio.{Scope, ZIO}
-import zio.test.Assertion.*
+import zio.http.{Client, Status, URL, Path}
+import zio.{Scope, ZIO, ZLayer}
 import zio.test.{
   TestEnvironment,
-  assert, assertTrue,
+  assertTrue,
   Spec,
-  SmartAssertionOps, SmartAssertMacros, TestLensOptionOps
+  SmartAssertionOps, TestLensOptionOps
 }
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
+  private def endpointPath: URL =
+    URL(Path.root / "my" / "storages")
+
   override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Create storage tests")(
       test("When unauthorized should get 401") {
         Client.batched(
-          post("my/storages")
+          post(endpointPath)
             .withJsonBody(CreateStorageReqBody("storage"))
         ).map(resp => assertTrue(resp.status == Status.Unauthorized))
       },
       test("When authorized should get 200") {
         for
-          userId <- registerUser
+          user <- registerUser
           resp <- Client.batched(
-            post("my/storages")
+            post(endpointPath)
               .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(userId)
+              .addAuthorization(user)
           )
         yield assertTrue(resp.status == Status.Ok)
       },
-      test("When authorized storage should be added to db") {
-        var storageName = "storage"
+      test("When authorized, storage should be added to db & have its creator an owner") {
+        val storageName = "storage"
         for
-          userId <- registerUser
+          user <- registerUser
 
           resp <- Client.batched(
-            post("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(userId)
+            post(endpointPath)
+              .withJsonBody(CreateStorageReqBody(storageName))
+              .addAuthorization(user)
           )
 
           storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
-          storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-        yield assertTrue(resp.status == Status.Ok)
-           && assert(storage)(isSome)
-           && assertTrue(storage.is(_.some).id == storageId)
-           && assertTrue(storage.is(_.some).name == storageName)
-      },
-      test("When created storage should have creator as owner") {
-        var storageName = "storage"
-        for
-          userId <- registerUser
-
-          resp <- Client.batched(
-            post("my/storages")
-              .withJsonBody(CreateStorageReqBody("storage"))
-              .addAuthorization(userId)
+          storage <- ZIO.serviceWithZIO[StoragesRepo](_
+            .getById(storageId)
+            .provideUser(user)
           )
-
-          storageId <- resp.body.asString.map(_.toIntOption).someOrFailException
-          storage <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
-        yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(storage.is(_.some).ownerId == userId)
+        yield assertTrue(resp.status == Status.Ok) &&
+          assertTrue(storage.is(_.some).id == storageId) &&
+          assertTrue(storage.is(_.some).name == storageName) &&
+          assertTrue(storage.is(_.some).ownerId == user.userId)
       },
     ).provideLayer(testLayer)

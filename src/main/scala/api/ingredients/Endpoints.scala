@@ -7,9 +7,9 @@ val ingredientsEndpoint =
   .in("ingredients")
 
 val ingredientsEndpoints = List(
-  create,
-  delete,
-  getAll,
-  get,
-  search
+  create.widen,
+  delete.widen,
+  get.widen,
+  search.widen,
+  searchAll.widen,
 )

@@ -1,12 +1,12 @@
 package db.repositories
 
 import db.tables.{DbStorageMember, storageMembersTable, storagesTable}
-import db.DbError
-import domain.{UserId, StorageId}
 import db.{DbError, handleDbError}
+import domain.{UserId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, IO, RLayer, ZLayer}
+import api.Authentication.AuthenticatedUser
 
 trait StorageMembersRepo:
   def addMemberToStorageById(storageId: StorageId, memberId: UserId):
@@ -15,10 +15,11 @@ trait StorageMembersRepo:
     IO[DbError, Unit]
   def getAllStorageMembers(storageId: StorageId):
     IO[DbError, Vector[UserId]]
+  def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]]
+  def checkForMembership(storageId: StorageId):
+    ZIO[AuthenticatedUser, DbError, Boolean]
 
-  def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]]
-  
 private final case class StorageMembersRepoLive(xa: Transactor)
   extends Repo[DbStorageMember, DbStorageMember, Null]
   with StorageMembersRepo:
@@ -27,11 +28,11 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-           insert into ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
-           values ($storageId, $memberId)
-           on conflict (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
-           do nothing
-         """.update.run()
+        INSERT INTO ${storageMembersTable} (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+        VALUES ($storageId, $memberId)
+        ON CONFLICT (${storageMembersTable.storageId}, ${storageMembersTable.memberId})
+        DO NOTHING
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -39,10 +40,10 @@ private final case class StorageMembersRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-       delete from $storageMembersTable
-       where ${storageMembersTable.storageId} = $storageId
-       and ${storageMembersTable.memberId} = $memberId
-         """.update.run()
+        DELETE FROM $storageMembersTable
+        WHERE ${storageMembersTable.storageId} = $storageId
+        and ${storageMembersTable.memberId} = $memberId
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -55,19 +56,35 @@ private final case class StorageMembersRepoLive(xa: Transactor)
       """.query[UserId].run()
     }.mapError(handleDbError)
 
-  override def getAllUserStorageIds(userId: UserId):
-    IO[DbError, Vector[StorageId]] =
-    xa.transact {
-      sql"""
-        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
-        WHERE ${storageMembersTable.memberId} = $userId
+  override def getAllUserStorageIds:
+    ZIO[AuthenticatedUser, DbError, Vector[StorageId]] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
+          SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+          WHERE ${storageMembersTable.memberId} = $userId
+          UNION
+          SELECT ${storagesTable.id} FROM $storagesTable
+          WHERE ${storagesTable.ownerId} = $userId
+        """.query[UserId].run()
+      }.mapError(handleDbError)
+    }
 
-        UNION
-
-        SELECT ${storagesTable.id}
-        FROM $storagesTable
-        WHERE ${storagesTable.ownerId} = $userId
-      """.query[UserId].run()
+  override def checkForMembership(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser]{ authenticatedUser =>
+      val userId = authenticatedUser.userId
+      xa.transact {
+        sql"""
+            SELECT 1
+            FROM $storageMembersTable sm
+            JOIN $storagesTable s
+              ON sm.${storageMembersTable.storageId} = s.${storagesTable.id}
+            WHERE sm.${storageMembersTable.storageId} = $storageId 
+              AND(sm.${storageMembersTable.memberId} = $userId OR s.${storagesTable.ownerId} = $userId)
+            LIMIT 1
+        """.query[Int].run().nonEmpty
+      }
     }.mapError(handleDbError)
 
 object StorageMembersRepo:

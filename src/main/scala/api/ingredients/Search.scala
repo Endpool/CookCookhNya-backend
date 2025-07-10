@@ -1,6 +1,5 @@
 package api.ingredients
 
-import api.AppEnv
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError, StorageId, UserId}
@@ -12,18 +11,20 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private case class IngredientSearchResult(
+case class IngredientSearchResult(
   id: IngredientId,
   name: String,
   available: Boolean
 )
 
-private case class SearchResultsResp(
+case class SearchResultsResp(
   results: Vector[IngredientSearchResult],
   found: Int
 )
 
-private val search: ZServerEndpoint[AppEnv, Any] =
+private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
+
+private val search: ZServerEndpoint[SearchEnv, Any] =
   endpoint
     .get
     .in("ingredients-for-storage")
@@ -31,16 +32,19 @@ private val search: ZServerEndpoint[AppEnv, Any] =
     .in(query[StorageId]("storage-id"))
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
+    .in(query[Int]("threshold").default(50))
     .out(jsonBody[SearchResultsResp])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
 
+// TODO this should be authenticated
 private def searchHandler(
   query: String,
   storageId: StorageId,
   size: Int,
-  offset: Int
-): ZIO[IngredientsRepo & StorageIngredientsRepo, InternalServerError, SearchResultsResp] =
+  offset: Int,
+  threshold: Int
+): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
     allIngredientsAvailability <- ZIO.foreach(allIngredients) {
@@ -51,7 +55,7 @@ private def searchHandler(
     }
     res = allIngredientsAvailability
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
-      .filter((_, ratio) => ratio >= 70) // min ratio threshold
+      .filter((_, ratio) => ratio >= threshold)
       .sortBy(
         (i, ratio) => (
           -ratio, // negate the ratio to make order descending

@@ -1,49 +1,68 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.tables.{DbStorage, DbStorageCreator, storageMembersTable, storagesTable}
-import domain.{StorageId, UserId}
 import db.{DbError, handleDbError}
+import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{IO, RLayer, UIO, ZIO, ZLayer}
 
 trait StoragesRepo:
-  def createEmpty(name: String, ownerId: UserId): IO[DbError, StorageId]
-  def removeById(id: StorageId): IO[DbError, Unit]
-  def getById(id: StorageId): IO[DbError, Option[DbStorage]]
-  def getAll(id: UserId) : IO[DbError, Vector[DbStorage]]
+  def createEmpty(name: String): ZIO[AuthenticatedUser, DbError, StorageId]
+  def removeById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Unit]
+  def getById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Option[DbStorage]]
+  def getAll : ZIO[AuthenticatedUser, DbError, Vector[DbStorage]]
 
 private final case class StoragesRepoLive(xa: Transactor)
   extends Repo[DbStorageCreator, DbStorage, StorageId] with StoragesRepo:
 
-  override def createEmpty(name: String, ownerId: UserId): IO[DbError, StorageId] =
-    xa.transact {
-      val storage = insertReturning(DbStorageCreator(name, ownerId))
+  override def createEmpty(name: String): ZIO[AuthenticatedUser, DbError, StorageId] = for
+    creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    storageId <- xa.transact {
+      val storage = insertReturning(DbStorageCreator(name, creatorId))
       storage.id
-    }.mapError {
-      handleDbError
-    }
-
-  override def getById(id: StorageId): IO[DbError, Option[DbStorage]] =
-    xa.transact {
-      findById(id)
     }.mapError(handleDbError)
+  yield storageId
 
-  override def getAll(id: UserId): IO[DbError, Vector[DbStorage]] =
-    xa.transact {
+  override def getById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Option[DbStorage]] = for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    mStorage <- xa.transact {
       sql"""
-           select distinct ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
-           from $storagesTable left join $storageMembersTable
-           on ${storagesTable.id} = ${storageMembersTable.storageId}
-           where $id = ${storagesTable.ownerId} or $id = ${storageMembersTable.memberId}
-         """
-        .query[DbStorage].run()
+        SELECT DISTINCT ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+        FROM $storagesTable LEFT JOIN $storageMembersTable
+        ON ${storagesTable.id} = ${storageMembersTable.storageId}
+        WHERE $storageId = ${storagesTable.id}
+          AND (  $userId = ${storagesTable.ownerId}
+              OR $userId = ${storageMembersTable.memberId}
+              )
+      """.query[DbStorage].run().headOption
     }.mapError(handleDbError)
+  yield mStorage
 
-  override def removeById(id: StorageId): IO[DbError, Unit] =
-    xa.transact {
-      deleteById(id)
+  override def getAll: ZIO[AuthenticatedUser, DbError, Vector[DbStorage]] = for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    storages <- xa.transact {
+      sql"""
+        SELECT DISTINCT ${storagesTable.id}, ${storagesTable.ownerId}, ${storagesTable.name}
+        FROM $storagesTable LEFT JOIN $storageMembersTable
+        ON ${storagesTable.id} = ${storageMembersTable.storageId}
+        WHERE $userId = ${storagesTable.ownerId}
+           OR $userId = ${storageMembersTable.memberId}
+      """.query[DbStorage].run()
     }.mapError(handleDbError)
+  yield storages
+
+  override def removeById(storageId: StorageId): ZIO[AuthenticatedUser, DbError, Unit] = for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    _ <- xa.transact {
+      sql"""
+        DELETE FROM $storagesTable
+        WHERE $storageId = ${storagesTable.id}
+          AND $userId = ${storagesTable.ownerId}
+      """.update.run()
+    }.mapError(handleDbError)
+  yield ()
 
 object StoragesRepo:
   val layer: RLayer[Transactor, StoragesRepo] =

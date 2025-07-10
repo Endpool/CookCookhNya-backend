@@ -33,9 +33,9 @@ lazy val root = (project in file("."))
 
       "ch.qos.logback" % "logback-classic" % "1.4.14",
 
-
       "me.xdrop" % "fuzzywuzzy" % "1.4.0",
 
+      "commons-codec" % "commons-codec" % "1.16.0",
 
       // tests
       "dev.zio" %% "zio-test" % zioVersion % Test,

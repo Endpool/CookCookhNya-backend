@@ -20,27 +20,25 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type RemoveEnv = StorageIngredientsRepo
-
-private val remove: ZServerEndpoint[RemoveEnv, Any] =
+private val removeMany: ZServerEndpoint[RemoveEnv, Any] =
   storagesIngredientsEndpoint
-  .delete
-  .in(path[IngredientId]("ingredientId"))
-  .out(statusCode(StatusCode.NoContent))
-  .errorOut(oneOf(
-    serverErrorVariant,
-    ingredientNotFoundVariant,
-    storageNotFoundVariant,
-  ))
-  .zSecuredServerLogic(removeHandler)
+    .delete
+    .in(query[Vector[IngredientId]]("ingredient"))
+    .out(statusCode(StatusCode.NoContent))
+    .errorOut(oneOf(
+      serverErrorVariant,
+      ingredientNotFoundVariant,
+      storageNotFoundVariant,
+    ))
+    .zSecuredServerLogic(removeManyHandler)
 
 // TODO this endpoint ignored auth
-private def removeHandler(storageId : StorageId, ingredientId: IngredientId):
-  ZIO[AuthenticatedUser & RemoveEnv,
-      InternalServerError | StorageNotFound | IngredientNotFound,
-      Unit] =
+private def removeManyHandler(storageId : StorageId, ingredientIds: Vector[IngredientId]):
+ZIO[AuthenticatedUser & RemoveEnv,
+  InternalServerError | StorageNotFound | IngredientNotFound,
+  Unit] =
   ZIO.serviceWithZIO[StorageIngredientsRepo] {
-    _.removeIngredientFromStorageById(storageId, ingredientId)
+    _.removeIngredientsFromStorage(storageId, ingredientIds)
   }.mapError {
     case _: DbNotRespondingError => InternalServerError()
     case e: FailedDbQuery => handleFailedSqlQuery(e)
