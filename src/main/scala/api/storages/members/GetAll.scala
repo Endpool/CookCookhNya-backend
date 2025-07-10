@@ -44,7 +44,7 @@ private def getAllHandler(storageId: StorageId):
           WHERE s.${storagesTable.id} = $storageId
         """.query[UserResp].run()
       }
-    }.mapError(_ => InternalServerError())
+    }.orElseFail(InternalServerError())
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
       ZIO.fail(StorageNotFound(storageId.toString))
     }

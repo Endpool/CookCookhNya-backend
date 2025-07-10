@@ -1,7 +1,6 @@
 package integration.common
 
 import api.Authentication.AuthenticatedUser
-import api.ingredients.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
 import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
@@ -79,9 +78,11 @@ object Utils:
 
   def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
-      ZIO.serviceWithZIO[IngredientsRepo] {
-        _.add(name).map(_.id)
-      }.mapError(_ => InternalServerError())
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addGlobal(name)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
     )
 
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =

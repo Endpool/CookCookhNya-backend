@@ -16,7 +16,8 @@ import zio.{Exit, ZIO}
 
 private type GetIngredientsEnv = ShoppingListsRepo & IngredientsRepo
 
-private val getIngredients: ZServerEndpoint[GetIngredientsEnv, Any] = shoppingListEndpoint
+private val getIngredients: ZServerEndpoint[GetIngredientsEnv, Any] =
+  shoppingListEndpoint
   .get
   .out(jsonBody[Seq[IngredientResp]])
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
@@ -28,12 +29,12 @@ private def getIngredientsHandler(u: Unit):
       Seq[IngredientResp]] = {
   for
     ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
-    result <- ZIO.foreach(ingredientIds) {
-      ingredientId =>
-        ZIO.serviceWithZIO[IngredientsRepo](_.getById(ingredientId)).flatMap {
-          case Some(dbEntity) => ZIO.succeed(IngredientResp.fromDb(dbEntity))
-          case None => ZIO.fail(IngredientNotFound(ingredientId.toString))
-        }
+    result <- ZIO.foreach(ingredientIds) { ingredientId =>
+        ZIO.serviceWithZIO[IngredientsRepo](_
+          .getAny(ingredientId)
+          .someOrFail(IngredientNotFound(ingredientId.toString))
+          .map(IngredientResp.fromDb)
+        )
     }
   yield result
 }.mapError {
