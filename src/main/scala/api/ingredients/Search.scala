@@ -37,7 +37,7 @@ private val search: ZServerEndpoint[SearchEnv, Any] =
 // TODO this should be authenticated
 private def searchHandler(
   searchParams: SearchParams,
-  pagination: PaginationParams,
+  paginationParams: PaginationParams,
   storageId: StorageId,
 ): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
   for
@@ -53,4 +53,4 @@ private def searchHandler(
       )
     }
     res = Searchable.search(allIngredientsAvailability, searchParams)
-  yield SearchResultsResp(res.slice(pagination.offset, pagination.offset + pagination.size), res.length)
+  yield SearchResultsResp(res.paginate(paginationParams), res.length)

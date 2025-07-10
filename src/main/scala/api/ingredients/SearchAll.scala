@@ -28,7 +28,7 @@ private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchAllHandler)
 
-private def searchAllHandler(searchParams: SearchParams, pagination: PaginationParams):
+private def searchAllHandler(searchParams: SearchParams, paginationParams: PaginationParams):
   ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
@@ -37,5 +37,5 @@ private def searchAllHandler(searchParams: SearchParams, pagination: PaginationP
     )
     allIngredients = allDbIngredients.map(IngredientResp.fromDb)
     res = Searchable.search(allIngredients, searchParams)
-  yield SearchAllResultsResp(res.slice(pagination.offset, pagination.offset + pagination.size), res.length)
+  yield SearchAllResultsResp(res.paginate(paginationParams), res.length)
 
