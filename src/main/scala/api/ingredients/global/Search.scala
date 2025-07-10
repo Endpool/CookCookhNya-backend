@@ -1,8 +1,9 @@
 package api.ingredients.global
 
+import api.common.search.*
 import api.EndpointErrorVariants.serverErrorVariant
 import api.ingredients.{IngredientResp, SearchAllResultsResp}
-import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
+import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
 
 import io.circe.generic.auto.*
@@ -12,36 +13,24 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
+private type SearchAllEnv = IngredientsRepo
 
 private val searchGlobal: ZServerEndpoint[SearchAllEnv, Any] =
   globalIngredientsEndpoint
-  .get
-  .in(query[String]("query"))
-  .in(query[Int]("size").default(2))
-  .in(query[Int]("offset").default(0))
-  .in(query[Int]("threshold").default(50))
-  .out(jsonBody[SearchAllResultsResp])
-  .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchGlobalHandler)
+    .get
+    .in(SearchParams.query)
+    .in(PaginationParams.query)
+    .out(jsonBody[SearchAllResultsResp])
+    .errorOut(oneOf(serverErrorVariant))
+    .zServerLogic(searchGlobalHandler)
 
-private def searchGlobalHandler(
-  query: String,
-  size: Int,
-  offset: Int,
-  threshold: Int
-): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
+private def searchGlobalHandler(searchParams: SearchParams, paginationParams: PaginationParams):
+  ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.orElseFail(InternalServerError()))
-    allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
-    res = allIngredients
-      .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
-      .filter((_, ratio) => ratio >= threshold)
-      .sortBy(
-        (i, ratio) => (
-          -ratio, // negate the ratio to make order descending
-          (i.name.length - query.length).abs // secondary sort by length difference
-        )
-      )
-      .map(_._1)
-  yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
+      .getAllGlobal
+      .orElseFail(InternalServerError())
+    )
+    allIngredients = allDbIngredients.map(IngredientResp.fromDb)
+    res = Searchable.search(allIngredients, searchParams)
+  yield SearchAllResultsResp(res.paginate(paginationParams), res.length)

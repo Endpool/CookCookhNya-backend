@@ -4,12 +4,13 @@ import db.tables.{DbRecipe, DbRecipeCreator}
 import db.{DbError, handleDbError}
 import domain.{IngredientId, Recipe, RecipeId}
 import com.augustnagro.magnum.magzio.*
-import zio.{ZIO, ZLayer}
+import zio.{ZIO, IO, ZLayer}
 
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
     ZIO[RecipeIngredientsRepo, DbError, RecipeId]
   def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]]
+  def getAll: IO[DbError, Vector[DbRecipe]]
   def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit]
 
 private final case class RecipesRepoLive(xa: Transactor)
@@ -36,6 +37,9 @@ private final case class RecipesRepoLive(xa: Transactor)
       }
     yield recipe
 
+  override def getAll: IO[DbError, Vector[DbRecipe]] =
+    xa.transact(findAll).mapError(handleDbError)
+    
   override def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit] =
     xa.transact {
       deleteById(recipeId)
