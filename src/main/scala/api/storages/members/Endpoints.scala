@@ -7,7 +7,7 @@ import sttp.tapir.ztapir.*
 
 val storagesMembersEndpoint =
   storagesEndpoint
-    .tag("Members")
+    .tag("Storage members")
     .in(path[StorageId]("storageId") / "members")
 
 val storagesMembersEndpoints = List(
