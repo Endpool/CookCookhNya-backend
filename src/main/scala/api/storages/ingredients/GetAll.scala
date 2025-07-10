@@ -49,7 +49,7 @@ private def getAllHandler(storageId: StorageId):
         .getAllIngredientsFromStorage(storageId)
       )
       ingredients <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
-        ZIO.foreach(ingredientIds)(repo.getPersonal)
+        ZIO.foreach(ingredientIds)(repo.getAny)
       )
     yield ingredients.flatten.map(IngredientResp.fromDb)
   }.mapError {

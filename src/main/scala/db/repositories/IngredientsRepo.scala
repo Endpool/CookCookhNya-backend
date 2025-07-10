@@ -12,6 +12,7 @@ trait IngredientsRepo:
   def addPersonal(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient]
   def getGlobal(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def getPersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
+  def getAny(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
   def removeGlobal(id: IngredientId): IO[DbError, Unit]
   def removePersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
   def getAllGlobal: IO[DbError, Vector[DbIngredient]]
@@ -49,6 +50,12 @@ private final case class IngredientsRepoLive(xa: Transactor)
            """.query[DbIngredient].run().headOption
       }.mapError(handleDbError)
     yield result
+
+  override def getAny(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
+    getGlobal(id).flatMap {
+      case Some(ingredient) => ZIO.succeed(Some(ingredient))
+      case None             => getPersonal(id)
+    }
 
   override def removeGlobal(id: IngredientId): IO[DbError, Unit] =
     xa.transact {

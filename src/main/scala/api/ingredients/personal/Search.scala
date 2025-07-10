@@ -1,5 +1,6 @@
 package api.ingredients.personal
 
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.ingredients.{IngredientResp, SearchAllResultsResp}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
@@ -22,16 +23,16 @@ private val searchPersonal: ZServerEndpoint[SearchAllEnv, Any] =
     .in(query[Int]("threshold").default(50))
     .out(jsonBody[SearchAllResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchGlobalHandler)
+    .zSecuredServerLogic(searchPersonalHandler)
 
-private def searchGlobalHandler(
-                                 query: String,
-                                 size: Int,
-                                 offset: Int,
-                                 threshold: Int
-                               ): ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
+private def searchPersonalHandler(
+ query: String,
+ size: Int,
+ offset: Int,
+ threshold: Int
+): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllGlobal.mapError(_ => InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo] (_.getAllPersonal.mapError(_ => InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
     res = allIngredients
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
