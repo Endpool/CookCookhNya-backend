@@ -29,6 +29,7 @@ private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo
 
 private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
   recipesEndpoint
+    .in("suggested")
     .get
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
