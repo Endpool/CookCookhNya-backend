@@ -2,16 +2,12 @@ package api.ingredients
 
 import sttp.tapir.ztapir.*
 
+import api.ingredients.global.globalEndpoints
+import api.ingredients.personal.personalEndpoints
+
 val ingredientsEndpoint =
   endpoint
     .tag("Ingredients")
-  .in("ingredients")
+    .in("ingredients")
 
-val ingredientsEndpoints = List(
-  createPublic.widen,
-  createPrivate.widen,
-  delete.widen,
-  get.widen,
-  search.widen,
-  searchAll.widen,
-)
+val ingredientsEndpoints = globalEndpoints.map(_.widen) ++ personalEndpoints.map(_.widen)

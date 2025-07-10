@@ -11,4 +11,5 @@ val recipeEndpoints = List(
   create.widen,
   getSuggested.widen,
   get.widen,
+  searchAll.widen
 )

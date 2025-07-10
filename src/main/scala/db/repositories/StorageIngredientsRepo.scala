@@ -63,7 +63,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Vector[IngredientId]] =
     xa.transact {
       sql"""
-        SELECT ${storageIngredientsTable.ingredientId} FROM ${storageIngredientsTable}
+        SELECT ${storageIngredientsTable.ingredientId} FROM $storageIngredientsTable
         WHERE ${storageIngredientsTable.storageId} = $storageId
       """.query[IngredientId].run()
     }.mapError(handleDbError)
