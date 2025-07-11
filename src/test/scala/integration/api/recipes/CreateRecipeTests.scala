@@ -1,13 +1,14 @@
 package integration.api.recipes
 
 import api.Authentication.AuthenticatedUser
-import api.recipes.CreateRecipeReqBody
-import api.recipes.{RecipeResp}
+import api.recipes.{RecipeResp, CreateRecipeReqBody}
 import db.repositories.{IngredientsRepo, RecipesRepo}
-import domain.{IngredientId}
+import db.tables.recipesTable
+import domain.{IngredientId, ErrorResponse, IngredientNotFound}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
+import com.augustnagro.magnum.magzio.{Transactor, sql}
 import io.circe.parser.*
 import io.circe.generic.auto.*
 import zio.http.{Client, Path, Request, Status, URL}
@@ -18,7 +19,7 @@ import zio.test.{
   TestEnvironment,
   assertTrue,
   Spec,
-  SmartAssertionOps, TestLensOptionOps
+  SmartAssertionOps, TestLensOptionOps, TestLensEitherOps
 }
 
 object CreateRecipeTests extends ZIOIntegrationTestSpec:
@@ -45,15 +46,42 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         resp <- createRecipe(user, CreateRecipeReqBody("recipe", "sourceLink", Vector.empty))
       yield assertTrue(resp.status == Status.Ok)
     },
-    test("When create valid recipe, recipe should be added to db") {
+    test("When create valid recipe with global ingredients, recipe should be added to db") {
+      for
+        recipeName <- randomString
+        recipeSourceLink <- randomString
+        ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
+          Gen.alphaNumericString.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addGlobal))
+        ).map(_.map(_.id))
+          .map(Vector.from)
+
+        user <- registerUser
+
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
+        recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId))
+      yield assertTrue(resp.status == Status.Ok)
+         && assertTrue(recipe.is(_.some).name == recipeName)
+         && assertTrue(recipe.is(_.some).sourceLink == recipeSourceLink)
+         && assertTrue(recipe.get.ingredients hasSameElementsAs ingredientIds)
+    },
+    test("When create valid recipe with global and personal ingredients, recipe should be added to db") {
       for
         user <- registerUser
         recipeName <- randomString
         recipeSourceLink <- randomString
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
-          Gen.string.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addGlobal))
-        ).map(_.map(_.id))
-          .map(Vector.from)
+          for
+            globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
+              .flatMap(ZIO.foreach(_)(repo.addGlobal))
+              .map(_.map(_.id))
+              .map(Vector.from)
+            personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
+              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(user)
+              .map(_.map(_.id))
+              .map(Vector.from)
+          yield globalIngredientIds ++ personalIngredientIds
+        )
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
         recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
