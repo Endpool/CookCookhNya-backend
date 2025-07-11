@@ -32,4 +32,4 @@ object EndpointErrorVariants:
   val userNotFoundVariant = NotFound.variantJson[UserNotFound]
   val recipeNotFoundVariant = NotFound.variantJson[RecipeNotFound]
   val serverErrorVariant = StatusCode.InternalServerError.variantJson[InternalServerError]
-  val invalidInvitationHashVariant = StatusCode.Forbidden.variantJson[InvalidInvitationHash]
+  val invalidInvitationHashVariant = BadRequest.variantJson[InvalidInvitationHash]

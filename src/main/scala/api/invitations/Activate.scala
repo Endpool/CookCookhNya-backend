@@ -1,7 +1,7 @@
 package api.invitations
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
-import api.EndpointErrorVariants.{invalidInvitationHashVariant, serverErrorVariant, storageAccessForbiddenVariant, storageNotFoundVariant}
+import api.EndpointErrorVariants.{invalidInvitationHashVariant, serverErrorVariant}
 import db.repositories.{InvitationsRepo, StorageMembersRepo}
 import domain.{InternalServerError, InvalidInvitationHash}
 
