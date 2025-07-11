@@ -42,8 +42,8 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
       "dev.zio" %% "zio-http-testkit" % "3.3.3" % Test,
 
-      "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.41.4" % Test,
-      "org.testcontainers" % "postgresql" % "1.20.2" % Test,
+      "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test,
+      "org.testcontainers" % "postgresql" % "1.21.3" % Test,
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )

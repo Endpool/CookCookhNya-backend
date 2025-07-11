@@ -56,7 +56,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: postgres-image.tar
-          key: docker-image-postgres-9.6.12
+          key: docker-image-postgres-17
 
 
       - name: Load or pull PostgreSQL Docker image
@@ -67,9 +67,9 @@ jobs:
             docker load -i postgres-image.tar || { echo "Error: Failed to load postgres-image.tar"; exit 1; }
           else
             echo "Cache miss, pulling Docker image"
-            docker pull postgres:9.6.12 || { echo "Error: Failed to pull postgres:9.6.12"; exit 1; }
+            docker pull postgres:17 || { echo "Error: Failed to pull postgres:17"; exit 1; }
             echo "Saving Docker image to tar file"
-            docker save -o postgres-image.tar postgres:9.6.12 || { echo "Error: Failed to save postgres-image.tar"; exit 1; }
+            docker save -o postgres-image.tar postgres:17 || { echo "Error: Failed to save postgres-image.tar"; exit 1; }
             ls -l postgres-image.tar || { echo "Error: postgres-image.tar was not created"; exit 1; }
           fi
 
