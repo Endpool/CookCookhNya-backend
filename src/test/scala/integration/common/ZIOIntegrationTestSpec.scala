@@ -26,8 +26,11 @@ import zio.http.{Client, Server, TestServer, URL}
 import zio.test.Gen
 import zio.test.ZIOSpecDefault
 import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
+import org.testcontainers.utility.DockerImageName
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
+  private val postgreSQLContainerTag: String = "17"
+
   protected def testLayer:
     TaskLayer[
       Client
@@ -49,7 +52,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val psqlContainerLayer: TaskLayer[PostgreSQLContainer] = ZLayer.scoped {
     ZIO.acquireRelease(
       ZIO.attempt {
-        val container = PostgreSQLContainer()
+        val container = PostgreSQLContainer(DockerImageName(s"postgres:$postgreSQLContainerTag"))
         container.start
         container
       }
