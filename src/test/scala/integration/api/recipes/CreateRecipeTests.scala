@@ -120,5 +120,38 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(ingredientNotFound.is(_.right).isInstanceOf[IngredientNotFound])
          && assertTrue(recipeDoesNotExist)
     },
+    test("When create recipe with other user's personal ingredients, should get 404 ingredient not found and recipe should NOT be added to db") {
+      for
+        otherUser <- registerUser
+        recipeName <- randomString
+        recipeSourceLink <- randomString
+        ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
+          for
+            globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
+              .flatMap(ZIO.foreach(_)(repo.addGlobal))
+              .map(_.map(_.id))
+              .map(Vector.from)
+            personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
+              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(otherUser)
+              .map(_.map(_.id))
+              .map(Vector.from)
+          yield globalIngredientIds ++ personalIngredientIds
+        )
+
+        user <- registerUser
+
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        bodyStr <- resp.body.asString
+        ingredientNotFound = decode[ErrorResponse](bodyStr)
+        recipeDoesNotExist <- ZIO.serviceWithZIO[Transactor](_.transact(
+          sql"""
+            SELECT ${recipesTable.name} FROM $recipesTable
+            WHERE ${recipesTable.name} = $recipeName
+          """.query[String].run().isEmpty
+        ))
+      yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(ingredientNotFound.is(_.right).isInstanceOf[IngredientNotFound])
+         && assertTrue(recipeDoesNotExist)
+    },
   ).provideLayer(testLayer)
 
