@@ -9,6 +9,6 @@ final case class SearchParams(
 
 object SearchParams:
   val query: tapir.EndpointInput[SearchParams] =
-    tapir.query[String]("query").and(tapir.query[Int]("threshold")).map
+    tapir.query[String]("query").and(tapir.query[Int]("threshold").default(50)).map
       (SearchParams.apply.tupled)
       {case SearchParams(query, threshold) => (query, threshold)}
