@@ -1,39 +1,44 @@
 package integration.api.recipes
 
+import api.Authentication.AuthenticatedUser
 import api.recipes.{IngredientSummary, RecipeResp}
 import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
-import domain.{IngredientId, StorageId}
+import domain.{RecipeId, IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.parser.*
 import io.circe.generic.auto.*
-import zio.http.{Client, Path, Request, Status, URL}
-import zio.{Scope, ZIO}
+import zio.http.{Response, Client, Path, Request, Status, URL}
+import zio.http.Request.get
+import zio.{Scope, ZIO, RIO}
 import zio.test.{Spec, TestEnvironment, assertTrue}
 
 object GetRecipeTests extends ZIOIntegrationTestSpec:
-  override def spec: Spec[TestEnvironment & Scope, Any] =
-    val defaultPath = URL(Path.root / "recipes")
-    val defaultIngredientAmount = 3
+  private val endpointPath = URL(Path.root / "recipes")
 
+  private def getRecipe(user: AuthenticatedUser, recipeId: RecipeId):
+    RIO[Client, Response] =
+    Client.batched(
+      get(endpointPath / recipeId.toString)
+        .addAuthorization(user)
+    )
+
+  private val defaultIngredientAmount: Int = 5
+
+  override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Get recipe (detailed) tests")(
       test("When unauthorized should get 401") {
         getRandomUUID.flatMap { id =>
           Client.batched(
-            Request.get(s"$defaultPath/$id")
+            Request.get(endpointPath / id.toString)
           ).map(resp => assertTrue(resp.status == Status.Unauthorized))
         }
       },
       test("When asked for non-existent recipe, 404 should be returned"){
         for
           user <- registerUser
-          resp <- getRandomUUID.flatMap { id =>
-            Client.batched(
-              Request.get(defaultPath / id.toString)
-                .addAuthorization(user)
-            )
-          }
+          resp <- getRandomUUID.flatMap(getRecipe(user, _))
         yield assertTrue(resp.status == Status.NotFound)
       },
       test("1 user with 1 storage") {
@@ -46,10 +51,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
           recipeId <- createRecipe(ingredientIds)
 
-          resp <- Client.batched(
-            Request.get(defaultPath / recipeId.toString)
-              .addAuthorization(user)
-          )
+          resp <- getRecipe(user, recipeId)
 
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
@@ -81,10 +83,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           _ <- createNIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(storage2Id, _))
 
-          resp <- Client.batched(
-            Request.get(defaultPath / recipeId.toString)
-              .addAuthorization(user)
-          )
+          resp <- getRecipe(user, recipeId)
 
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
@@ -144,10 +143,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           // case 1: sending request as a 1st user
           assertCase1 <- {
             for
-              resp <- Client.batched(
-                Request.get(defaultPath / recipeId.toString)
-                  .addAuthorization(user1)
-              )
+              resp <- getRecipe(user1, recipeId)
 
               strBody <- resp.body.asString
               recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
@@ -169,10 +165,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           // case 2: sending request as a 2nd user
           assertCase2 <- {
             for
-              resp <- Client.batched(
-                Request.get(defaultPath / recipeId.toString)
-                  .addAuthorization(user2)
-              )
+              resp <- getRecipe(user2, recipeId)
 
               strBody <- resp.body.asString
               recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
