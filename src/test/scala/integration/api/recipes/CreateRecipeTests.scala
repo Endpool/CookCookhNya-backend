@@ -51,7 +51,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         recipeName <- randomString
         recipeSourceLink <- randomString
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
-          Gen.string.runCollectN(10).flatMap(ZIO.foreach(_)(repo.add))
+          Gen.string.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addGlobal))
         ).map(_.map(_.id))
           .map(Vector.from)
 
