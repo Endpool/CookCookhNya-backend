@@ -31,7 +31,7 @@ object ActivateInvitationTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Activate invitation tests")(
     test("When unauthorized should get 401") {
       for
-        invitationHash <- Gen.string.runHead.some
+        invitationHash <- Gen.alphaNumericString.runHead.some
         resp <- Client.batched(post(endpointPath(invitationHash)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
