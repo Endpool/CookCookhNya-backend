@@ -2,8 +2,8 @@ package db.repositories
 
 import db.tables.{DbRecipe, DbRecipeCreator}
 import db.{DbError, handleDbError}
-
 import domain.{IngredientId, Recipe, RecipeId}
+
 import io.getquill.*
 import java.util.UUID
 import javax.sql.DataSource
@@ -23,7 +23,7 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
   import db.QuillConfig.provideDS
   import RecipesQueries.*
 
-  given DataSource = dataSource
+  private given DataSource = dataSource
 
   override def addRecipe(name: String, sourceLink: String, ingredientIds: List[IngredientId]):
     IO[DbError, RecipeId] = transaction {

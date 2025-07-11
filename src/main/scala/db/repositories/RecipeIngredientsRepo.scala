@@ -20,7 +20,7 @@ final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends Recip
   import db.QuillConfig.ctx.*
   import RecipeIngredientsQueries.*
 
-  given DataSource = dataSource
+  private given DataSource = dataSource
 
   override def getAllIngredients(recipeId: RecipeId):
     IO[DbError, List[IngredientId]] =
