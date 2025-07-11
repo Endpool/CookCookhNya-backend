@@ -1,8 +1,7 @@
 package api
 
-import _root_.db.dbLayer
+import _root_.db.{dbLayer, dataSourceLayer, DataSourceDescription}
 import _root_.db.repositories.*
-import _root_.db.DataSourceDescription
 
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
@@ -10,6 +9,9 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
 import com.augustnagro.magnum.magzio.Transactor
+import io.getquill.Literal
+import io.getquill.PostgresZioJdbcContext
+import javax.sql.DataSource
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
@@ -27,7 +29,7 @@ object Main extends ZIOAppDefault:
   val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
 
   val reposLayer:
-    RLayer[Transactor & InvitationsSecretKey
+    RLayer[Transactor & InvitationsSecretKey & DataSource
       , IngredientsRepo
       & InvitationsRepo
       & RecipesDomainRepo
@@ -41,7 +43,7 @@ object Main extends ZIOAppDefault:
     ] =
     IngredientsRepo.layer ++
     InvitationsRepo.layer ++
-    RecipeIngredientsRepo.layer ++
+    RecipeIngredientsRepoLive.layer ++
     RecipesDomainRepo.layer ++
     RecipesRepo.layer ++
     ShoppingListsRepo.layer ++
@@ -54,6 +56,6 @@ object Main extends ZIOAppDefault:
     Server.serve(app)
       .provideSomeLayer(Server.defaultWithPort(8080))
       .provideLayer(
-        DataSourceDescription.layerFromEnv >>> dbLayer >+>
+        DataSourceDescription.layerFromEnv >>> dataSourceLayer >+> dbLayer >+>
         (InvitationsSecretKey.layerFromEnv >>> reposLayer)
       )

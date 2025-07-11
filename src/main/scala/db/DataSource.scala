@@ -51,9 +51,12 @@ object DataSourceDescription:
     yield DataSourceDescription(address, dbName, username, password, "org.postgresql.Driver")
   }
 
-val dbLayer: RLayer[DataSourceDescription, Transactor] =
+val dbLayer: RLayer[DataSource, Transactor] =
   for
-    dataSourceDescr <- ZLayer.service[DataSourceDescription]
-    xa <- Transactor.layer(dataSourceDescr.get.toDataSource)
+    dataSource <- ZLayer.service[DataSource]
+    xa <- Transactor.layer(dataSource.get)
     _  <- ZLayer.fromZIO(createTables(xa.get))
   yield xa
+
+val dataSourceLayer: RLayer[DataSourceDescription, DataSource] =
+  ZLayer.fromFunction((descr: DataSourceDescription) => descr.toDataSource)

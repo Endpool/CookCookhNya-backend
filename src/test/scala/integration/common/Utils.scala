@@ -99,7 +99,7 @@ object Utils:
       name <- randomString
       link <- randomString
       recipeId <- ZIO.serviceWithZIO[RecipesRepo](
-        _.addRecipe(name, link, ingredientIds)
+        _.addRecipe(name, link, ingredientIds.toList)
       )
     yield recipeId
 

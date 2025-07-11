@@ -37,13 +37,13 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
     test("When unauthorized should get 401") {
       Client.batched(
         post(endpointPath)
-          .withJsonBody(CreateRecipeReqBody("recipe", "sourceLink", Vector.empty))
+          .withJsonBody(CreateRecipeReqBody("recipe", "sourceLink", List.empty))
       ).map(resp => assertTrue(resp.status == Status.Unauthorized))
     },
     test("When authorized should get 200") {
       for
         user <- registerUser
-        resp <- createRecipe(user, CreateRecipeReqBody("recipe", "sourceLink", Vector.empty))
+        resp <- createRecipe(user, CreateRecipeReqBody("recipe", "sourceLink", List.empty))
       yield assertTrue(resp.status == Status.Ok)
     },
     test("When create valid recipe with global ingredients, recipe should be added to db") {
@@ -57,7 +57,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         user <- registerUser
 
-        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
         recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId))
       yield assertTrue(resp.status == Status.Ok)
@@ -83,7 +83,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
           yield globalIngredientIds ++ personalIngredientIds
         )
 
-        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
         recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId))
       yield assertTrue(resp.status == Status.Ok)
@@ -107,7 +107,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         user <- registerUser
 
-        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         bodyStr <- resp.body.asString
         ingredientNotFound = decode[ErrorResponse](bodyStr)
         recipeDoesNotExist <- ZIO.serviceWithZIO[Transactor](_.transact(
@@ -140,7 +140,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         user <- registerUser
 
-        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds))
+        resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         bodyStr <- resp.body.asString
         ingredientNotFound = decode[ErrorResponse](bodyStr)
         recipeDoesNotExist <- ZIO.serviceWithZIO[Transactor](_.transact(

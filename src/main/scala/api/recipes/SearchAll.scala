@@ -35,6 +35,7 @@ private def searchAllRecipesHandler(
   for
     allDbRecipes <- ZIO.serviceWithZIO[RecipesRepo](_
       .getAll
+      .map(Vector.from)
       .orElseFail(InternalServerError())
     )
     allRecipes = allDbRecipes.map(dbRecipe => RecipeSearchResp(dbRecipe.name, dbRecipe.sourceLink))

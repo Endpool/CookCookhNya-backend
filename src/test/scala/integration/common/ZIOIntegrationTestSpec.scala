@@ -27,6 +27,8 @@ import zio.test.Gen
 import zio.test.ZIOSpecDefault
 import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
 import org.testcontainers.utility.DockerImageName
+import javax.sql.DataSource
+import db.dataSourceLayer
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val postgreSQLContainerTag: String = "17"
@@ -34,7 +36,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   protected def testLayer:
     TaskLayer[
       Client
-      & Transactor
+      & Transactor & DataSource
       & IngredientsRepo
       & InvitationsRepo
       & RecipeIngredientsRepo
@@ -44,7 +46,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       & StoragesRepo
       & UsersRepo
     ] =
-    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >+> (
+    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dataSourceLayer >+> dbLayer >+> (
       testServerLayer >>> clientLayer ++ testReposLayer
     )
 
@@ -72,11 +74,11 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val testReposLayer =
     ZLayer.succeed(InvitationsSecretKey("Invit4ti0n553c7etK3yInv1t4t10n5Secret3ey")) >>> Main.reposLayer
 
-  private def initTestServer(testServer: TestServer): RIO[Transactor, Unit] =
+  private def initTestServer(testServer: TestServer): RIO[DataSource & Transactor, Unit] =
     testServer.addRoutes(Main.app)
       .provideSomeLayer(testReposLayer)
 
-  private val testServerLayer: RLayer[Transactor, TestServer] = for
+  private val testServerLayer: RLayer[DataSource & Transactor, TestServer] = for
     testServer <- TestServer.default
     _ <- ZLayer.fromZIO(initTestServer(testServer.get))
   yield testServer

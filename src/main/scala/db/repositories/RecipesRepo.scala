@@ -2,48 +2,65 @@ package db.repositories
 
 import db.tables.{DbRecipe, DbRecipeCreator}
 import db.{DbError, handleDbError}
+
 import domain.{IngredientId, Recipe, RecipeId}
-import com.augustnagro.magnum.magzio.*
-import zio.{ZIO, IO, ZLayer}
+import io.getquill.*
+import java.util.UUID
+import javax.sql.DataSource
+import zio.{IO, ZIO, RLayer, ZLayer}
 
 trait RecipesRepo:
-  def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, RecipeId]
-  def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]]
-  def getAll: IO[DbError, Vector[DbRecipe]]
-  def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit]
+  def addRecipe(name: String, sourceLink: String, ingredients: List[IngredientId]):
+    IO[DbError, RecipeId]
+  def getRecipe(recipeId: RecipeId): IO[DbError, Option[Recipe]]
+  def getAll: IO[DbError, List[DbRecipe]]
+  def deleteRecipe(recipeId: RecipeId): IO[DbError, Unit]
 
-private final case class RecipesRepoLive(xa: Transactor)
-  extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
+private inline def recipes = query[DbRecipe]
 
-  override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, RecipeId] = for
-      recipeId <- xa.transact {
-        val recipe = DbRecipeCreator(name, sourceLink)
-        val DbRecipe(recipeId, _, _) = insertReturning(recipe)
-        recipeId
-      }.mapError(handleDbError)
-      _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.addIngredients(recipeId, ingredients))
-    yield recipeId
+final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
+  import db.QuillConfig.ctx.*
+  import db.QuillConfig.provideDS
+  import RecipesQueries.*
 
-  override def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]] =
+  given DataSource = dataSource
+
+  override def addRecipe(name: String, sourceLink: String, ingredientIds: List[IngredientId]):
+    IO[DbError, RecipeId] = transaction {
     for
-      ingredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.getAllIngredients(recipeId))
-      recipeTableRowOption <- xa.transact {
-        findById(recipeId)
-      }.mapError(handleDbError)
-      recipe = recipeTableRowOption.map{ recipeTableRow =>
-        Recipe(recipeId, recipeTableRow.name, ingredients, recipeTableRow.sourceLink)
-      }
-    yield recipe
+      recipeId <- run(
+        recipes
+          .insertValue(lift(DbRecipe(id = null, name, sourceLink)))
+          .returningGenerated(r => r.id) // null is safe here because of returningGenerated
+      )
+      _ <- run(
+        RecipeIngredientsQueries.addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
+      )
+    yield recipeId
+  }.provideDS
 
-  override def getAll: IO[DbError, Vector[DbRecipe]] =
-    xa.transact(findAll).mapError(handleDbError)
-    
-  override def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit] =
-    xa.transact {
-      deleteById(recipeId)
-    }.mapError(handleDbError)
+  override def getRecipe(recipeId: RecipeId): IO[DbError, Option[Recipe]] = transaction {
+    for
+      mRecipe <- run(getRecipeQ(lift(recipeId))).map(_.headOption)
+      mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
+        val DbRecipe(id, name, sourceLink) = recipe
+        run(RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id))).map(Recipe(id, name, _, sourceLink))
+      }
+    yield mRecipeWithIngredients
+  }.provideDS
+
+  override def getAll: IO[DbError, List[DbRecipe]] =
+    run(recipes).provideDS
+
+  override def deleteRecipe(recipeId: RecipeId): IO[DbError, Unit] =
+    run(getRecipeQ(lift(recipeId)).delete).unit.provideDS
+
+object RecipesQueries:
+  import db.QuillConfig.ctx.*
+
+  inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    recipes.filter(_.id == recipeId)
 
 object RecipesRepo:
-  val layer = ZLayer.fromFunction(RecipesRepoLive(_))
+  def layer: RLayer[DataSource, RecipesRepo] =
+    ZLayer.fromFunction(RecipesRepoQuill.apply)

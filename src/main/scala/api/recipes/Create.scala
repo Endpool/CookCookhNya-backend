@@ -15,7 +15,7 @@ import zio.ZIO
 final case class CreateRecipeReqBody(
   name: String,
   sourceLink: String,
-  ingredients: Vector[IngredientId]
+  ingredients: List[IngredientId]
 )
 
 private type CreateEnv = RecipesRepo & RecipeIngredientsRepo
