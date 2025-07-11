@@ -22,23 +22,24 @@ case class SearchResultsResp(
   found: Int
 )
 
-private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
+private type SearchForStorageEnv = IngredientsRepo & StorageIngredientsRepo
 
-private val searchForStorage: ZServerEndpoint[SearchEnv, Any] =
+private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
   endpoint
   .get
+  .in("ingredients-for-storage")
   .in(SearchParams.query)
   .in(PaginationParams.query)
   .in(query[StorageId]("storage-id"))
   .out(jsonBody[SearchResultsResp])
   .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchHandler)
+  .zServerLogic(searchForStorageHandler)
 
-private def searchHandler(
+private def searchForStorageHandler(
   searchParams: SearchParams,
   paginationParams: PaginationParams,
   storageId: StorageId,
-): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
+): ZIO[SearchForStorageEnv, InternalServerError, SearchResultsResp] =
   for
     allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
       .getAllGlobal

@@ -10,5 +10,6 @@ val globalEndpoints = List(
   createGlobal.widen,
   getGlobal.widen,
   deleteGlobal.widen,
-  searchGlobal.widen
+  searchGlobal.widen,
+  searchForStorage.widen,
 )
