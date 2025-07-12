@@ -59,7 +59,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
-        recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId))
+        recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId).provideUser(user))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(recipe.is(_.some).name == recipeName)
          && assertTrue(recipe.is(_.some).sourceLink == recipeSourceLink)
@@ -85,7 +85,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
-        recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId))
+        recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId).provideUser(user))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(recipe.is(_.some).name == recipeName)
          && assertTrue(recipe.is(_.some).sourceLink == recipeSourceLink)
