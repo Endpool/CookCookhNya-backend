@@ -17,17 +17,6 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class IngredientSearchResult(
-  id: IngredientId,
-  name: String,
-  available: Boolean
-) extends Searchable
-
-case class SearchResultsResp(
-  results: Vector[IngredientSearchResult],
-  found: Int
-)
-
 private type SearchForStorageEnv = DataSource
 
 private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
@@ -53,9 +42,8 @@ private def searchForStorageHandler(
     allIngredientsAvailability <- run(
       IngredientsQueries.getAllVisibleQ(lift(userId))
         .leftJoin(getquill.query[DbStorageIngredient])
-        .on((i, si) => i.id == si.ingredientId)
-        .filter((_, si) => si.exists(_.storageId == lift(storageId)))
-        .map((i, si) => IngredientSearchResult(i.id, i.name, si.map(_.storageId) == None))
+        .on((i, si) => i.id == si.ingredientId && si.storageId == lift(storageId))
+        .map((i, si) => IngredientSearchResult(i.id, i.name, si.map(_.storageId).isDefined))
     ).provideDS(using dataSource)
       .map(Vector.from)
       .orElseFail(InternalServerError())
