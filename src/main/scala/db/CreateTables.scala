@@ -62,7 +62,9 @@ def createTables(xa: Transactor) = {
         CREATE TABLE IF NOT EXISTS $recipesTable(
           ${recipesTable.id} UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           ${recipesTable.name} VARCHAR(255) NOT NULL,
-          ${recipesTable.sourceLink} VARCHAR(128) NOT NULL
+          ${recipesTable.creatorId} BIGINT NOT NULL,
+          ${recipesTable.sourceLink} VARCHAR(255),
+          FOREIGN KEY (${recipesTable.creatorId}) REFERENCES $usersTable(${usersTable.id}) ON DELETE CASCADE
         );
       """,
 
