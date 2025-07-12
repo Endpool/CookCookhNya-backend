@@ -32,11 +32,11 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
       creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       recipeId <- run(
         recipes
-          .insertValue(lift(DbRecipe(id = null, name, creatorId, sourceLink)))
+          .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
-      _ <- run(
-        RecipeIngredientsQueries.addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
+      _ <- run(RecipeIngredientsQueries
+        .addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
       )
     yield recipeId
   }.provideDS
@@ -45,11 +45,10 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
     for
       mRecipe <- run(getRecipeQ(lift(recipeId))).map(_.headOption)
       mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
-        val DbRecipe(id, name, creatorId, sourceLink) = recipe
+        val DbRecipe(id, name, creatorId, isPublished, sourceLink) = recipe
         run(
-          RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id)))
-            .map(Recipe(id, name, creatorId, _, sourceLink)
-        )
+          RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id))
+        ).map(Recipe(id, name, creatorId, isPublished, _, sourceLink))
       }
     yield mRecipeWithIngredients
   }.provideDS

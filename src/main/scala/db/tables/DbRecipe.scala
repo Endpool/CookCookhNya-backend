@@ -10,6 +10,7 @@ final case class DbRecipe(
   @Id id: RecipeId,
   name: String,
   creatorId: UserId,
+  isPublished: Boolean,
   sourceLink: Option[String],
 ) derives DbCodec
 

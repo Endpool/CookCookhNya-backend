@@ -31,11 +31,12 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
 
 private def createHandler(recipe: CreateRecipeReqBody):
   ZIO[AuthenticatedUser & CreateEnv, InternalServerError | IngredientNotFound, RecipeId] =
-  ZIO.serviceWithZIO[RecipesRepo] {
-    _.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
-  }.mapError {
-    case DbNotRespondingError(_) => InternalServerError()
-    case e: FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(toIngredientNotFound)
-      .getOrElse(InternalServerError())
-  }
+  ZIO.serviceWithZIO[RecipesRepo](_
+    .addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
+    .mapError {
+      case DbNotRespondingError(_) => InternalServerError()
+      case e: FailedDbQuery => handleFailedSqlQuery(e)
+        .flatMap(toIngredientNotFound)
+        .getOrElse(InternalServerError())
+    }
+  )
