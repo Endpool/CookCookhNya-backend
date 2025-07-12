@@ -1,5 +1,6 @@
 package api.recipes
 
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.*
 import db.repositories.{RecipesRepo, StorageIngredientsRepo}
@@ -27,12 +28,12 @@ private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
     .in(PaginationParams.query)
     .out(jsonBody[SearchAllRecipesResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchAllRecipesHandler)
+    .zSecuredServerLogic(searchAllRecipesHandler)
 
 private def searchAllRecipesHandler(
   searchParams: SearchParams,
   paginationParams: PaginationParams
-): ZIO[SearchAllEnv, InternalServerError, SearchAllRecipesResp] =
+): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchAllRecipesResp] =
   for
     allDbRecipes <- ZIO.serviceWithZIO[RecipesRepo](_
       .getAll

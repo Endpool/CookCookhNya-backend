@@ -4,7 +4,7 @@ import api.{handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant, userNotFoundVariant}
 import db.{DbError, handleDbError}
-import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
+import db.tables.{usersTable, ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 import domain.{
   IngredientId,
   InternalServerError,
@@ -23,7 +23,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.tables.usersTable
 
 final case class IngredientResp(
   id: IngredientId,
