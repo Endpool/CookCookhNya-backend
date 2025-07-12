@@ -1,7 +1,8 @@
 package api.recipes
 
-import api.{toIngredientNotFound, handleFailedSqlQuery}
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
+import api.{toIngredientNotFound, handleFailedSqlQuery}
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.{RecipeIngredientsRepo, RecipesRepo}
 import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId}
@@ -11,7 +12,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 
 final case class CreateRecipeReqBody(
   name: String,

@@ -37,19 +37,19 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
     test("When unauthorized should get 401") {
       Client.batched(
         post(endpointPath)
-          .withJsonBody(CreateRecipeReqBody("recipe", "sourceLink", List.empty))
+          .withJsonBody(CreateRecipeReqBody("recipe", Some("sourceLink"), List.empty))
       ).map(resp => assertTrue(resp.status == Status.Unauthorized))
     },
     test("When authorized should get 200") {
       for
         user <- registerUser
-        resp <- createRecipe(user, CreateRecipeReqBody("recipe", "sourceLink", List.empty))
+        resp <- createRecipe(user, CreateRecipeReqBody("recipe", Some("sourceLink"), List.empty))
       yield assertTrue(resp.status == Status.Ok)
     },
     test("When create valid recipe with global ingredients, recipe should be added to db") {
       for
         recipeName <- randomString
-        recipeSourceLink <- randomString
+        recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           Gen.alphaNumericString.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addGlobal))
         ).map(_.map(_.id))
@@ -69,7 +69,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
       for
         user <- registerUser
         recipeName <- randomString
-        recipeSourceLink <- randomString
+        recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
@@ -94,7 +94,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
     test("When create recipe with non-existant ingredients, should get 404 ingredient not found and recipe should NOT be added to db") {
       for
         recipeName <- randomString
-        recipeSourceLink <- randomString
+        recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
@@ -124,7 +124,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
       for
         otherUser <- registerUser
         recipeName <- randomString
-        recipeSourceLink <- randomString
+        recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)

@@ -1,5 +1,6 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.tables.DbRecipe
 import db.DbError
 import domain.{IngredientId, Recipe, RecipeId}
@@ -8,7 +9,6 @@ import io.getquill.*
 import java.util.UUID
 import javax.sql.DataSource
 import zio.{IO, ZIO, RLayer, ZLayer}
-import api.Authentication.AuthenticatedUser
 
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
