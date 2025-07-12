@@ -1,8 +1,8 @@
 package db.repositories
 
-import db.tables.{DbRecipeIngredient, recipeIngredientsTable, DbRecipe, recipesTable}
+import db.tables.DbRecipeIngredient
 import db.DbError
-import domain.{IngredientId, RecipeId, StorageId}
+import domain.{IngredientId, RecipeId}
 
 import io.getquill.*
 import javax.sql.DataSource

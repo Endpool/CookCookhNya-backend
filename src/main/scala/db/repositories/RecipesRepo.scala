@@ -1,7 +1,7 @@
 package db.repositories
 
-import db.tables.{DbRecipe, DbRecipeCreator}
-import db.{DbError, handleDbError}
+import db.tables.DbRecipe
+import db.DbError
 import domain.{IngredientId, Recipe, RecipeId}
 
 import io.getquill.*
@@ -56,8 +56,6 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
     run(getRecipeQ(lift(recipeId)).delete).unit.provideDS
 
 object RecipesQueries:
-  import db.QuillConfig.ctx.*
-
   inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     recipes.filter(_.id == recipeId)
 

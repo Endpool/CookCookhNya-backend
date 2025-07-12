@@ -6,7 +6,7 @@ import db.{DbError, handleDbError}
 import domain.{StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import zio.{RLayer, ZIO, ZLayer}
 
 trait StoragesRepo:
   def createEmpty(name: String): ZIO[AuthenticatedUser, DbError, StorageId]

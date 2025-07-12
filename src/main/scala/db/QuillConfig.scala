@@ -1,7 +1,6 @@
 package db
 
 import io.getquill.{LowerCase, NamingStrategy, PluralizedTableNames, PostgresZioJdbcContext, SnakeCase, StripTableDbPrefix}
-import java.sql.SQLException
 import javax.sql.DataSource
 import zio.{ZIO, ZEnvironment}
 

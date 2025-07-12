@@ -2,7 +2,6 @@ package api.storages
 
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
-import db.DbError
 import db.repositories.StorageMembersRepo
 import db.repositories.StoragesRepo
 import db.tables.DbStorage

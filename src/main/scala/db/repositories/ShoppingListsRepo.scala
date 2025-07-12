@@ -3,11 +3,10 @@ package db.repositories
 import api.Authentication.AuthenticatedUser
 import db.tables.{DbShoppingList, shoppingListTable}
 import db.{DbError, handleDbError}
-import domain.{IngredientId, Recipe, RecipeId, UserId}
+import domain.{IngredientId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
-import org.checkerframework.checker.units.qual.A
 
 trait ShoppingListsRepo:
   def addIngredients(ingredients: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]

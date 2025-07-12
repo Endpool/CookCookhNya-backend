@@ -3,15 +3,13 @@ package api
 import _root_.db.{dbLayer, dataSourceLayer, DataSourceDescription}
 import _root_.db.repositories.*
 
+import com.augustnagro.magnum.magzio.Transactor
+import javax.sql.DataSource
 import sttp.tapir.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
-import com.augustnagro.magnum.magzio.Transactor
-import io.getquill.Literal
-import io.getquill.PostgresZioJdbcContext
-import javax.sql.DataSource
 
 object Main extends ZIOAppDefault:
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(

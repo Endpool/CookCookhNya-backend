@@ -1,8 +1,7 @@
 package integration.common
 
 import api.Main
-import api.users.CreateUserReqBody
-import db.{DataSourceDescription, dbLayer}
+import db.{DataSourceDescription, dataSourceLayer, dbLayer}
 import db.repositories.{
   IngredientsRepo,
   InvitationsRepo,
@@ -16,19 +15,13 @@ import db.repositories.{
   StoragesRepo,
   UsersRepo,
 }
-import domain.UserId
-import integration.common.Utils.{addAuthorization, put, withJsonBody}
-
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
-import io.circe.generic.auto.deriveEncoder
+import javax.sql.DataSource
+import org.testcontainers.utility.DockerImageName
 import zio.http.{Client, Server, TestServer, URL}
-import zio.test.Gen
 import zio.test.ZIOSpecDefault
 import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
-import org.testcontainers.utility.DockerImageName
-import javax.sql.DataSource
-import db.dataSourceLayer
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val postgreSQLContainerTag: String = "17"

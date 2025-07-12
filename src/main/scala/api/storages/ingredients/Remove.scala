@@ -14,7 +14,7 @@ import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import common.OptionExtensions.<|>
 import db.DbError.{DbNotRespondingError, FailedDbQuery}
 import db.repositories.StorageIngredientsRepo
-import domain.{IngredientNotFound, StorageNotFound, IngredientId, InternalServerError, StorageId, UserId}
+import domain.{IngredientNotFound, StorageNotFound, IngredientId, InternalServerError, StorageId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*

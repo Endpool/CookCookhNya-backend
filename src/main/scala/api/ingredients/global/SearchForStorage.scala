@@ -6,7 +6,7 @@ import api.EndpointErrorVariants.serverErrorVariant
 import db.QuillConfig.provideDS
 import db.repositories.IngredientsQueries
 import db.tables.DbStorageIngredient
-import domain.{IngredientId, InternalServerError, StorageId, UserId}
+import domain.{IngredientId, InternalServerError, StorageId}
 
 import io.circe.generic.auto.*
 import io.getquill

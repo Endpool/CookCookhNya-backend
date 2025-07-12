@@ -2,7 +2,6 @@ package api.storages
 
 import api.storages.ingredients.storagesIngredientsEndpoints
 import api.storages.members.storagesMembersEndpoints
-import domain.UserId
 
 import sttp.tapir.ztapir.*
 

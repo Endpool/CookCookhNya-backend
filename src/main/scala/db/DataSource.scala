@@ -3,8 +3,7 @@ package db
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.HikariDataSource
 import javax.sql.DataSource
-import zio.{ZLayer, Layer, ZIO, IO, System, Task, RLayer}
-import zio.Scope
+import zio.{ZLayer, Layer, System, RLayer}
 
 case class DataSourceDescription(
   jdbcUrl: String,

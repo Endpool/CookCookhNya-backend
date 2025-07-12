@@ -1,15 +1,13 @@
 package db.repositories
 
 import api.Authentication.AuthenticatedUser
-import db.tables.{DbUser, usersTable}
-import db.{DbError, handleDbError}
+import db.tables.DbUser
+import db.DbError
 import db.QuillConfig.provideDS
-import domain.UserId
 
-import com.augustnagro.magnum.magzio.*
 import io.getquill.*
 import javax.sql.DataSource
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
 trait UsersRepo:
   def saveUser(alias: Option[String], fullName: String):

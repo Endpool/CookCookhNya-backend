@@ -8,7 +8,6 @@ import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
-import io.circe.parser.decode
 import io.circe.syntax.*
 import zio.{RIO, UIO, ZIO, ZLayer}
 import zio.http.{Path, URL, Body, Client, Header, MediaType, Request}
