@@ -13,6 +13,8 @@ import zio.http.{Response, Client, Path, Request, Status, URL}
 import zio.http.Request.get
 import zio.{Scope, ZIO, RIO}
 import zio.test.{Spec, TestEnvironment, assertTrue}
+import domain.ErrorResponse
+import domain.RecipeNotFound
 
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   private val endpointPath = URL(Path.root / "recipes")
@@ -184,6 +186,54 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
                  ))
           }
         yield assertCase1 && assertCase2
+      },
+      test("When get other user's personal recipe, should get 404") {
+        for
+          user1 <- registerUser
+          user2 <- registerUser
+
+          user1StorageId  <- createStorage(user1)
+          sharedStorageId <- createStorage(user1)
+          _ <- ZIO.serviceWithZIO[StorageMembersRepo](_
+            .addMemberToStorageById(sharedStorageId, user2.userId)
+          )
+          user2StorageId  <- createStorage(user2)
+
+          temp <- for
+            commonIngredientIds           <- createNIngredients(defaultIngredientAmount)
+            user1OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+            user2OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+          yield (user1OnlyStorageIngredientIds ++ commonIngredientIds,
+                 user2OnlyStorageIngredientIds ++ commonIngredientIds)
+          (user1StorageIngredientIds, user2StorageIngredientIds) = temp
+          _ <- addIngredientsToStorage(user1StorageId, user1StorageIngredientIds)
+          _ <- addIngredientsToStorage(user2StorageId, user2StorageIngredientIds)
+
+          sharedStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+          _ <- addIngredientsToStorage(sharedStorageId, sharedStorageIngredientIds)
+
+          recipeIngredientsIds =
+            (  user1StorageIngredientIds
+            ++ user2StorageIngredientIds
+            ++ sharedStorageIngredientIds
+            ).distinct
+          recipeId <- createRecipe(recipeIngredientsIds).provideUser(user1)
+
+          // create some extra ingredients that are not used in the recipe
+          _ <- createNIngredients(defaultIngredientAmount)
+            .flatMap(addIngredientsToStorage(user1StorageId, _))
+          _ <- createNIngredients(defaultIngredientAmount)
+            .flatMap(addIngredientsToStorage(user2StorageId, _))
+          _ <- createNIngredients(defaultIngredientAmount)
+            .flatMap(addIngredientsToStorage(sharedStorageId, _))
+
+          resp <- getRecipe(user2, recipeId)
+
+          strBody <- resp.body.asString
+          errorResponse <- ZIO.fromEither(decode[ErrorResponse](strBody))
+        yield assertTrue(resp.status == Status.NotFound)
+           && assertTrue(errorResponse.isInstanceOf[RecipeNotFound])
+           && assertTrue(errorResponse.asInstanceOf[RecipeNotFound].recipeId == recipeId.toString)
       }
     ).provideLayer(testLayer)
 
