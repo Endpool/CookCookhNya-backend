@@ -14,7 +14,7 @@ import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.ingredients.IngredientResp
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo, StorageMembersRepo, StoragesRepo}
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
-import domain.{StorageNotFound, InternalServerError, UserNotFound, IngredientId, StorageId, UserId}
+import domain.{StorageNotFound, InternalServerError, UserNotFound, IngredientId, StorageId}
 import common.OptionExtensions.<|>
 
 import io.circe.generic.auto.*
@@ -22,7 +22,7 @@ import sttp.model.StatusCode
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.{ZIO, IO}
+import zio.ZIO
 
 private type GetAllEnv = StorageIngredientsRepo & IngredientsRepo & StoragesRepo & StorageMembersRepo
 

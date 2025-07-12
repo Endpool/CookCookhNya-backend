@@ -7,7 +7,7 @@ import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.generic.auto.*
 import zio.http.{Client, Status, URL, Path}
-import zio.{Scope, ZIO, ZLayer}
+import zio.{Scope, ZIO}
 import zio.test.{
   TestEnvironment,
   assertTrue,

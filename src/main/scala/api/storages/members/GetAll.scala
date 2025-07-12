@@ -7,7 +7,6 @@ import domain.{InternalServerError, StorageNotFound, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.augustnagro.magnum.sql
-import db.DbError
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*

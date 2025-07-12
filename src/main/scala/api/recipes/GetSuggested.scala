@@ -9,8 +9,9 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import api.common.search.PaginationParams
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
-import db.repositories.RecipesDomainRepo
+import db.repositories.{RecipesDomainRepo, StorageIngredientsRepo}
 import domain.{InternalServerError, RecipeId, StorageId, StorageNotFound}
 
 import io.circe.generic.auto.*
@@ -18,10 +19,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.repositories.StorageIngredientsRepo
-import zio.RIO
-import sttp.tapir.server.ServerEndpoint
-import api.common.search.PaginationParams
 
 case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
 case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])

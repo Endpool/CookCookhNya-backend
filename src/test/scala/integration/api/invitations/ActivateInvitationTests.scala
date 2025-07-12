@@ -1,21 +1,17 @@
 package integration.api.invitations
 
 import api.Authentication.AuthenticatedUser
-import api.recipes.{IngredientSummary, RecipeResp}
 import com.augustnagro.magnum.magzio.{Transactor, sql}
 import db.repositories.InvitationsRepo
-import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
+import db.repositories.StorageMembersRepo
 import db.repositories.StoragesRepo
 import db.tables.storageInvitationTable
-import domain.{IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
-import io.circe.generic.auto.*
-import io.circe.parser.*
-import zio.http.{Client, Body, Response, Path, Request, Status, URL}
+import zio.http.{Client, Response, Path, Status, URL}
 import zio.{Scope, ZIO, RIO}
-import zio.test.{Gen, Spec, TestEnvironment, assertTrue, TestLensOptionOps, SmartAssertionOps}
+import zio.test.{Gen, Spec, TestEnvironment, assertTrue}
 
 object ActivateInvitationTests extends ZIOIntegrationTestSpec:
   private def endpointPath(invitationHash: String): URL =

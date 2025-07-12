@@ -1,23 +1,15 @@
 package api.storages.members
 
-import api.{
-  handleFailedSqlQuery,
-  toStorageNotFound,
-  toUserNotFound,
-}
+import api.{handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import db.DbError.*
 import db.repositories.{StorageMembersRepo, StoragesRepo}
 import domain.{ErrorResponse, InternalServerError, StorageNotFound, StorageId, UserNotFound, UserId}
 
-import io.circe.{Encoder, Json}
-import io.circe.syntax.*
 import sttp.model.StatusCode
-import sttp.tapir.json.circe.*
-import sttp.tapir.ValidationError
 import sttp.tapir.ztapir.*
-import zio.{IO, ZIO}
+import zio.ZIO
 
 private type AddEnv = StorageMembersRepo & StoragesRepo
 

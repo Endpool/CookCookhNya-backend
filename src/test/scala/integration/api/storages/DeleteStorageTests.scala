@@ -8,7 +8,7 @@ import integration.common.ZIOIntegrationTestSpec
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.delete
 import zio.{Scope, ZIO, ZLayer}
-import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
+import zio.test.{TestEnvironment, assertTrue, Spec}
 
 object DeleteStorageTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =

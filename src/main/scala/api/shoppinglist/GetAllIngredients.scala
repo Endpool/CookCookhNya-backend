@@ -3,16 +3,15 @@ package api.shoppinglist
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import api.ingredients.IngredientResp
-import domain.{IngredientNotFound, IngredientId, InternalServerError, UserId}
+import domain.{IngredientNotFound, IngredientId, InternalServerError}
 import db.repositories.{IngredientsRepo, ShoppingListsRepo}
 import db.DbError
 
-import sttp.model.StatusCode
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.{Exit, ZIO}
+import zio.ZIO
 
 private type GetIngredientsEnv = ShoppingListsRepo & IngredientsRepo
 

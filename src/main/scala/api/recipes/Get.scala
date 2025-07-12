@@ -1,6 +1,6 @@
 package api.recipes
 
-import api.{handleFailedSqlQuery, toStorageNotFound, toUserNotFound}
+import api.{handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, storageNotFoundVariant, serverErrorVariant}
 import db.{DbError, handleDbError}

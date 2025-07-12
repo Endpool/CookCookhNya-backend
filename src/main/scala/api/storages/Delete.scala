@@ -2,9 +2,8 @@ package api.storages
 
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageAccessForbiddenVariant}
-import db.DbError
 import db.repositories.StoragesRepo
-import domain.{StorageId, UserId, StorageAccessForbidden, InternalServerError}
+import domain.{StorageId, StorageAccessForbidden, InternalServerError}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*

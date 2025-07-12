@@ -1,6 +1,6 @@
 package api.storages.members
 
-import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
+import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.DbError
 import db.repositories.{StorageMembersRepo, StoragesRepo}
