@@ -11,10 +11,11 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 
 final case class CreateRecipeReqBody(
   name: String,
-  sourceLink: String,
+  sourceLink: Option[String],
   ingredients: List[IngredientId]
 )
 
@@ -26,10 +27,10 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
     .in(jsonBody[CreateRecipeReqBody])
     .out(plainBody[RecipeId])
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-    .zServerLogic(createHandler)
+    .zSecuredServerLogic(createHandler)
 
 private def createHandler(recipe: CreateRecipeReqBody):
-  ZIO[CreateEnv, InternalServerError | IngredientNotFound, RecipeId] =
+  ZIO[AuthenticatedUser & CreateEnv, InternalServerError | IngredientNotFound, RecipeId] =
   ZIO.serviceWithZIO[RecipesRepo] {
     _.addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
   }.mapError {

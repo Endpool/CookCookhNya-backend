@@ -8,10 +8,11 @@ import io.getquill.*
 import java.util.UUID
 import javax.sql.DataSource
 import zio.{IO, ZIO, RLayer, ZLayer}
+import api.Authentication.AuthenticatedUser
 
 trait RecipesRepo:
-  def addRecipe(name: String, sourceLink: String, ingredients: List[IngredientId]):
-    IO[DbError, RecipeId]
+  def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, RecipeId]
   def getRecipe(recipeId: RecipeId): IO[DbError, Option[Recipe]]
   def getAll: IO[DbError, List[DbRecipe]]
   def deleteRecipe(recipeId: RecipeId): IO[DbError, Unit]
@@ -25,12 +26,13 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
 
   private given DataSource = dataSource
 
-  override def addRecipe(name: String, sourceLink: String, ingredientIds: List[IngredientId]):
-    IO[DbError, RecipeId] = transaction {
+  override def addRecipe(name: String, sourceLink: Option[String], ingredientIds: List[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, RecipeId] = transaction {
     for
+      creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       recipeId <- run(
         recipes
-          .insertValue(lift(DbRecipe(id = null, name, sourceLink)))
+          .insertValue(lift(DbRecipe(id = null, name, creatorId, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
       _ <- run(
@@ -43,8 +45,11 @@ final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
     for
       mRecipe <- run(getRecipeQ(lift(recipeId))).map(_.headOption)
       mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
-        val DbRecipe(id, name, sourceLink) = recipe
-        run(RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id))).map(Recipe(id, name, _, sourceLink))
+        val DbRecipe(id, name, creatorId, sourceLink) = recipe
+        run(
+          RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id)))
+            .map(Recipe(id, name, creatorId, _, sourceLink)
+        )
       }
     yield mRecipeWithIngredients
   }.provideDS

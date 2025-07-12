@@ -1,7 +1,7 @@
 package db.tables
 
 import db.CustomSqlNameMapper
-import domain.RecipeId
+import domain.{RecipeId, UserId}
 
 import com.augustnagro.magnum.*
 
@@ -9,9 +9,10 @@ import com.augustnagro.magnum.*
 final case class DbRecipe(
   @Id id: RecipeId,
   name: String,
-  sourceLink: String
+  creatorId: UserId,
+  sourceLink: Option[String],
 ) derives DbCodec
 
-case class DbRecipeCreator(name: String, sourceLink: String)
+case class DbRecipeCreator(name: String, creatorId: Option[UserId], sourceLink: Option[String])
 
 val recipesTable = TableInfo[DbRecipeCreator, DbRecipe, RecipeId]

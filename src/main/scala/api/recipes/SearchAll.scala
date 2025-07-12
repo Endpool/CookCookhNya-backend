@@ -4,13 +4,14 @@ import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.*
 import db.repositories.{RecipesRepo, StorageIngredientsRepo}
 import domain.InternalServerError
+
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-case class RecipeSearchResp(name: String, sourceLink: String) extends Searchable
+case class RecipeSearchResp(name: String, sourceLink: Option[String]) extends Searchable
 
 case class SearchAllRecipesResp(
   results: Vector[RecipeSearchResp],
