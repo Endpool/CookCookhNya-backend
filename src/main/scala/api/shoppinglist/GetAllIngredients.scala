@@ -29,7 +29,7 @@ private def getIngredientsHandler(u: Unit):
       Seq[IngredientResp]] = {
   for
     ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
-    result <- ZIO.foreach(ingredientIds) { ingredientId =>
+    result <- ZIO.foreachPar(ingredientIds) { ingredientId =>
         ZIO.serviceWithZIO[IngredientsRepo](_
           .getAny(ingredientId)
           .someOrFail(IngredientNotFound(ingredientId.toString))

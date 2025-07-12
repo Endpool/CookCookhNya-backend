@@ -45,7 +45,7 @@ private def searchForStorageHandler(
       .getAllGlobal
       .orElseFail(InternalServerError())
     )
-    allIngredientsAvailability <- ZIO.foreach(allIngredients) { ingredient =>
+    allIngredientsAvailability <- ZIO.foreachPar(allIngredients) { ingredient =>
       ZIO.serviceWithZIO[StorageIngredientsRepo](_
         .inStorage(storageId, ingredient.id)
         .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
