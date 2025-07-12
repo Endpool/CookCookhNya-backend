@@ -1,29 +1,30 @@
 package api.shoppinglist
 
-import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
+import api.common.search.*
 import api.ingredients.IngredientResp
-import domain.{IngredientNotFound, IngredientId, InternalServerError, UserId}
+import domain.{IngredientId, IngredientNotFound, InternalServerError, UserId}
 import db.repositories.{IngredientsRepo, ShoppingListsRepo}
 import db.DbError
 
-import sttp.model.StatusCode
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
-import zio.{Exit, ZIO}
+import zio.ZIO
 
 private type GetIngredientsEnv = ShoppingListsRepo & IngredientsRepo
 
 private val getIngredients: ZServerEndpoint[GetIngredientsEnv, Any] =
   shoppingListEndpoint
   .get
+  .in(PaginationParams.query)
   .out(jsonBody[Seq[IngredientResp]])
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
   .zSecuredServerLogic(getIngredientsHandler)
 
-private def getIngredientsHandler(u: Unit):
+private def getIngredientsHandler(paginationParams: PaginationParams):
   ZIO[AuthenticatedUser & GetIngredientsEnv,
       InternalServerError | IngredientNotFound,
       Seq[IngredientResp]] = {
@@ -37,6 +38,7 @@ private def getIngredientsHandler(u: Unit):
         )
     }
   yield result
+  yield result.paginate(paginationParams)
 }.mapError {
   case _: DbError  => InternalServerError()
   case e: IngredientNotFound => e
