@@ -36,8 +36,7 @@ private def getIngredientsHandler(paginationParams: PaginationParams):
           .someOrFail(IngredientNotFound(ingredientId.toString))
           .map(IngredientResp.fromDb)
         )
-    }
-  yield result
+    }.map(_.sortBy(_.name))
   yield result.paginate(paginationParams)
 }.mapError {
   case _: DbError  => InternalServerError()
