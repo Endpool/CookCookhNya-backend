@@ -4,6 +4,8 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "3.3.6"
 
+Global / cancelable := true
+
 val zioHttpVersion = "3.2.0"
 val zioVersion = "2.1.19"
 val sttpVersion = "4.0.7"
@@ -14,6 +16,9 @@ val circeVersion = "0.14.14"
 lazy val root = (project in file("."))
   .settings(
     name := "CookCookHnya-backend",
+    scalacOptions ++= Seq(
+      "-Wunused:imports"
+    ),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion,
 
