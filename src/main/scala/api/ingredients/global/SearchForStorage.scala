@@ -1,11 +1,17 @@
 package api.ingredients.global
 
-import api.EndpointErrorVariants.serverErrorVariant
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.common.search.*
-import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
+import api.EndpointErrorVariants.serverErrorVariant
+import db.QuillConfig.provideDS
+import db.repositories.IngredientsQueries
+import db.tables.DbStorageIngredient
 import domain.{IngredientId, InternalServerError, StorageId, UserId}
 
 import io.circe.generic.auto.*
+import io.getquill
+import io.getquill.{query => _, *}
+import javax.sql.DataSource
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
@@ -22,7 +28,7 @@ case class SearchResultsResp(
   found: Int
 )
 
-private type SearchForStorageEnv = IngredientsRepo & StorageIngredientsRepo
+private type SearchForStorageEnv = DataSource
 
 private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
   endpoint
@@ -33,24 +39,25 @@ private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
   .in(query[StorageId]("storage-id"))
   .out(jsonBody[SearchResultsResp])
   .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(searchForStorageHandler)
+  .zSecuredServerLogic(searchForStorageHandler)
 
 private def searchForStorageHandler(
   searchParams: SearchParams,
   paginationParams: PaginationParams,
   storageId: StorageId,
-): ZIO[SearchForStorageEnv, InternalServerError, SearchResultsResp] =
+): ZIO[AuthenticatedUser & SearchForStorageEnv, InternalServerError, SearchResultsResp] =
+  import db.QuillConfig.ctx.*
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
-      .getAllGlobal
+    dataSource <- ZIO.service[DataSource]
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    allIngredientsAvailability <- run(
+      IngredientsQueries.getAllVisibleQ(lift(userId))
+        .leftJoin(getquill.query[DbStorageIngredient])
+        .on((i, si) => i.id == si.ingredientId)
+        .filter((_, si) => si.exists(_.storageId == lift(storageId)))
+        .map((i, si) => IngredientSearchResult(i.id, i.name, si.map(_.storageId) == None))
+    ).provideDS(using dataSource)
+      .map(Vector.from)
       .orElseFail(InternalServerError())
-    )
-    allIngredientsAvailability <- ZIO.foreach(allIngredients) { ingredient =>
-      ZIO.serviceWithZIO[StorageIngredientsRepo](_
-        .inStorage(storageId, ingredient.id)
-        .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
-        .orElseFail(InternalServerError())
-      )
-    }
     res = Searchable.search(allIngredientsAvailability, searchParams)
   yield SearchResultsResp(res.paginate(paginationParams), res.length)

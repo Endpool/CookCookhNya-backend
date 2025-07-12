@@ -1,8 +1,7 @@
 package db.repositories
 
 import db.tables.{DbRecipeIngredient, recipeIngredientsTable, DbRecipe, recipesTable}
-import db.{DbError, handleDbError}
-import db.QuillConfig.provideDS
+import db.DbError
 import domain.{IngredientId, RecipeId, StorageId}
 
 import io.getquill.*
@@ -18,6 +17,7 @@ private inline def recipeIngredients = query[DbRecipeIngredient]
 
 final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends RecipeIngredientsRepo:
   import db.QuillConfig.ctx.*
+  import db.QuillConfig.provideDS
   import RecipeIngredientsQueries.*
 
   private given DataSource = dataSource

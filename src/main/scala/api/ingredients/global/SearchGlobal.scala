@@ -31,6 +31,6 @@ private def searchGlobalHandler(searchParams: SearchParams, paginationParams: Pa
       .getAllGlobal
       .orElseFail(InternalServerError())
     )
-    allIngredients = allDbIngredients.map(IngredientResp.fromDb)
+    allIngredients = Vector.from(allDbIngredients).map(IngredientResp.fromDb)
     res = Searchable.search(allIngredients, searchParams)
   yield SearchAllResultsResp(res.paginate(paginationParams), res.length)

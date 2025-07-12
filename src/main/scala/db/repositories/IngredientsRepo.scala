@@ -4,7 +4,10 @@ import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
 import db.tables.{DbIngredient, DbIngredientCreator, ingredientsTable}
 import domain.{IngredientId, UserId}
+
 import com.augustnagro.magnum.magzio.*
+import io.getquill.*
+import javax.sql.DataSource
 import zio.{IO, RLayer, ZIO, ZLayer}
 
 trait IngredientsRepo:
@@ -15,11 +18,13 @@ trait IngredientsRepo:
   def getAny(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
   def removeGlobal(id: IngredientId): IO[DbError, Unit]
   def removePersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
-  def getAllGlobal: IO[DbError, Vector[DbIngredient]]
-  def getAllPersonal: ZIO[AuthenticatedUser, DbError, Vector[DbIngredient]]
+  def getAllGlobal: IO[DbError, List[DbIngredient]]
+  def getAllPersonal: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
+  def getAllVisible: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
 
-private final case class IngredientsRepoLive(xa: Transactor)
+private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSource)
   extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
+
   override def addGlobal(name: String): IO[DbError, DbIngredient] =
     xa.transact(insertReturning(DbIngredientCreator(None, name)))
       .mapError(handleDbError)
@@ -78,21 +83,34 @@ private final case class IngredientsRepoLive(xa: Transactor)
       }.mapError(handleDbError)
     yield ()
 
-  override def getAllGlobal: IO[DbError, Vector[DbIngredient]] =
-    xa.transact {
-      findAll.filter((ingredient: DbIngredient) => ingredient.ownerId.isEmpty)
-    }.mapError(handleDbError)
+  private given DataSource = dataSource
+  import db.QuillConfig.ctx.*
+  import db.QuillConfig.provideDS
+  import IngredientsQueries.*
 
-  override def getAllPersonal: ZIO[AuthenticatedUser, DbError, Vector[DbIngredient]] =
-    for
-      ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      result  <- xa.transact {
-        findAll.filter { (ingredient: DbIngredient) =>
-           ingredient.ownerId.contains(ownerId)
-        }
-      }.mapError(handleDbError)
-    yield result
+  override def getAllGlobal: IO[DbError, List[DbIngredient]] =
+    run(getAllGlobalQ).provideDS
+
+  override def getAllPersonal: ZIO[AuthenticatedUser, DbError, List[DbIngredient]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(getAllPersonalQ(lift(user.userId))).provideDS
+    )
+
+  override def getAllVisible: ZIO[AuthenticatedUser, DbError, List[DbIngredient]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(getAllVisibleQ(lift(user.userId))).provideDS
+    )
+
+object IngredientsQueries:
+  inline def getAllGlobalQ: Quoted[EntityQuery[DbIngredient]] =
+    query[DbIngredient].filter(_.ownerId.isEmpty)
+
+  inline def getAllPersonalQ(inline userId: UserId): Quoted[EntityQuery[DbIngredient]] =
+    query[DbIngredient].filter(_.ownerId == Some(userId))
+
+  inline def getAllVisibleQ(inline userId: UserId): Quoted[EntityQuery[DbIngredient]] =
+    query[DbIngredient].filter(_.ownerId.forall(_ == userId))
 
 object IngredientsRepo:
-  val layer: RLayer[Transactor, IngredientsRepo] =
-    ZLayer.fromFunction(IngredientsRepoLive(_))
+  val layer: RLayer[Transactor & DataSource, IngredientsRepo] =
+    ZLayer.fromFunction(IngredientsRepoLive.apply)

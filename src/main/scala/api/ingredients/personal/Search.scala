@@ -35,7 +35,7 @@ private def searchPersonalHandler(
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllPersonal.orElseFail(InternalServerError()))
     allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
-    res = allIngredients
+    res = Vector.from(allIngredients)
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
       .filter((_, ratio) => ratio >= threshold)
       .sortBy(
