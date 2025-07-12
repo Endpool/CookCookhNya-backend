@@ -15,8 +15,8 @@ import domain.{
   UserNotFound,
 }
 
-import com.augustnagro.magnum.magzio
 import com.augustnagro.magnum.magzio.*
+import com.augustnagro.magnum.Query
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
@@ -24,16 +24,16 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-case class IngredientSummary(
+final case class IngredientResp(
   id: IngredientId,
   name: String,
-  inStorages: Vector[StorageId]
+  inStorages: Vector[StorageId],
 )
 
-case class RecipeResp(
-  ingredients: Vector[IngredientSummary],
+final case class RecipeResp(
+  ingredients: Vector[IngredientResp],
   name: String,
-  sourceLink: String
+  sourceLink: String,
 )
 
 private type GetEnv = Transactor
@@ -59,56 +59,15 @@ private def getHandler(recipeId: RecipeId):
       RecipeResp] =
   ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
     val userId = authenticatedUser.userId
-    ZIO.serviceWithZIO[Transactor](_.transact(
-      sql"""
-        SELECT r.${recipesTable.name} AS "name", r.${recipesTable.sourceLink} AS sourceLink,
-        COALESCE(
-          (
-            SELECT JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', i.${ingredientsTable.id},
-                'name', i.${ingredientsTable.name},
-                'inStorages', COALESCE(
-                  (
-                    SELECT JSON_AGG(DISTINCT si.storage_id)
-                    FROM $storageIngredientsTable si
-                    WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
-                      AND si.${storageIngredientsTable.storageId} IN (
-                        SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
-                        WHERE ${storageMembersTable.memberId} = $userId
-
-                        UNION
-
-                        SELECT ${storagesTable.id}
-                        FROM $storagesTable
-                        WHERE ${storagesTable.ownerId} = $userId
-                      )
-                  ),
-                  '[]'::json
-                )
-              )
-            )
-            FROM $ingredientsTable i
-            JOIN $recipeIngredientsTable ri ON i.${ingredientsTable.id}= ri.${recipeIngredientsTable.ingredientId}
-            WHERE ri.${recipeIngredientsTable.recipeId} = r.${recipesTable.id}
-          ),
-          '[]'::json
-        ) AS ingredients
-        FROM $recipesTable r
-        WHERE r.${recipesTable.id} = $recipeId;
-      """.query[RawRecipeResult].run().headOption
-    ))
-  }.mapError(handleDbError).flatMap {
-    case Some(rawResult) =>
-      // Parse the JSON ingredients string
-      decode[Vector[IngredientSummary]](rawResult.ingredients) match
-        case Right(ingredients) =>
-          ZIO.succeed(RecipeResp(
-            ingredients, rawResult.name, rawResult.sourceLink
-          ))
-        case Left(_) =>
-          ZIO.fail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
-    case None => ZIO.fail(RecipeNotFound(recipeId.toString))
+    ZIO.serviceWithZIO[Transactor](_
+      .transact(rawRecipeQuery(userId, recipeId).run().headOption)
+      .mapError(handleDbError)
+    )
+  }.someOrFail(RecipeNotFound(recipeId.toString)).flatMap { rawResult =>
+    // Parse the JSON ingredients string
+    ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
+      .map(RecipeResp(_, rawResult.name, rawResult.sourceLink))
+      .orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
   }.mapError {
     case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)
       .flatMap(toUserNotFound)
@@ -116,3 +75,43 @@ private def getHandler(recipeId: RecipeId):
     case _: DbError => InternalServerError()
     case e: (InternalServerError | RecipeNotFound | UserNotFound) => e
   }
+
+private inline def rawRecipeQuery(
+  inline userId: UserId,
+  inline recipeId: RecipeId
+): Query[RawRecipeResult] = sql"""
+  SELECT r.${recipesTable.name} AS "name", r.${recipesTable.sourceLink} AS sourceLink,
+  COALESCE(
+    (
+      SELECT JSON_AGG(
+        JSON_BUILD_OBJECT(
+          'id', i.${ingredientsTable.id},
+          'name', i.${ingredientsTable.name},
+          'inStorages', COALESCE(
+            (
+              SELECT JSON_AGG(DISTINCT si.storage_id)
+              FROM $storageIngredientsTable si
+              WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
+                AND si.${storageIngredientsTable.storageId} IN (
+                  SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
+                  WHERE ${storageMembersTable.memberId} = $userId
+                  UNION
+                  SELECT ${storagesTable.id}
+                  FROM $storagesTable
+                  WHERE ${storagesTable.ownerId} = $userId
+                )
+            ),
+            '[]'::json
+          )
+        )
+      )
+      FROM $ingredientsTable i
+      JOIN $recipeIngredientsTable ri
+        ON i.${ingredientsTable.id} = ri.${recipeIngredientsTable.ingredientId}
+      WHERE ri.${recipeIngredientsTable.recipeId} = r.${recipesTable.id}
+    ),
+    '[]'::json
+  ) AS ingredients
+  FROM $recipesTable r
+  WHERE r.${recipesTable.id} = $recipeId;
+""".query[RawRecipeResult]
