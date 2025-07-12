@@ -27,7 +27,7 @@ object Main extends ZIOAppDefault:
   val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
 
   val reposLayer:
-    RLayer[Transactor & InvitationsSecretKey & DataSource
+    RLayer[Transactor & DataSource & InvitationsSecretKey
       , IngredientsRepo
       & InvitationsRepo
       & RecipesDomainRepo
@@ -50,7 +50,7 @@ object Main extends ZIOAppDefault:
     StoragesRepo.layer ++
     UsersRepo.layer
 
-  override def run =
+  override def run: IO[Throwable, Nothing] =
     Server.serve(app)
       .provideSomeLayer(Server.defaultWithPort(8080))
       .provideLayer(
