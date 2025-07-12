@@ -2,7 +2,7 @@ package api.recipes
 
 import api.{handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
-import api.EndpointErrorVariants.{recipeNotFoundVariant, storageNotFoundVariant, serverErrorVariant}
+import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant, userNotFoundVariant}
 import db.{DbError, handleDbError}
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
 import domain.{
@@ -33,7 +33,7 @@ final case class IngredientResp(
 final case class RecipeResp(
   ingredients: Vector[IngredientResp],
   name: String,
-  sourceLink: String,
+  sourceLink: Option[String],
 )
 
 private type GetEnv = Transactor
@@ -42,14 +42,14 @@ private val get: ZServerEndpoint[GetEnv, Any] =
   recipesEndpoint
     .get
     .in(path[RecipeId]("recipeId"))
-    .errorOut(oneOf(recipeNotFoundVariant, storageNotFoundVariant, serverErrorVariant))
+    .errorOut(oneOf(serverErrorVariant, recipeNotFoundVariant, userNotFoundVariant))
     .out(jsonBody[RecipeResp])
     .zSecuredServerLogic(getHandler)
 
 // intermediate class to accept raw query result
 private case class RawRecipeResult(
   name: String,
-  sourceLink: String,
+  sourceLink: Option[String],
   ingredients: String // JSON string from PostgreSQL
 )
 

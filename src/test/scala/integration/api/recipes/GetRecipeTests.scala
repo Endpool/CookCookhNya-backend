@@ -1,7 +1,7 @@
 package integration.api.recipes
 
 import api.Authentication.AuthenticatedUser
-import api.recipes.{IngredientSummary, RecipeResp}
+import api.recipes.{IngredientResp, RecipeResp}
 import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
 import domain.{RecipeId, IngredientId, StorageId}
 import integration.common.Utils.*
