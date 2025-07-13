@@ -5,13 +5,16 @@ import _root_.db.repositories.*
 import _root_.db.DataSourceDescription
 
 import sttp.tapir.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
+import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import zio.*
 import zio.http.*
 import com.augustnagro.magnum.magzio.Transactor
 
 object Main extends ZIOAppDefault:
+  private val metrics = PrometheusMetrics.default[Task]()
+
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
     SwaggerInterpreter()
       .fromServerEndpoints(
