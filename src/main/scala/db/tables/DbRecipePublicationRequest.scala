@@ -21,7 +21,7 @@ object DbRecipePublicationRequest:
     DbRecipePublicationRequest(req.recipeId, req.createdAt, req.updatedAt, status, reason)
 
   val createTable: String = """
-    CREATE TABLE recipe_publication_request(
+    CREATE TABLE recipe_publication_requests(
       recipe_id UUID NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -29,4 +29,17 @@ object DbRecipePublicationRequest:
       reason TEXT,
       FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
     );
+
+    CREATE FUNCTION trigger_set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = CURRENT_TIMESTAMP;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER update_timestamp
+    BEFORE UPDATE ON recipe_publication_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_updated_at();
   """

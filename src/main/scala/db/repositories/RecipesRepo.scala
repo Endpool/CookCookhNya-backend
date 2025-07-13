@@ -22,7 +22,7 @@ trait RecipesRepo:
 
 private inline def recipes = query[DbRecipe]
 
-final case class RecipesRepoQuill(dataSource: DataSource) extends RecipesRepo:
+final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
   import db.QuillConfig.ctx.*
   import db.QuillConfig.provideDS
   import RecipesQueries.*
@@ -78,4 +78,4 @@ object RecipesQueries:
 
 object RecipesRepo:
   def layer: RLayer[DataSource, RecipesRepo] =
-    ZLayer.fromFunction(RecipesRepoQuill.apply)
+    ZLayer.fromFunction(RecipesRepoLive.apply)

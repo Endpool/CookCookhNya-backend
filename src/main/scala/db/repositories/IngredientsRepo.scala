@@ -15,7 +15,7 @@ trait IngredientsRepo:
   def addPersonal(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient]
   def getGlobal(id: IngredientId): IO[DbError, Option[DbIngredient]]
   def getPersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
-  def getAny(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
+  def get(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]]
   def removeGlobal(id: IngredientId): IO[DbError, Unit]
   def removePersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
   def getAllGlobal: IO[DbError, List[DbIngredient]]
@@ -33,33 +33,6 @@ private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSou
     ZIO.serviceWithZIO[AuthenticatedUser] { case AuthenticatedUser(userId) =>
       xa.transact(insertReturning(DbIngredientCreator(Some(userId), name)))
         .mapError(handleDbError)
-    }
-
-  override def getGlobal(id: IngredientId): IO[DbError, Option[DbIngredient]] =
-    xa.transact {
-      findById(id).flatMap { (ingredient: DbIngredient) =>
-        ingredient.ownerId match
-          case Some(_) => None
-          case None    => Some(ingredient)
-      }
-    }.mapError(handleDbError)
-
-  override def getPersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
-    for
-      ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      result  <- xa.transact {
-        sql"""
-          SELECT * FROM $ingredientsTable
-          WHERE ${ingredientsTable.id} = $id
-          AND ${ingredientsTable.ownerId} = $ownerId
-        """.query[DbIngredient].run().headOption
-      }.mapError(handleDbError)
-    yield result
-
-  override def getAny(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
-    getGlobal(id).flatMap {
-      case Some(ingredient) => ZIO.succeed(Some(ingredient))
-      case None             => getPersonal(id)
     }
 
   override def removeGlobal(id: IngredientId): IO[DbError, Unit] =
@@ -99,6 +72,22 @@ private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSou
   override def getAllVisible: ZIO[AuthenticatedUser, DbError, List[DbIngredient]] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
       run(getAllVisibleQ(lift(user.userId))).provideDS
+    )
+
+  override def getGlobal(id: IngredientId): IO[DbError, Option[DbIngredient]] =
+    run(getAllGlobalQ.filter(_.id == (lift(id))))
+      .map(_.headOption).provideDS
+
+  override def getPersonal(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(getAllPersonalQ(lift(user.userId)).filter(_.id == (lift(id))))
+        .map(_.headOption).provideDS
+    )
+
+  override def get(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(getAllVisibleQ(lift(user.userId)).filter(_.id == (lift(id))))
+        .map(_.headOption).provideDS
     )
 
 object IngredientsQueries:
