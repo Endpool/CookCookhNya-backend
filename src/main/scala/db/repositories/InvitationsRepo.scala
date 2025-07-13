@@ -3,13 +3,13 @@ package db.repositories
 import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
 import db.tables.{DbStorageInvitation, storageInvitationTable}
-import domain.{IngredientId, InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId, StorageNotFound, UserId}
+import domain.{InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId}
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, URLayer, Layer, System, ZIO, ZLayer, Clock}
+import zio.{URLayer, Layer, System, ZIO, ZLayer, Clock}
 
 trait InvitationsRepo:
   def create(storageId: StorageId):

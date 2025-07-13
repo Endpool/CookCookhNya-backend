@@ -1,7 +1,6 @@
 package api
 
 import domain.{
-  ErrorResponse,
   IngredientNotFound,
   StorageNotFound,
   StorageAccessForbidden,
@@ -20,9 +19,10 @@ import sttp.tapir.ztapir.*
 import scala.reflect.ClassTag
 import sttp.model.StatusCode.*
 import sttp.tapir.EndpointOutput
+import sttp.tapir.Schema
 
 extension (sc: StatusCode)
-  def variantJson[E <: ErrorResponse : ClassTag]: EndpointOutput.OneOfVariant[E] =
+  def variantJson[E : Encoder : Decoder : Schema : ClassTag]: EndpointOutput.OneOfVariant[E] =
     oneOfVariant(statusCode(sc).and(jsonBody[E]))
 
 object EndpointErrorVariants:

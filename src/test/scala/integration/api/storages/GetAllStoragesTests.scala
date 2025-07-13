@@ -9,7 +9,7 @@ import io.circe.generic.auto.*
 import io.circe.parser.decode
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.get
-import zio.{Scope, ZIO, ZLayer}
+import zio.{Scope, ZIO}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:

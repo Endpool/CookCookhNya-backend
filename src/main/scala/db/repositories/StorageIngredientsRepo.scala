@@ -5,6 +5,8 @@ import db.{DbError, handleDbError}
 import domain.{IngredientId, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
+import io.getquill.*
+import javax.sql.DataSource
 import zio.{RLayer, IO, ZLayer}
 
 trait StorageIngredientsRepo:
@@ -22,17 +24,23 @@ trait StorageIngredientsRepo:
 
   def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean]
 
-private final case class StorageIngredientsRepoLive(xa: Transactor)
+private final case class StorageIngredientsRepoLive(xa: Transactor, dataSource: DataSource)
   extends Repo[DbStorageIngredient, DbStorageIngredient, (StorageId, UserId)] with StorageIngredientsRepo:
+
+  import db.QuillConfig.ctx.*
+  import db.QuillConfig.provideDS
+  import StorageIngredientsQueries.*
+
+  private given DataSource = dataSource
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-          INSERT INTO $storageIngredientsTable
-          VALUES ($storageId, $ingredientId)
-          ON CONFLICT DO NOTHING
-        """.update.run()
+        INSERT INTO $storageIngredientsTable
+        VALUES ($storageId, $ingredientId)
+        ON CONFLICT DO NOTHING
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -40,10 +48,10 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] =
     xa.transact {
       sql"""
-          DELETE FROM $storageIngredientsTable
-          WHERE ${storageIngredientsTable.storageId} = $storageId
-            AND ${storageIngredientsTable.ingredientId} = $ingredientId
-        """.update.run()
+        DELETE FROM $storageIngredientsTable
+        WHERE ${storageIngredientsTable.storageId} = $storageId
+          AND ${storageIngredientsTable.ingredientId} = $ingredientId
+      """.update.run()
       ()
     }.mapError(handleDbError)
 
@@ -51,10 +59,10 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     IO[DbError, Unit] = {
     xa.transact {
       sql"""
-       DELETE FROM $storageIngredientsTable
-       WHERE ${storageIngredientsTable.storageId} = $storageId
-       AND ${storageIngredientsTable.ingredientId} = ANY(${ingredientIds.toArray})
-         """.update.run()
+        DELETE FROM $storageIngredientsTable
+        WHERE ${storageIngredientsTable.storageId} = $storageId
+        AND ${storageIngredientsTable.ingredientId} = ANY(${ingredientIds.toArray})
+      """.update.run()
       ()
     }.mapError(handleDbError)
   }
@@ -69,15 +77,15 @@ private final case class StorageIngredientsRepoLive(xa: Transactor)
     }.mapError(handleDbError)
 
   override def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean] =
-    xa.transact {
-      val spec = Spec[DbStorageIngredient]
-        .where(sql"${storageIngredientsTable.storageId} = $storageId")
-        .where(sql"${storageIngredientsTable.ingredientId} = $ingredientId")
-        .limit(1)
-      val exists = ! findAll(spec).isEmpty
-      exists
-    }.mapError(handleDbError)
+    run(inStorageQ(lift(storageId), lift(ingredientId))).provideDS
+
+object StorageIngredientsQueries:
+  inline def inStorageQ(inline storageId: StorageId, inline ingredientId: IngredientId) =
+    query[DbStorageIngredient]
+      .filter(si => si.storageId == storageId && si.ingredientId == ingredientId)
+      .map(_ => 1)
+      .nonEmpty
 
 object StorageIngredientsRepo:
-  val layer: RLayer[Transactor, StorageIngredientsRepo] =
-    ZLayer.fromFunction(StorageIngredientsRepoLive(_))
+  val layer: RLayer[Transactor & DataSource, StorageIngredientsRepo] =
+    ZLayer.fromFunction(StorageIngredientsRepoLive.apply)

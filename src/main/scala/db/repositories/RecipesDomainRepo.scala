@@ -1,19 +1,12 @@
 package db.repositories
 
 import api.common.search.PaginationParams
-import db.tables.{
-  DbStorage,
-  DbStorageCreator,
-  recipeIngredientsTable,
-  recipesTable,
-  storageMembersTable,
-  storagesTable
-}
+import db.tables.{recipeIngredientsTable, recipesTable}
 import db.{DbError, handleDbError}
-import domain.{RecipeId, StorageId, UserId}
-import com.augustnagro.magnum.magzio.*
+import domain.{RecipeId, StorageId}
 
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import com.augustnagro.magnum.magzio.*
+import zio.{ZIO, ZLayer}
 
 trait RecipesDomainRepo:
   protected type RecipeSummary = (RecipeId, String, Int, Int, Int)

@@ -4,9 +4,9 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import api.common.search.*
 import api.ingredients.IngredientResp
-import domain.{IngredientId, IngredientNotFound, InternalServerError, UserId}
 import db.repositories.{IngredientsRepo, ShoppingListsRepo}
 import db.DbError
+import domain.{IngredientNotFound, IngredientId, InternalServerError}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -32,7 +32,7 @@ private def getIngredientsHandler(paginationParams: PaginationParams):
     ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
     result <- ZIO.foreachPar(ingredientIds) { ingredientId =>
         ZIO.serviceWithZIO[IngredientsRepo](_
-          .getAny(ingredientId)
+          .get(ingredientId)
           .someOrFail(IngredientNotFound(ingredientId.toString))
           .map(IngredientResp.fromDb)
         )

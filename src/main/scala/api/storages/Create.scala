@@ -3,8 +3,7 @@ package api.storages
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.StoragesRepo
-import db.DbError
-import domain.{InternalServerError, StorageId, UserId}
+import domain.{InternalServerError, StorageId}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
@@ -20,7 +19,7 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
   storagesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
-  .out(jsonBody[StorageId])
+  .out(plainBody[StorageId])
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(createHandler)
 
