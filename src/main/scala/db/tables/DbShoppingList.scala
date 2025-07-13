@@ -6,7 +6,7 @@ import domain.{UserId, IngredientId}
 import com.augustnagro.magnum.*
 
 @Table(PostgresDbType, CustomSqlNameMapper)
-case class DbShoppingList(
+final case class DbShoppingList(
   ownerId: UserId,
   ingredientId: IngredientId
 ) derives DbCodec
