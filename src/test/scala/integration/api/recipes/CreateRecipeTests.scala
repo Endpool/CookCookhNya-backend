@@ -74,7 +74,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .map(_.map(_.id))
               .map(Vector.from)
             personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(user)
+              .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(user)
               .map(_.map(_.id))
               .map(Vector.from)
           yield globalIngredientIds ++ personalIngredientIds
@@ -131,7 +131,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .map(_.map(_.id))
               .map(Vector.from)
             personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(otherUser)
+              .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(otherUser)
               .map(_.map(_.id))
               .map(Vector.from)
           yield globalIngredientIds ++ personalIngredientIds
