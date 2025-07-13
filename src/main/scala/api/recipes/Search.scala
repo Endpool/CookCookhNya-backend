@@ -54,8 +54,8 @@ private def searchAllRecipesHandler(
 ): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchAllRecipesResp] =
   for
     getRecipes <- ZIO.serviceWith[RecipesRepo](filter match
-      case SearchRecipesFilter.Custom => _.getCustom
-      case SearchRecipesFilter.Public => _.getPublic
+      case SearchRecipesFilter.Custom => _.getAllCustom
+      case SearchRecipesFilter.Public => _.getAllPublic
       case SearchRecipesFilter.All    => _.getAll
     )
     allDbRecipes <- getRecipes

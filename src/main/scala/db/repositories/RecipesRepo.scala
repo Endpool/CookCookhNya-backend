@@ -17,9 +17,9 @@ trait RecipesRepo:
     ZIO[AuthenticatedUser, DbError, Option[Recipe]]
   def getAll:
     ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
-  def getCustom:
+  def getAllCustom:
     ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
-  def getPublic:
+  def getAllPublic:
     IO[DbError, List[DbRecipe]]
   def deleteRecipe(recipeId: RecipeId):
     ZIO[AuthenticatedUser, DbError, Unit]
@@ -67,13 +67,13 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
       run(visibleRecipesQ(lift(user.userId))).provideDS
     )
 
-  override def getCustom: ZIO[AuthenticatedUser, DbError, List[DbRecipe]] =
+  override def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbRecipe]] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
       run(customRecipesQ(lift(user.userId))).provideDS
     )
 
-  override def getPublic: IO[DbError, List[DbRecipe]] =
-    run(recipesQ).provideDS
+  override def getAllPublic: IO[DbError, List[DbRecipe]] =
+    run(publicRecipesQ).provideDS
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
@@ -82,20 +82,23 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     )
 
   override def publish(recipeId: RecipeId): IO[DbError, Unit] =
-      run(getRecipeQ(lift(recipeId)).update(_.isPublished -> true))
-        .unit.provideDS
+    run(getRecipeQ(lift(recipeId)).update(_.isPublished -> true))
+      .unit.provideDS
 
 object RecipesQueries:
-  inline def recipesQ = query[DbRecipe]
+  inline def recipesQ: EntityQuery[DbRecipe] = query[DbRecipe]
 
-  inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
-    recipesQ.filter(r => r.id == recipeId)
+  inline def publicRecipesQ: EntityQuery[DbRecipe] =
+    recipesQ.filter(_.isPublished)
 
   inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
     recipesQ.filter(r => r.isPublished || r.creatorId == userId)
 
   inline def customRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
     recipesQ.filter(r => r.creatorId == userId)
+
+  inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.id == recipeId)
 
   inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     visibleRecipesQ(userId).filter(r => r.id == recipeId)
