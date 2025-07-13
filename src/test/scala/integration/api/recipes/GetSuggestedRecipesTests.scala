@@ -59,5 +59,56 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
          && assertTrue(suggestedRecipes.recipes.map(_.id).forall(recipeIds.contains))
          && assertTrue(suggestedRecipes.recipes.map(_.available).forall(_ == 0))
     },
+    test("When querying with owned storages, availabilities should be correct") {
+      for
+        user <- registerUser
+
+        storage1Id <- createStorage(user)
+        storage2Id <- createStorage(user)
+
+        minStorageIngredientsAmount = 4
+
+        tmp <- ZIO.foreach(Seq(storage1Id, storage2Id))(storageId => for
+          n <- Gen.int(3, 10).runHead.some
+          ingredientIds <- createNIngredients(n)
+          _ <- addIngredientsToStorage(storage1Id, ingredientIds)
+        yield ingredientIds)
+        Seq(storage1IngredientIds, storage2IngredientIds) = tmp
+
+        n <- Gen.int(2, 10).runHead.some
+        otherIngredientIds <- createNIngredients(n)
+
+        recipe1Storage1Availability = minStorageIngredientsAmount
+        recipe1Storage2Availability = minStorageIngredientsAmount - 1
+        recipe1IngredientIds
+          =  storage1IngredientIds.take(recipe1Storage1Availability)
+          ++ storage2IngredientIds.take(recipe1Storage2Availability)
+          ++ otherIngredientIds
+        recipe1Id <- createRecipe(user, recipe1IngredientIds)
+
+        recipe2Storage1Availability = minStorageIngredientsAmount - 2
+        recipe2Storage2Availability = minStorageIngredientsAmount
+        recipe2IngredientIds
+          =  storage1IngredientIds.takeRight(recipe2Storage1Availability)
+          ++ storage2IngredientIds.takeRight(recipe2Storage2Availability)
+          ++ otherIngredientIds
+        recipe2Id <- createRecipe(user, recipe2IngredientIds)
+
+        resp <- getSuggestedRecipes(user, Seq(storage1Id, storage2Id))
+
+        bodyStr <- resp.body.asString
+        suggestedRecipes <- ZIO.fromEither(decode[SuggestedRecipesResp](bodyStr))
+      yield assertTrue(resp.status == Status.Ok)
+         && assertTrue(
+           suggestedRecipes.recipes
+             .find(_.id == recipe1Id)
+             .is(_.some).available == recipe1Storage1Availability + recipe1Storage2Availability
+         ) ?? "Recipe 1 exists and its 'available' fields are correct"
+         && assertTrue(
+           suggestedRecipes.recipes
+             .find(_.id == recipe2Id)
+             .is(_.some).available == recipe2Storage1Availability + recipe2Storage2Availability
+         ) ?? "Recipe 2 exists and its 'available' fields are correct"
+    },
   ).provideLayer(testLayer)
 
