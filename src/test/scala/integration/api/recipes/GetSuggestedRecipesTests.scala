@@ -16,7 +16,7 @@ import db.repositories.StorageMembersRepo
 import domain.StorageNotFound
 
 object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
-  private val endpointPath = URL(Path.root / "recipes" / "suggested")
+  private val endpointPath = URL(Path.root / "suggested-recipes")
 
   private def getSuggestedRecipes(user: AuthenticatedUser, storageIds: Seq[StorageId]):
     RIO[Client, Response] =

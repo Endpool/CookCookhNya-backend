@@ -21,9 +21,9 @@ final case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[Suggest
 private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo & StoragesRepo
 
 private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
-  recipesEndpoint
-    .in("suggested")
-    .get
+  recipesEndpoint(
+    path = "suggested-recipes"
+  ).get
     .in(PaginationParams.query)
     .in(query[Vector[StorageId]]("storage-id"))
     .out(jsonBody[SuggestedRecipesResp])
