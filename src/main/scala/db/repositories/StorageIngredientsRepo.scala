@@ -6,6 +6,7 @@ import domain.{IngredientId, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.*
 import io.getquill.*
+import db.QuillConfig.ctx.*
 import javax.sql.DataSource
 import zio.{RLayer, IO, ZLayer}
 
@@ -34,15 +35,7 @@ private final case class StorageIngredientsRepoLive(xa: Transactor, dataSource: 
   private given DataSource = dataSource
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[DbError, Unit] =
-    xa.transact {
-      sql"""
-        INSERT INTO $storageIngredientsTable
-        VALUES ($storageId, $ingredientId)
-        ON CONFLICT DO NOTHING
-      """.update.run()
-      ()
-    }.mapError(handleDbError)
+    IO[DbError, Unit] = run(addIngredientToStorageQ(lift(storageId), lift(ingredientId))).unit.provideDS
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
@@ -85,6 +78,10 @@ object StorageIngredientsQueries:
       .filter(si => si.storageId == storageId && si.ingredientId == ingredientId)
       .map(_ => 1)
       .nonEmpty
+
+  inline def addIngredientToStorageQ(inline storageId: StorageId, inline ingredientId: IngredientId) =
+    query[DbStorageIngredient]
+      .insertValue(DbStorageIngredient(storageId, ingredientId))
 
 object StorageIngredientsRepo:
   val layer: RLayer[Transactor & DataSource, StorageIngredientsRepo] =
