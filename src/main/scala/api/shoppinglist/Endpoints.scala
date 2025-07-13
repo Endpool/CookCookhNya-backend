@@ -5,7 +5,7 @@ import sttp.tapir.ztapir.*
 val shoppingListEndpoint =
   endpoint
     .tag("Shopping lists")
-    .in("my" / "shopping-list")
+    .in("shopping-list")
 
 val shoppingListEndpoints = List(
   addIngredients.widen,

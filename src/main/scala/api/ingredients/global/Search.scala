@@ -14,16 +14,16 @@ import zio.ZIO
 
 private type SearchAllEnv = IngredientsRepo
 
-private val searchGlobal: ZServerEndpoint[SearchAllEnv, Any] =
+private val search: ZServerEndpoint[SearchAllEnv, Any] =
   globalIngredientsEndpoint
     .get
     .in(SearchParams.query)
     .in(PaginationParams.query)
     .out(jsonBody[SearchAllResultsResp])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchGlobalHandler)
+    .zServerLogic(searchHandler)
 
-private def searchGlobalHandler(searchParams: SearchParams, paginationParams: PaginationParams):
+private def searchHandler(searchParams: SearchParams, paginationParams: PaginationParams):
   ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_

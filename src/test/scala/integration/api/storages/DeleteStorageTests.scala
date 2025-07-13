@@ -12,7 +12,7 @@ import zio.test.{TestEnvironment, assertTrue, Spec}
 
 object DeleteStorageTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
-    URL(Path.root / "my" / "storages" / storageId.toString)
+    URL(Path.root / "storages" / storageId.toString)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Delete storage tests")(
     test("When unauthorized should get 401") {

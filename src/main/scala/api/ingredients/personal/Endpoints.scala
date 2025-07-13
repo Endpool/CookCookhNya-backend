@@ -1,10 +1,11 @@
 package api.ingredients.personal
 
+import api.ingredients.ingredientsEndpoint
+
 import sttp.tapir.ztapir.*
 
 private val personalIngredientsEndpoint =
-  endpoint
-    .in("my" / "ingredients")
+  ingredientsEndpoint
 
 val personalEndpoints = List(
   createPersonal.widen,

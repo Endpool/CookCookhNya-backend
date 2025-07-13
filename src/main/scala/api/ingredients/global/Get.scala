@@ -14,16 +14,16 @@ import zio.ZIO
 
 private type GetEnv = IngredientsRepo
 
-private val getGlobal: ZServerEndpoint[GetEnv, Any] =
+private val get: ZServerEndpoint[GetEnv, Any] =
   globalIngredientsEndpoint
   .get
   .in(path[IngredientId]("ingredientId"))
   .out(jsonBody[IngredientResp])
   .out(statusCode(StatusCode.Ok))
   .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-  .zServerLogic(getGlobalHandler)
+  .zServerLogic(getHandler)
 
-private def getGlobalHandler(ingredientId: IngredientId):
+private def getHandler(ingredientId: IngredientId):
   ZIO[GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
   ZIO.serviceWithZIO[IngredientsRepo](_
     .getGlobal(ingredientId)

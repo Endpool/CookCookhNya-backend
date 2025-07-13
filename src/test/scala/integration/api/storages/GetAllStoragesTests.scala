@@ -13,7 +13,7 @@ import zio.{Scope, ZIO}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:
-  private val endpointPath: URL = URL(Path.root / "my" / "storages")
+  private val endpointPath: URL = URL(Path.root / "storages")
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Get all storages tests")(
     test("When unauthorized should get 401") {

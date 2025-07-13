@@ -12,7 +12,7 @@ import zio.*
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
   private def endpointPath: URL =
-    URL(Path.root / "my" / "storages")
+    URL(Path.root / "storages")
 
   override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("Create storage tests")(

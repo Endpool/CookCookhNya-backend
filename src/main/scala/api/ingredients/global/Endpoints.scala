@@ -1,16 +1,20 @@
 package api.ingredients.global
 
+import api.ingredients.ingredientsEndpoint
+import api.TapirExtensions.superTag
+
 import sttp.tapir.ztapir.*
 
 val globalIngredientsEndpoint =
-  endpoint
-    .in("ingredients")
+  ingredientsEndpoint
+    .superTag("Public")
+    .prependIn("public")
 
 val globalEndpoints = List(
-  createGlobal.widen,
-  getGlobal.widen,
-  deleteGlobal.widen,
-  searchGlobal.widen,
-  searchForStorage.widen,
-  searchForRecipe.widen
+  get.widen,
+  search.widen,
+  // createGlobal.widen,
+  // deleteGlobal.widen,
+  // searchForStorage.widen,
+  // searchForRecipe.widen,
 )
