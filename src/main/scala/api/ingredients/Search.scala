@@ -1,8 +1,7 @@
-package api.ingredients.personal
+package api.ingredients
 
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
-import api.ingredients.{IngredientResp, SearchAllResultsResp}
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
 
@@ -15,26 +14,26 @@ import zio.ZIO
 
 private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
 
-private val searchPersonal: ZServerEndpoint[SearchAllEnv, Any] =
-  personalIngredientsEndpoint
+private val search: ZServerEndpoint[SearchAllEnv, Any] =
+  ingredientsEndpoint
     .get
     .in(query[String]("query"))
     .in(query[Int]("size").default(2))
     .in(query[Int]("offset").default(0))
     .in(query[Int]("threshold").default(50))
-    .out(jsonBody[SearchAllResultsResp])
+    .out(jsonBody[SearchResp[IngredientResp]])
     .errorOut(oneOf(serverErrorVariant))
-    .zSecuredServerLogic(searchPersonalHandler)
+    .zSecuredServerLogic(searchHandler)
 
-private def searchPersonalHandler(
+private def searchHandler(
   query: String,
   size: Int,
   offset: Int,
   threshold: Int
-): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchAllResultsResp] =
+): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllPersonal.orElseFail(InternalServerError()))
-    allIngredients = allDbIngredients.map(dbIngredient => IngredientResp(dbIngredient.id, dbIngredient.name))
+    allIngredients = allDbIngredients.map(IngredientResp.fromDb)
     res = Vector.from(allIngredients)
       .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
       .filter((_, ratio) => ratio >= threshold)
@@ -45,4 +44,4 @@ private def searchPersonalHandler(
         )
       )
       .map(_._1)
-  yield SearchAllResultsResp(res.slice(offset, offset + size), res.length)
+  yield SearchResp(res.slice(offset, offset + size), res.length)

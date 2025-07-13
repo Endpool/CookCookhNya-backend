@@ -1,14 +1,24 @@
 package api.ingredients
 
+import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
 
-import api.ingredients.global.globalEndpoints
-import api.ingredients.personal.personalEndpoints
+import api.ingredients.public.publicEndpoints
 import api.TapirExtensions.subTag
 
-val ingredientsEndpoint =
+val ingredientsEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
+  ingredientsEndpoint()
+
+def ingredientsEndpoint(path: String = "ingredients"): Endpoint[Unit, Unit, Unit, Unit, Any] =
   endpoint
     .subTag("Ingredients")
-    .in("ingredients")
+    .in(path)
 
-val ingredientsEndpoints = globalEndpoints.map(_.widen) ++ personalEndpoints.map(_.widen)
+val ingredientsEndpoints = List(
+  create.widen,
+  delete.widen,
+  get.widen,
+  search.widen,
+  searchForRecipe.widen,
+  searchForStorage.widen,
+) ++ publicEndpoints.map(_.widen)

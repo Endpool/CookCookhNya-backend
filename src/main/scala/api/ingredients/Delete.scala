@@ -1,4 +1,4 @@
-package api.ingredients.personal
+package api.ingredients
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
@@ -11,15 +11,15 @@ import zio.ZIO
 
 private type DeleteEnv = IngredientsRepo
 
-private val deletePersonal: ZServerEndpoint[DeleteEnv, Any] =
-  personalIngredientsEndpoint
+private val delete: ZServerEndpoint[DeleteEnv, Any] =
+  ingredientsEndpoint
     .delete
     .in(path[IngredientId]("ingredientId"))
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-    .zSecuredServerLogic(deletePersonalHandler)
+    .zSecuredServerLogic(deleteHandler)
 
-private def deletePersonalHandler(ingredientId: IngredientId):
+private def deleteHandler(ingredientId: IngredientId):
 ZIO[AuthenticatedUser & DeleteEnv, InternalServerError, Unit] =
   ZIO.serviceWithZIO[IngredientsRepo](_
     .removePersonal(ingredientId)

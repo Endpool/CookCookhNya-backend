@@ -1,8 +1,8 @@
-package api.ingredients.global
+package api.ingredients.public
 
 import api.common.search.*
 import api.EndpointErrorVariants.serverErrorVariant
-import api.ingredients.{IngredientResp, SearchAllResultsResp}
+import api.ingredients.{SearchResp, IngredientResp}
 import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
 
@@ -15,16 +15,16 @@ import zio.ZIO
 private type SearchAllEnv = IngredientsRepo
 
 private val search: ZServerEndpoint[SearchAllEnv, Any] =
-  globalIngredientsEndpoint
+  publicIngredientsEndpint
     .get
     .in(SearchParams.query)
     .in(PaginationParams.query)
-    .out(jsonBody[SearchAllResultsResp])
+    .out(jsonBody[SearchResp[IngredientResp]])
     .errorOut(oneOf(serverErrorVariant))
     .zServerLogic(searchHandler)
 
 private def searchHandler(searchParams: SearchParams, paginationParams: PaginationParams):
-  ZIO[SearchAllEnv, InternalServerError, SearchAllResultsResp] =
+  ZIO[SearchAllEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
       .getAllGlobal
@@ -32,4 +32,4 @@ private def searchHandler(searchParams: SearchParams, paginationParams: Paginati
     )
     allIngredients = Vector.from(allDbIngredients).map(IngredientResp.fromDb)
     res = Searchable.search(allIngredients, searchParams)
-  yield SearchAllResultsResp(res.paginate(paginationParams), res.length)
+  yield SearchResp(res.paginate(paginationParams), res.length)

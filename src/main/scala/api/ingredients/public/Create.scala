@@ -1,4 +1,4 @@
-package api.ingredients.global
+package api.ingredients.public
 
 import api.ingredients.CreateIngredientReqBody
 import api.EndpointErrorVariants.serverErrorVariant
@@ -14,16 +14,16 @@ import zio.ZIO
 
 private type CreateEnv = IngredientsRepo
 
-private val createGlobal: ZServerEndpoint[CreateEnv, Any] =
-  globalIngredientsEndpoint
-  .post
-  .in(jsonBody[CreateIngredientReqBody])
-  .out(plainBody[IngredientId])
-  .out(statusCode(StatusCode.Created))
-  .errorOut(oneOf(serverErrorVariant))
-  .zServerLogic(createGlobalHandler)
+private val create: ZServerEndpoint[CreateEnv, Any] =
+  publicIngredientsEndpint
+    .post
+    .in(jsonBody[CreateIngredientReqBody])
+    .out(plainBody[IngredientId])
+    .out(statusCode(StatusCode.Created))
+    .errorOut(oneOf(serverErrorVariant))
+    .zServerLogic(createHandler)
 
-private def createGlobalHandler(reqBody: CreateIngredientReqBody):
+private def createHandler(reqBody: CreateIngredientReqBody):
   ZIO[CreateEnv, InternalServerError, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo](_
     .addGlobal(reqBody.name)

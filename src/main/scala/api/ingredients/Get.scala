@@ -1,6 +1,5 @@
-package api.ingredients.personal
+package api.ingredients
 
-import api.ingredients.IngredientResp
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.IngredientsRepo
@@ -15,16 +14,16 @@ import zio.ZIO
 
 private type GetEnv = IngredientsRepo
 
-private val getPersonal: ZServerEndpoint[GetEnv, Any] =
-  personalIngredientsEndpoint
+private val get: ZServerEndpoint[GetEnv, Any] =
+  ingredientsEndpoint
     .get
     .in(path[IngredientId]("ingredientId"))
     .out(jsonBody[IngredientResp])
     .out(statusCode(StatusCode.Ok))
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
-    .zSecuredServerLogic(getPersonalHandler)
+    .zSecuredServerLogic(getHandler)
 
-private def getPersonalHandler(ingredientId: IngredientId):
+private def getHandler(ingredientId: IngredientId):
 ZIO[AuthenticatedUser & GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
   ZIO.serviceWithZIO[IngredientsRepo](_
     .getPersonal(ingredientId)
