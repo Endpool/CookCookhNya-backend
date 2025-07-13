@@ -6,6 +6,7 @@ import _root_.db.repositories.{
   RecipeIngredientsRepo,
   RecipesDomainRepo,
   RecipesRepo,
+  RecipePublicationRequestsRepo,
   ShoppingListsRepo,
   StorageIngredientsRepo,
   StorageMembersRepo,
@@ -22,6 +23,7 @@ type AppEnv
   & IngredientsRepo
   & InvitationsRepo
   & RecipeIngredientsRepo
+  & RecipePublicationRequestsRepo
   & RecipesDomainRepo
   & RecipesRepo
   & ShoppingListsRepo

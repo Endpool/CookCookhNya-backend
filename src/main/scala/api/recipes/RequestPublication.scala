@@ -16,11 +16,17 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class CannotPublishRecipeWithPersonalIngredients(ingredients: Seq[IngredientId])
+final case class CannotPublishRecipeWithPersonalIngredients(
+  ingredients: Seq[IngredientId],
+  message: String = "Cannot publish recipe with personal ingredients",
+)
 object CannotPublishRecipeWithPersonalIngredients:
   val variant = BadRequest.variantJson[CannotPublishRecipeWithPersonalIngredients]
 
-final case class CannotPublishPublishedRecipe(recipeId: RecipeId)
+final case class CannotPublishPublishedRecipe(
+  recipeId: RecipeId,
+  message: String = "Cannot publish recipe that is published",
+)
 object CannotPublishPublishedRecipe:
   val variant = BadRequest.variantJson[CannotPublishPublishedRecipe]
 
