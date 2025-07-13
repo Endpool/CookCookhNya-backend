@@ -21,8 +21,8 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
-case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
+final case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
+final case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
 
 private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo
 
