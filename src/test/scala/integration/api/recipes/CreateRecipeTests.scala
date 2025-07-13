@@ -4,7 +4,7 @@ import api.Authentication.AuthenticatedUser
 import api.recipes.CreateRecipeReqBody
 import db.repositories.{IngredientsRepo, RecipesRepo}
 import db.tables.recipesTable
-import domain.{IngredientId, ErrorResponse, IngredientNotFound}
+import domain.{IngredientId, IngredientNotFound}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
@@ -14,13 +14,7 @@ import io.circe.generic.auto.*
 import zio.http.{Client, Path, Status, URL}
 import zio.{Scope, ZIO, RIO}
 import zio.http.Response
-import zio.test.{
-  Gen,
-  TestEnvironment,
-  assertTrue,
-  Spec,
-  SmartAssertionOps, TestLensOptionOps, TestLensEitherOps
-}
+import zio.test.*
 
 object CreateRecipeTests extends ZIOIntegrationTestSpec:
   private val endpointPath = URL(Path.root / "recipes")
@@ -109,7 +103,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         bodyStr <- resp.body.asString
-        ingredientNotFound = decode[ErrorResponse](bodyStr)
+        ingredientNotFound = decode[IngredientNotFound](bodyStr)
         recipeDoesNotExist <- ZIO.serviceWithZIO[Transactor](_.transact(
           sql"""
             SELECT ${recipesTable.name} FROM $recipesTable
@@ -117,7 +111,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
           """.query[String].run().isEmpty
         ))
       yield assertTrue(resp.status == Status.NotFound)
-         && assertTrue(ingredientNotFound.is(_.right).isInstanceOf[IngredientNotFound])
+         && assertTrue(ingredientNotFound.isRight)
          && assertTrue(recipeDoesNotExist)
     },
     test("When create recipe with other user's personal ingredients, should get 404 ingredient not found and recipe should NOT be added to db") {
@@ -142,7 +136,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
         bodyStr <- resp.body.asString
-        ingredientNotFound = decode[ErrorResponse](bodyStr)
+        ingredientNotFound = decode[IngredientNotFound](bodyStr)
         recipeDoesNotExist <- ZIO.serviceWithZIO[Transactor](_.transact(
           sql"""
             SELECT ${recipesTable.name} FROM $recipesTable
@@ -150,7 +144,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
           """.query[String].run().isEmpty
         ))
       yield assertTrue(resp.status == Status.NotFound)
-         && assertTrue(ingredientNotFound.is(_.right).isInstanceOf[IngredientNotFound])
+         && assertTrue(ingredientNotFound.isRight)
          && assertTrue(recipeDoesNotExist)
     },
   ).provideLayer(testLayer)

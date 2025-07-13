@@ -3,7 +3,7 @@ package integration.api.recipes
 import api.Authentication.AuthenticatedUser
 import api.recipes.{IngredientResp, RecipeResp}
 import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
-import domain.{RecipeId, IngredientId, StorageId}
+import domain.{RecipeNotFound, RecipeId, IngredientId, StorageId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
@@ -12,9 +12,8 @@ import io.circe.generic.auto.*
 import zio.http.{Response, Client, Path, Request, Status, URL}
 import zio.http.Request.get
 import zio.{Scope, ZIO, RIO}
-import zio.test.{Spec, TestEnvironment, assertTrue}
-import domain.ErrorResponse
-import domain.RecipeNotFound
+import zio.test.*
+import db.repositories.RecipesRepo
 
 object GetRecipeTests extends ZIOIntegrationTestSpec:
   private val endpointPath = URL(Path.root / "recipes")
@@ -57,9 +56,8 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
 
           strBody <- resp.body.asString
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
-          recipeRespIngredientsIds = recipeResp.ingredients.map(_.id)
         yield assertTrue(resp.status == Status.Ok)
-           && assertTrue(ingredientIds hasSameElementsAs recipeRespIngredientsIds)
+           && assertTrue(recipeResp.ingredients.map(_.id) hasSameElementsAs ingredientIds)
            && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
       },
       test("1 user with 2 storages") {
@@ -132,7 +130,8 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(recipeIngredientsIds).provideUser(user1) //TODO this recipe should be public
+          recipeId <- createRecipe(recipeIngredientsIds).provideUser(user1)
+          _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
           // create some extra ingredients that are not used in the recipe
           _ <- createNIngredients(defaultIngredientAmount)
@@ -230,10 +229,9 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           resp <- getRecipe(user2, recipeId)
 
           strBody <- resp.body.asString
-          errorResponse <- ZIO.fromEither(decode[ErrorResponse](strBody))
+          errorResponse <- ZIO.fromEither(decode[RecipeNotFound](strBody))
         yield assertTrue(resp.status == Status.NotFound)
-           && assertTrue(errorResponse.isInstanceOf[RecipeNotFound])
-           && assertTrue(errorResponse.asInstanceOf[RecipeNotFound].recipeId == recipeId.toString)
+           && assertTrue(errorResponse.recipeId == recipeId.toString)
       }
     ).provideLayer(testLayer)
 
