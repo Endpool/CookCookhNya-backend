@@ -46,7 +46,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         recipeName <- randomString
         recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
-          Gen.alphaNumericString.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addGlobal))
+          Gen.alphaNumericString.runCollectN(10).flatMap(ZIO.foreach(_)(repo.addPublic))
         ).map(_.map(_.id))
           .map(Vector.from)
 
@@ -70,11 +70,11 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addGlobal))
+              .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
             personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(user)
+              .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(user)
               .map(_.map(_.id))
               .map(Vector.from)
           yield globalIngredientIds ++ personalIngredientIds
@@ -97,7 +97,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addGlobal))
+              .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
             nonExistantIngredientIds <- Gen.uuid.runCollectN(10)
@@ -127,11 +127,11 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
             globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addGlobal))
+              .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
             personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
-              .flatMap(ZIO.foreach(_)(repo.addPersonal)).provideUser(otherUser)
+              .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(otherUser)
               .map(_.map(_.id))
               .map(Vector.from)
           yield globalIngredientIds ++ personalIngredientIds

@@ -27,7 +27,7 @@ private def searchHandler(searchParams: SearchParams, paginationParams: Paginati
   ZIO[SearchAllEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
-      .getAllGlobal
+      .getAllPublic
       .orElseFail(InternalServerError())
     )
     allIngredients = Vector.from(allDbIngredients).map(IngredientResp.fromDb)

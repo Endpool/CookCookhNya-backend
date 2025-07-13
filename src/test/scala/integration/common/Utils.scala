@@ -80,7 +80,7 @@ object Utils:
   def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
       ZIO.serviceWithZIO[IngredientsRepo](_
-        .addGlobal(name)
+        .addPublic(name)
         .map(_.id)
         .orElseFail(InternalServerError())
       )

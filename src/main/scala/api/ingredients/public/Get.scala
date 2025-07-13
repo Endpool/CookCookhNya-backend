@@ -26,7 +26,7 @@ private val get: ZServerEndpoint[GetEnv, Any] =
 private def getHandler(ingredientId: IngredientId):
   ZIO[GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
   ZIO.serviceWithZIO[IngredientsRepo](_
-    .getGlobal(ingredientId)
+    .getPublic(ingredientId)
     .someOrFail(IngredientNotFound(ingredientId.toString))
     .map(IngredientResp.fromDb)
     .mapError {
