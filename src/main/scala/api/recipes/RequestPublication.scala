@@ -30,10 +30,10 @@ private type PublishEnv
   & RecipePublicationRequestsRepo
   & DataSource
 
-private val publish: ZServerEndpoint[PublishEnv, Any] =
+private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
   recipesEndpoint
     .post
-    .in(path[RecipeId]("recipeId") / "publish")
+    .in(path[RecipeId]("recipeId") / "request-publication")
     .errorOut(oneOf(
       serverErrorVariant,
       recipeNotFoundVariant,
@@ -41,9 +41,9 @@ private val publish: ZServerEndpoint[PublishEnv, Any] =
       CannotPublishPublishedRecipe.variant,
     ))
     .out(statusCode(NoContent))
-    .zSecuredServerLogic(publishHandler)
+    .zSecuredServerLogic(requestPublicationHandler)
 
-private def publishHandler(recipeId: RecipeId):
+private def requestPublicationHandler(recipeId: RecipeId):
   ZIO[AuthenticatedUser & PublishEnv,
       InternalServerError | CannotPublishPublishedRecipe |
       CannotPublishRecipeWithPersonalIngredients | RecipeNotFound,
@@ -69,7 +69,7 @@ private def publishHandler(recipeId: RecipeId):
       .when(personalIngredientIdsInRecipe.nonEmpty)
 
     _ <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
-      .publish(recipeId)
+      .requestPublication(recipeId)
       .orElseFail(InternalServerError())
     )
   yield ()

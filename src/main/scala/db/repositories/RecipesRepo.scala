@@ -8,7 +8,7 @@ import domain.{UserId, IngredientId, Recipe, RecipeId}
 import io.getquill.*
 import java.util.UUID
 import javax.sql.DataSource
-import zio.{ZIO, RLayer, ZLayer}
+import zio.{ZIO, IO, RLayer, ZLayer}
 
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
@@ -19,8 +19,8 @@ trait RecipesRepo:
     ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
   def deleteRecipe(recipeId: RecipeId):
     ZIO[AuthenticatedUser, DbError, Unit]
-
-private inline def recipes = query[DbRecipe]
+  def publish(recipeId: RecipeId):
+    IO[DbError, Unit]
 
 final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
   import db.QuillConfig.ctx.*
@@ -34,7 +34,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     for
       creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       recipeId <- run(
-        recipes
+        recipesQ
           .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
@@ -48,7 +48,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     ZIO[AuthenticatedUser, DbError, Option[Recipe]] = transaction {
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      mRecipe <- run(getRecipeQ(lift(userId), lift(recipeId))).map(_.headOption)
+      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId))).map(_.headOption)
       mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
         val DbRecipe(id, name, creatorId, isPublished, sourceLink) = recipe
         run(
@@ -65,15 +65,24 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
-      run(getRecipeQ(lift(user.userId), lift(recipeId)).delete)
+      run(getVisibleRecipeQ(lift(user.userId), lift(recipeId)).delete)
         .unit.provideDS
     )
 
-object RecipesQueries:
-  inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
-    recipes.filter(r => r.isPublished || r.creatorId == userId)
+  override def publish(recipeId: RecipeId): IO[DbError, Unit] =
+      run(getRecipeQ(lift(recipeId)).update(_.isPublished -> true))
+        .unit.provideDS
 
-  inline def getRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+object RecipesQueries:
+  inline def recipesQ = query[DbRecipe]
+
+  inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.id == recipeId)
+
+  inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.isPublished || r.creatorId == userId)
+
+  inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     visibleRecipesQ(userId).filter(r => r.id == recipeId)
 
 object RecipesRepo:

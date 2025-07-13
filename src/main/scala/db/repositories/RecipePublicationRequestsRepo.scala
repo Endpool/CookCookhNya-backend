@@ -9,7 +9,7 @@ import zio.{IO, ZLayer, RLayer}
 import javax.sql.DataSource
 
 trait RecipePublicationRequestsRepo:
-  def publish(recipeId: RecipeId): IO[DbError, Unit]
+  def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
 
 private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
@@ -21,11 +21,11 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
 
   private given DataSource = dataSource
 
-  override def publish(recipeId: RecipeId): IO[DbError, Unit] =
-    run(publishQ(lift(recipeId))).unit.provideDS
+  override def requestPublication(recipeId: RecipeId): IO[DbError, Unit] =
+    run(requestPublicationQ(lift(recipeId))).unit.provideDS
 
 object RecipePublicationRequestsQueries:
-  inline def publishQ(inline recipeId: RecipeId) =
+  inline def requestPublicationQ(inline recipeId: RecipeId) =
     recipePublicationRequests.insert(_.recipeId -> recipeId)
 
 object RecipePublicationRequestsRepo:
