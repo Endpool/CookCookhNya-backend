@@ -26,7 +26,7 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
 private def createHandler(reqBody: CreateIngredientReqBody):
   ZIO[CreateEnv, InternalServerError, IngredientId] =
   ZIO.serviceWithZIO[IngredientsRepo](_
-    .addGlobal(reqBody.name)
+    .addPublic(reqBody.name)
     .map(_.id)
     .orElseFail(InternalServerError())
   )

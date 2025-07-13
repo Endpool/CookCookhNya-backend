@@ -65,7 +65,7 @@ private def requestPublicationHandler(recipeId: RecipeId):
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     dataSource <- ZIO.service[DataSource]
     personalIngredientIdsInRecipe <- run(
-      IngredientsQueries.getAllPersonalQ(lift(userId))
+      IngredientsQueries.getAllCustomQ(lift(userId))
         .filter(i => liftQuery(recipe.ingredients).contains(i.id))
         .map(_.id)
     ).provideDS(using dataSource)
