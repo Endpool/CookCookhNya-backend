@@ -189,5 +189,18 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(storageNotFound.storageId == storageId.toString)
     },
+    test("When querying with other user's storages, should get 404") {
+      for
+        otherUserStorageId <- registerUser flatMap createStorage
+
+        user <- registerUser
+
+        resp <- getSuggestedRecipes(user, Seq(otherUserStorageId))
+
+        bodyStr <- resp.body.asString
+        storageNotFound <- ZIO.fromEither(decode[StorageNotFound](bodyStr))
+      yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(storageNotFound.storageId == otherUserStorageId.toString)
+    },
   ).provideLayer(testLayer)
 
