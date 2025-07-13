@@ -3,7 +3,7 @@ package db.repositories
 import api.Authentication.AuthenticatedUser
 import db.tables.{DbShoppingList, shoppingListTable}
 import db.{DbError, handleDbError}
-import domain.{IngredientId, StorageId, UserId}
+import domain.{IngredientId, IngredientNotFound, StorageId, UserId}
 import db.QuillConfig.provideDS
 import db.repositories.StorageIngredientsQueries.addIngredientToStorageQ
 
@@ -12,7 +12,7 @@ import com.augustnagro.magnum.magzio.*
 import io.getquill.*
 import db.QuillConfig.ctx.*
 import db.repositories.ShoppingListsQueries.*
-import zio.{IO, ZIO, ZLayer}
+import zio.{ZIO, ZLayer}
 
 trait ShoppingListsRepo:
   def addIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
@@ -20,9 +20,13 @@ trait ShoppingListsRepo:
 
   def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]]
 
-  def deleteIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
+  def deleteIngredient(userId: UserId, ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
+  def deleteIngredients(ingredientIds: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
 
-private final case class ShoppingListsLive(xa: Transactor, dataSource: DataSource)
+  def buyIngredientsToStorage(ingredientIds: Seq[IngredientId], storageId: StorageId):
+    ZIO[AuthenticatedUser, DbError, Unit]
+
+private final case class ShoppingListsLive(dataSource: DataSource)
   extends Repo[DbShoppingList, DbShoppingList, Null] with ShoppingListsRepo:
 
   private given DataSource = dataSource
@@ -48,12 +52,18 @@ private final case class ShoppingListsLive(xa: Transactor, dataSource: DataSourc
   override def deleteIngredient(userId: UserId, ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
     run(deleteIngredientQ(lift(userId), lift(ingredientId))).unit.provideDS
 
+  def deleteIngredients(ingredientIds: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit] =
+    for
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      _ <- run(liftQuery(ingredientIds).foreach(deleteIngredientQ(lift(userId), _))).unit.provideDS
+    yield ()
+
   override def buyIngredientsToStorage(ingredientIds: Seq[IngredientId], storageId: StorageId):
     ZIO[AuthenticatedUser, DbError, Unit] = transaction {
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      _ <- run(liftQuery(ingredientIds).foreach(deleteIngredientQ(userId, _)))
-      _ <- run(liftQuery(ingredientIds).foreach(addIngredientToStorageQ(storageId, _)))
+      _ <- run(liftQuery(ingredientIds).foreach(deleteIngredientQ(lift(userId), _)))
+      _ <- run(liftQuery(ingredientIds).foreach(addIngredientToStorageQ(lift(storageId), _)))
     yield ()
   }.provideDS
 
