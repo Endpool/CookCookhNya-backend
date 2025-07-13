@@ -11,6 +11,12 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
+import sttp.tapir.Codec.*
+import sttp.tapir.Codec
+import sttp.tapir.Schema
+import sttp.tapir.Validator
+import sttp.tapir.EndpointInput
+import sttp.tapir.EndpointInput.Query
 
 case class RecipeSearchResp(name: String, sourceLink: Option[String]) extends Searchable
 
@@ -19,27 +25,43 @@ case class SearchAllRecipesResp(
   found: Int
 )
 
-private type SearchAllEnv = RecipesRepo & StorageIngredientsRepo
+enum SearchRecipesFilter:
+  case Custom, Public, All
 
-private val searchAll: ZServerEndpoint[SearchAllEnv, Any] =
+object SearchRecipesFilter:
+  val query: EndpointInput.Query[SearchRecipesFilter] = query()
+  def query(default: SearchRecipesFilter = SearchRecipesFilter.All): Query[SearchRecipesFilter] =
+    sttp.tapir.query[SearchRecipesFilter]("filter").default(default)
+
+  given PlainCodec[SearchRecipesFilter] =
+    Codec.derivedEnumeration.defaultStringBased
+
+private type SearchEnv = RecipesRepo & StorageIngredientsRepo
+
+private val searchAll: ZServerEndpoint[SearchEnv, Any] =
   recipesEndpoint
     .get
     .in(SearchParams.query)
     .in(PaginationParams.query)
+    .in(SearchRecipesFilter.query)
     .out(jsonBody[SearchAllRecipesResp])
     .errorOut(oneOf(serverErrorVariant))
     .zSecuredServerLogic(searchAllRecipesHandler)
 
 private def searchAllRecipesHandler(
   searchParams: SearchParams,
-  paginationParams: PaginationParams
-): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchAllRecipesResp] =
+  paginationParams: PaginationParams,
+  filter: SearchRecipesFilter,
+): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchAllRecipesResp] =
   for
-    allDbRecipes <- ZIO.serviceWithZIO[RecipesRepo](_
-      .getAll
+    getRecipes <- ZIO.serviceWith[RecipesRepo](filter match
+      case SearchRecipesFilter.Custom => _.getCustom
+      case SearchRecipesFilter.Public => _.getPublic
+      case SearchRecipesFilter.All    => _.getAll
+    )
+    allDbRecipes <- getRecipes
       .map(Vector.from)
       .orElseFail(InternalServerError())
-    )
     allRecipes = allDbRecipes.map(dbRecipe => RecipeSearchResp(dbRecipe.name, dbRecipe.sourceLink))
     res = Searchable.search(allRecipes, searchParams)
   yield SearchAllRecipesResp(res.paginate(paginationParams), res.length)

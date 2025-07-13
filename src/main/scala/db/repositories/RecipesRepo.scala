@@ -17,6 +17,10 @@ trait RecipesRepo:
     ZIO[AuthenticatedUser, DbError, Option[Recipe]]
   def getAll:
     ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
+  def getCustom:
+    ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
+  def getPublic:
+    IO[DbError, List[DbRecipe]]
   def deleteRecipe(recipeId: RecipeId):
     ZIO[AuthenticatedUser, DbError, Unit]
   def publish(recipeId: RecipeId):
@@ -63,6 +67,14 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
       run(visibleRecipesQ(lift(user.userId))).provideDS
     )
 
+  override def getCustom: ZIO[AuthenticatedUser, DbError, List[DbRecipe]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(customRecipesQ(lift(user.userId))).provideDS
+    )
+
+  override def getPublic: IO[DbError, List[DbRecipe]] =
+    run(recipesQ).provideDS
+
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
       run(getVisibleRecipeQ(lift(user.userId), lift(recipeId)).delete)
@@ -81,6 +93,9 @@ object RecipesQueries:
 
   inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
     recipesQ.filter(r => r.isPublished || r.creatorId == userId)
+
+  inline def customRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.creatorId == userId)
 
   inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     visibleRecipesQ(userId).filter(r => r.id == recipeId)
