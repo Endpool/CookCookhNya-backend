@@ -44,10 +44,10 @@ private final case class ShoppingListsLive(dataSource: DataSource)
       )).provideDS
     yield ()
 
-  override def getIngredients: ZIO[AuthenticatedUser, DbError, List[IngredientId]] = for
+  override def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]] = for
     ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     res <- run(getIngredientsQ(lift(ownerId))).provideDS
-  yield res
+  yield res.toVector
 
   override def deleteIngredient(userId: UserId, ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
     run(deleteIngredientQ(lift(userId), lift(ingredientId))).unit.provideDS
