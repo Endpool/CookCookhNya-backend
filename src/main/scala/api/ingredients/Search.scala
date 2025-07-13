@@ -28,7 +28,10 @@ private def searchHandler(
   paginationParams: PaginationParams,
 ): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
-    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAllPersonal.orElseFail(InternalServerError()))
+    allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
+      .getAllVisible
+      .orElseFail(InternalServerError())
+    )
     allIngredients = allDbIngredients.map(IngredientResp.fromDb)
     res = Searchable.search(Vector.from(allIngredients), searchParams)
   yield SearchResp(res.paginate(paginationParams), res.length)

@@ -24,7 +24,7 @@ private val get: ZServerEndpoint[GetEnv, Any] =
     .zSecuredServerLogic(getHandler)
 
 private def getHandler(ingredientId: IngredientId):
-ZIO[AuthenticatedUser & GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
+  ZIO[AuthenticatedUser & GetEnv, InternalServerError | IngredientNotFound, IngredientResp] =
   ZIO.serviceWithZIO[IngredientsRepo](_
     .getPersonal(ingredientId)
     .someOrFail(IngredientNotFound(ingredientId.toString))
