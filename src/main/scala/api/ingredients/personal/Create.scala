@@ -19,7 +19,7 @@ private val createPersonal: ZServerEndpoint[CreateEnv, Any] =
   personalIngredientsEndpoint
     .post
     .in(jsonBody[CreateIngredientReqBody])
-    .out(jsonBody[IngredientId])
+    .out(plainBody[IngredientId])
     .out(statusCode(StatusCode.Created))
     .errorOut(oneOf(serverErrorVariant))
     .zSecuredServerLogic(createPersonalHandler)

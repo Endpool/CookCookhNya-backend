@@ -18,7 +18,7 @@ private val createGlobal: ZServerEndpoint[CreateEnv, Any] =
   globalIngredientsEndpoint
   .post
   .in(jsonBody[CreateIngredientReqBody])
-  .out(jsonBody[IngredientId])
+  .out(plainBody[IngredientId])
   .out(statusCode(StatusCode.Created))
   .errorOut(oneOf(serverErrorVariant))
   .zServerLogic(createGlobalHandler)
