@@ -1,15 +1,8 @@
 package api.storages.ingredients
 
-import api.{
-  handleFailedSqlQuery,
-  toStorageNotFound,
-  toUserNotFound,
-}
-import api.EndpointErrorVariants.{
-  serverErrorVariant,
-  storageNotFoundVariant,
-  userNotFoundVariant
-}
+import api.{handleFailedSqlQuery, toStorageNotFound, toUserNotFound}
+import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
+import api.common.search.{PaginationParams, paginate}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.ingredients.IngredientResp
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo, StorageMembersRepo, StoragesRepo}
@@ -29,6 +22,7 @@ private type GetAllEnv = StorageIngredientsRepo & IngredientsRepo & StoragesRepo
 private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   storagesIngredientsEndpoint
   .get
+  .in(PaginationParams.query)
   .out(statusCode(StatusCode.Ok))
   .out(jsonBody[Seq[IngredientResp]])
   .errorOut(oneOf(
@@ -38,7 +32,7 @@ private val getAll: ZServerEndpoint[GetAllEnv, Any] =
   ))
   .zSecuredServerLogic(getAllHandler)
 
-private def getAllHandler(storageId: StorageId):
+private def getAllHandler(storageId: StorageId, paginationParams: PaginationParams):
   ZIO[AuthenticatedUser & GetAllEnv,
       InternalServerError | StorageNotFound | UserNotFound,
       Seq[IngredientResp]] = {
@@ -51,7 +45,11 @@ private def getAllHandler(storageId: StorageId):
       ingredients <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
         ZIO.foreach(ingredientIds)(repo.get)
       )
-    yield ingredients.flatten.map(IngredientResp.fromDb)
+    yield ingredients
+      .flatten
+      .map(IngredientResp.fromDb)
+      .sortBy(_.name)
+      .paginate(paginationParams)
   }.mapError {
     case _: (DbNotRespondingError | InternalServerError) => InternalServerError()
     case e: StorageNotFound => e

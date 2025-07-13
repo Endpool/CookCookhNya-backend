@@ -19,7 +19,7 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
   storagesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
-  .out(jsonBody[StorageId])
+  .out(plainBody[StorageId])
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(createHandler)
 

@@ -6,13 +6,19 @@ import _root_.db.repositories.*
 import com.augustnagro.magnum.magzio.Transactor
 import javax.sql.DataSource
 import sttp.tapir.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
 
 object Main extends ZIOAppDefault:
-  val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
+  val serverOptions: ZioHttpServerOptions[AppEnv] =
+    ZioHttpServerOptions
+      .customiseInterceptors[AppEnv]
+      .metricsInterceptor(MetricsConfig.metrics.metricsInterceptor())
+      .options
+
+  val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter(serverOptions).toHttp(
     SwaggerInterpreter()
       .fromServerEndpoints(
         AppEndpoints.endpoints,
@@ -22,9 +28,13 @@ object Main extends ZIOAppDefault:
   )
 
   val endpoints: Routes[AppEnv, Response] =
-    ZioHttpInterpreter().toHttp(AppEndpoints.endpoints)
+    ZioHttpInterpreter(serverOptions).toHttp(AppEndpoints.endpoints)
 
-  val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
+  val metricsEndpoints: Routes[AppEnv, Response] =
+    ZioHttpInterpreter(serverOptions).toHttp(List(MetricsConfig.metrics.metricsEndpoint))
+
+  val app: Routes[AppEnv, Response] =
+    swaggerEndpoints ++ endpoints ++ metricsEndpoints
 
   val reposLayer:
     RLayer[Transactor & DataSource & InvitationsSecretKey
