@@ -15,6 +15,12 @@ import com.augustnagro.magnum.magzio.Transactor
 object Main extends ZIOAppDefault:
   private val metrics = PrometheusMetrics.default[Task]()
 
+  private val serverOptions: ZioHttpServerOptions[AppEnv] =
+    ZioHttpServerOptions
+      .customiseInterceptors[AppEnv]
+      .metricsInterceptor(metrics.metricsInterceptor()) 
+      .options
+
   val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter().toHttp(
     SwaggerInterpreter()
       .fromServerEndpoints(
