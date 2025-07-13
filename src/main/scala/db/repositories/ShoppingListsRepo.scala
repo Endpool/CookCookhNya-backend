@@ -48,9 +48,8 @@ private final case class ShoppingListsLive(xa: Transactor, dataSource: DataSourc
   override def deleteIngredient(userId: UserId, ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
     run(deleteIngredientQ(lift(userId), lift(ingredientId))).unit.provideDS
 
-  override def deleteIngredients(ingredientIds: Seq[IngredientId]):
-    ZIO[AuthenticatedUser, DbError, Unit] = ZIO.foreachParDiscard(ingredientIds)(deleteIngredient)
   override def buyIngredientsToStorage(ingredientIds: Seq[IngredientId], storageId: StorageId):
+    ZIO[AuthenticatedUser, DbError, Unit] = transaction {
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       _ <- run(liftQuery(ingredientIds).foreach(deleteIngredientQ(userId, _)))
