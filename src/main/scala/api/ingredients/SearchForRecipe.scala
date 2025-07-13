@@ -16,6 +16,12 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
+final case class IngredientsForRecipeResp(
+  id: IngredientId,
+  name: String,
+  isInRecipe: Boolean
+) extends Searchable
+
 private type SearchForRecipeEnv = DataSource
 
 private val searchForRecipe: ZServerEndpoint[SearchForRecipeEnv, Any] =
@@ -25,7 +31,7 @@ private val searchForRecipe: ZServerEndpoint[SearchForRecipeEnv, Any] =
     .in(SearchParams.query)
     .in(PaginationParams.query)
     .in(query[RecipeId]("recipe-id"))
-    .out(jsonBody[SearchResp[IngredientSearchResult]])
+    .out(jsonBody[SearchResp[IngredientsForRecipeResp]])
     .errorOut(oneOf(serverErrorVariant))
     .zSecuredServerLogic(searchForRecipeHandler)
 
@@ -35,7 +41,7 @@ private def searchForRecipeHandler(
   recipeId: RecipeId
 ): ZIO[AuthenticatedUser & SearchForRecipeEnv,
        InternalServerError,
-       SearchResp[IngredientSearchResult]] =
+       SearchResp[IngredientsForRecipeResp]] =
   import db.QuillConfig.ctx.*
   for
     dataSource <- ZIO.service[DataSource]
@@ -44,7 +50,7 @@ private def searchForRecipeHandler(
       IngredientsQueries.getAllVisibleQ(lift(userId))
         .leftJoin(quillQuery[DbRecipeIngredient])
         .on((i, ri) => i.id == ri.ingredientId && ri.recipeId == lift(recipeId))
-        .map((i, ri) => IngredientSearchResult(i.id, i.name, ri.map(_.recipeId).isDefined))
+        .map((i, ri) => IngredientsForRecipeResp(i.id, i.name, ri.map(_.recipeId).isDefined))
     ).provideDS(using dataSource)
       .map(Vector.from)
       .orElseFail(InternalServerError())

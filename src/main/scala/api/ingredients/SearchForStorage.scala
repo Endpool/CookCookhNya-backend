@@ -16,6 +16,12 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
+final case class IngredientsForStorageResp(
+  id: IngredientId,
+  name: String,
+  isInStorage: Boolean
+) extends Searchable
+
 private type SearchForStorageEnv = DataSource
 
 private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
@@ -25,7 +31,7 @@ private val searchForStorage: ZServerEndpoint[SearchForStorageEnv, Any] =
   .in(SearchParams.query)
   .in(PaginationParams.query)
   .in(query[StorageId]("storage-id"))
-  .out(jsonBody[SearchResp[IngredientSearchResult]])
+  .out(jsonBody[SearchResp[IngredientsForStorageResp]])
   .errorOut(oneOf(serverErrorVariant))
   .zSecuredServerLogic(searchForStorageHandler)
 
@@ -35,7 +41,7 @@ private def searchForStorageHandler(
   storageId: StorageId,
 ): ZIO[AuthenticatedUser & SearchForStorageEnv,
        InternalServerError,
-       SearchResp[IngredientSearchResult]] =
+       SearchResp[IngredientsForStorageResp]] =
   import db.QuillConfig.ctx.*
   for
     dataSource <- ZIO.service[DataSource]
@@ -44,7 +50,7 @@ private def searchForStorageHandler(
       IngredientsQueries.getAllVisibleQ(lift(userId))
         .leftJoin(quillQuery[DbStorageIngredient])
         .on((i, si) => i.id == si.ingredientId && si.storageId == lift(storageId))
-        .map((i, si) => IngredientSearchResult(i.id, i.name, si.map(_.storageId).isDefined))
+        .map((i, si) => IngredientsForStorageResp(i.id, i.name, si.map(_.storageId).isDefined))
     ).provideDS(using dataSource)
       .map(Vector.from)
       .orElseFail(InternalServerError())
