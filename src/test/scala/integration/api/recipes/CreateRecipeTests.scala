@@ -15,6 +15,7 @@ import zio.http.{Client, Path, Status, URL}
 import zio.{Scope, ZIO, RIO}
 import zio.http.Response
 import zio.test.*
+import zio.Cause
 
 object CreateRecipeTests extends ZIOIntegrationTestSpec:
   private val endpointPath = URL(Path.root / "recipes")
@@ -52,7 +53,9 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
-        recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
+        bodyStr <- resp.body.asString
+        recipeId <- ZIO.fromOption(bodyStr.toUUID)
+          .orElse(failed(Cause.fail(s"Could not parse response recipeId $bodyStr")))
         recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId).provideUser(user))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(recipe.is(_.some).name == recipeName)
@@ -78,7 +81,9 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         )
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
-        recipeId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
+        bodyStr <- resp.body.asString
+        recipeId <- ZIO.fromOption(bodyStr.toUUID)
+          .orElse(failed(Cause.fail(s"Could not parse response recipeId $bodyStr")))
         recipe <- ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(recipeId).provideUser(user))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(recipe.is(_.some).name == recipeName)

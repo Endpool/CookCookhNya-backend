@@ -18,7 +18,9 @@ object Utils:
   def getRandomUUID: ZIO[Any, Option[Nothing], UUID] = Gen.uuid.runHead.some
 
   extension(str: String)
-    def toUUID: UUID = UUID.fromString(str)
+    def toUUID: Option[UUID] =
+      try Some(UUID.fromString(str))
+      catch(_ => None)
 
   extension(req: Request)
     def addAuthorization(authorizedUser: AuthenticatedUser): Request =
