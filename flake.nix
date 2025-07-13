@@ -16,6 +16,7 @@
       in {
         devShell = pkgs.mkShell {
           packages = with pkgs; [
+            jdk
             sbt
           ];
 

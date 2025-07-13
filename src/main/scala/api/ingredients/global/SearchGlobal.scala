@@ -7,7 +7,6 @@ import db.repositories.IngredientsRepo
 import domain.{IngredientId, InternalServerError}
 
 import io.circe.generic.auto.*
-import me.xdrop.fuzzywuzzy.FuzzySearch
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
@@ -31,6 +30,6 @@ private def searchGlobalHandler(searchParams: SearchParams, paginationParams: Pa
       .getAllGlobal
       .orElseFail(InternalServerError())
     )
-    allIngredients = allDbIngredients.map(IngredientResp.fromDb)
+    allIngredients = Vector.from(allDbIngredients).map(IngredientResp.fromDb)
     res = Searchable.search(allIngredients, searchParams)
   yield SearchAllResultsResp(res.paginate(paginationParams), res.length)

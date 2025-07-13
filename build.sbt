@@ -4,16 +4,21 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "3.3.6"
 
+Global / cancelable := true
+
 val zioHttpVersion = "3.2.0"
 val zioVersion = "2.1.19"
 val sttpVersion = "4.0.7"
 val tapirVersion = "1.11.33"
-val ironVersion = "3.0.0"
+val quillVersion = "4.8.6"
 val circeVersion = "0.14.14"
 
 lazy val root = (project in file("."))
   .settings(
     name := "CookCookHnya-backend",
+    scalacOptions ++= Seq(
+      "-Wunused:imports"
+    ),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % zioVersion,
 
@@ -28,6 +33,7 @@ lazy val root = (project in file("."))
       "com.augustnagro" %% "magnumzio" % "2.0.0-M1",
       "com.zaxxer" % "HikariCP" % "6.3.0", // connection pool
       "org.postgresql" % "postgresql" % "42.7.7",
+      "io.getquill" %% "quill-jdbc-zio" % quillVersion,
 
       "io.circe" %% "circe-generic" % circeVersion,
 

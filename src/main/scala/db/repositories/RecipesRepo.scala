@@ -1,49 +1,90 @@
 package db.repositories
 
-import db.tables.{DbRecipe, DbRecipeCreator}
-import db.{DbError, handleDbError}
-import domain.{IngredientId, Recipe, RecipeId}
-import com.augustnagro.magnum.magzio.*
-import zio.{ZIO, IO, ZLayer}
+import api.Authentication.AuthenticatedUser
+import db.tables.DbRecipe
+import db.DbError
+import domain.{UserId, IngredientId, Recipe, RecipeId}
+
+import io.getquill.*
+import java.util.UUID
+import javax.sql.DataSource
+import zio.{ZIO, IO, RLayer, ZLayer}
 
 trait RecipesRepo:
-  def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, RecipeId]
-  def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]]
-  def getAll: IO[DbError, Vector[DbRecipe]]
-  def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit]
+  def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, RecipeId]
+  def getRecipe(recipeId: RecipeId):
+    ZIO[AuthenticatedUser, DbError, Option[Recipe]]
+  def getAll:
+    ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
+  def deleteRecipe(recipeId: RecipeId):
+    ZIO[AuthenticatedUser, DbError, Unit]
+  def publish(recipeId: RecipeId):
+    IO[DbError, Unit]
 
-private final case class RecipesRepoLive(xa: Transactor)
-  extends Repo[DbRecipeCreator, DbRecipe, RecipeId] with RecipesRepo:
+final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
+  import db.QuillConfig.ctx.*
+  import db.QuillConfig.provideDS
+  import RecipesQueries.*
 
-  override def addRecipe(name: String, sourceLink: String, ingredients: Vector[IngredientId]):
-    ZIO[RecipeIngredientsRepo, DbError, RecipeId] = for
-      recipeId <- xa.transact {
-        val recipe = DbRecipeCreator(name, sourceLink)
-        val DbRecipe(recipeId, _, _) = insertReturning(recipe)
-        recipeId
-      }.mapError(handleDbError)
-      _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.addIngredients(recipeId, ingredients))
-    yield recipeId
+  private given DataSource = dataSource
 
-  override def getRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Option[Recipe]] =
+  override def addRecipe(name: String, sourceLink: Option[String], ingredientIds: List[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, RecipeId] = transaction {
     for
-      ingredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_.getAllIngredients(recipeId))
-      recipeTableRowOption <- xa.transact {
-        findById(recipeId)
-      }.mapError(handleDbError)
-      recipe = recipeTableRowOption.map{ recipeTableRow =>
-        Recipe(recipeId, recipeTableRow.name, ingredients, recipeTableRow.sourceLink)
-      }
-    yield recipe
+      creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      recipeId <- run(
+        recipesQ
+          .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
+          .returningGenerated(r => r.id) // null is safe here because of returningGenerated
+      )
+      _ <- run(RecipeIngredientsQueries
+        .addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
+      )
+    yield recipeId
+  }.provideDS
 
-  override def getAll: IO[DbError, Vector[DbRecipe]] =
-    xa.transact(findAll).mapError(handleDbError)
-    
-  override def deleteRecipe(recipeId: RecipeId): ZIO[RecipeIngredientsRepo, DbError, Unit] =
-    xa.transact {
-      deleteById(recipeId)
-    }.mapError(handleDbError)
+  override def getRecipe(recipeId: RecipeId):
+    ZIO[AuthenticatedUser, DbError, Option[Recipe]] = transaction {
+    for
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId))).map(_.headOption)
+      mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
+        val DbRecipe(id, name, creatorId, isPublished, sourceLink) = recipe
+        run(
+          RecipeIngredientsQueries.getAllIngredientsQ(lift(recipe.id))
+        ).map(Recipe(id, name, creatorId, isPublished, _, sourceLink))
+      }
+    yield mRecipeWithIngredients
+  }.provideDS
+
+  override def getAll: ZIO[AuthenticatedUser, DbError, List[DbRecipe]] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(visibleRecipesQ(lift(user.userId))).provideDS
+    )
+
+  override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(getVisibleRecipeQ(lift(user.userId), lift(recipeId)).delete)
+        .unit.provideDS
+    )
+
+  override def publish(recipeId: RecipeId): IO[DbError, Unit] =
+      run(getRecipeQ(lift(recipeId)).update(_.isPublished -> true))
+        .unit.provideDS
+
+object RecipesQueries:
+  inline def recipesQ = query[DbRecipe]
+
+  inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.id == recipeId)
+
+  inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
+    recipesQ.filter(r => r.isPublished || r.creatorId == userId)
+
+  inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    visibleRecipesQ(userId).filter(r => r.id == recipeId)
 
 object RecipesRepo:
-  val layer = ZLayer.fromFunction(RecipesRepoLive(_))
+  def layer: RLayer[DataSource, RecipesRepo] =
+    ZLayer.fromFunction(RecipesRepoLive.apply)

@@ -3,8 +3,7 @@ package db
 import com.augustnagro.magnum.magzio.*
 import com.zaxxer.hikari.HikariDataSource
 import javax.sql.DataSource
-import zio.{ZLayer, Layer, ZIO, IO, System, Task, RLayer}
-import zio.Scope
+import zio.{ZLayer, Layer, System, RLayer}
 
 case class DataSourceDescription(
   jdbcUrl: String,
@@ -51,9 +50,12 @@ object DataSourceDescription:
     yield DataSourceDescription(address, dbName, username, password, "org.postgresql.Driver")
   }
 
-val dbLayer: RLayer[DataSourceDescription, Transactor] =
+val dbLayer: RLayer[DataSource, Transactor] =
   for
-    dataSourceDescr <- ZLayer.service[DataSourceDescription]
-    xa <- Transactor.layer(dataSourceDescr.get.toDataSource)
+    dataSource <- ZLayer.service[DataSource]
+    xa <- Transactor.layer(dataSource.get)
     _  <- ZLayer.fromZIO(createTables(xa.get))
   yield xa
+
+val dataSourceLayer: RLayer[DataSourceDescription, DataSource] =
+  ZLayer.fromFunction((descr: DataSourceDescription) => descr.toDataSource)

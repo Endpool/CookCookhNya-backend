@@ -2,9 +2,8 @@ package api.users
 
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
-import db.DbError
 import db.repositories.UsersRepo
-import domain.{InternalServerError, UserId}
+import domain.InternalServerError
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*

@@ -3,7 +3,7 @@ package api.shoppinglist
 import api.{handleFailedSqlQuery, toIngredientNotFound}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, ingredientNotFoundVariant}
-import domain.{IngredientNotFound, InternalServerError, IngredientId, UserId}
+import domain.{IngredientNotFound, InternalServerError, IngredientId}
 import db.repositories.ShoppingListsRepo
 import db.DbError.*
 
