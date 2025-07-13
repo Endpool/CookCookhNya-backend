@@ -7,13 +7,8 @@ import integration.common.ZIOIntegrationTestSpec
 
 import io.circe.generic.auto.*
 import zio.http.{Client, Status, URL, Path}
-import zio.{Scope, ZIO}
-import zio.test.{
-  TestEnvironment,
-  assertTrue,
-  Spec,
-  SmartAssertionOps, TestLensOptionOps
-}
+import zio.test.*
+import zio.*
 
 object CreateStorageTests extends ZIOIntegrationTestSpec:
   private def endpointPath: URL =
@@ -47,7 +42,9 @@ object CreateStorageTests extends ZIOIntegrationTestSpec:
               .withJsonBody(CreateStorageReqBody(storageName))
               .addAuthorization(user)
           )
-          storageId <- resp.body.asString.map(_.replaceAll("\"", "").toUUID)
+          bodyStr <- resp.body.asString
+          storageId <- ZIO.fromOption(bodyStr.toUUID)
+            .orElse(failed(Cause.fail(s"Could not parse response storageId $bodyStr")))
           storage <- ZIO.serviceWithZIO[StoragesRepo](_
             .getById(storageId)
             .provideUser(user)

@@ -30,7 +30,7 @@ private def getIngredientsHandler(u: Unit):
     ingredientIds <- ZIO.serviceWithZIO[ShoppingListsRepo](_.getIngredients)
     result <- ZIO.foreach(ingredientIds) { ingredientId =>
         ZIO.serviceWithZIO[IngredientsRepo](_
-          .getAny(ingredientId)
+          .get(ingredientId)
           .someOrFail(IngredientNotFound(ingredientId.toString))
           .map(IngredientResp.fromDb)
         )

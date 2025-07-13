@@ -2,19 +2,8 @@ package integration.common
 
 import api.Main
 import db.{DataSourceDescription, dataSourceLayer, dbLayer}
-import db.repositories.{
-  IngredientsRepo,
-  InvitationsRepo,
-  InvitationsSecretKey,
-  RecipeIngredientsRepo,
-  RecipesDomainRepo,
-  RecipesRepo,
-  ShoppingListsRepo,
-  StorageIngredientsRepo,
-  StorageMembersRepo,
-  StoragesRepo,
-  UsersRepo,
-}
+import db.repositories.*
+
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import javax.sql.DataSource
@@ -34,6 +23,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
       & InvitationsRepo
       & RecipeIngredientsRepo
       & RecipesRepo
+      & RecipePublicationRequestsRepo
       & StorageIngredientsRepo
       & StorageMembersRepo
       & StoragesRepo

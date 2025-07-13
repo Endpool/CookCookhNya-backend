@@ -5,7 +5,7 @@ import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
 import db.DbError.*
 import db.repositories.{StorageMembersRepo, StoragesRepo}
-import domain.{ErrorResponse, InternalServerError, StorageNotFound, StorageId, UserNotFound, UserId}
+import domain.{InternalServerError, StorageNotFound, StorageId, UserNotFound, UserId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*

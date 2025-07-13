@@ -33,6 +33,7 @@ object Main extends ZIOAppDefault:
       & RecipesDomainRepo
       & RecipesRepo
       & RecipeIngredientsRepo
+      & RecipePublicationRequestsRepo
       & ShoppingListsRepo
       & StorageIngredientsRepo
       & StorageMembersRepo
@@ -44,6 +45,7 @@ object Main extends ZIOAppDefault:
     RecipeIngredientsRepoLive.layer ++
     RecipesDomainRepo.layer ++
     RecipesRepo.layer ++
+    RecipePublicationRequestsRepo.layer ++
     ShoppingListsRepo.layer ++
     StorageIngredientsRepo.layer ++
     StorageMembersRepo.layer ++

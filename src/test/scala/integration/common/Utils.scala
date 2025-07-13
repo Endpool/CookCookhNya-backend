@@ -3,7 +3,7 @@ package integration.common
 import api.Authentication.AuthenticatedUser
 import api.users.CreateUserReqBody
 import db.DbError
-import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
+import db.repositories.{IngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 
 import io.circe.Encoder
@@ -18,7 +18,9 @@ object Utils:
   def getRandomUUID: ZIO[Any, Option[Nothing], UUID] = Gen.uuid.runHead.some
 
   extension(str: String)
-    def toUUID: UUID = UUID.fromString(str)
+    def toUUID: Option[UUID] =
+      try Some(UUID.fromString(str))
+      catch(_ => None)
 
   extension(req: Request)
     def addAuthorization(authorizedUser: AuthenticatedUser): Request =
@@ -90,13 +92,13 @@ object Utils:
     )
 
   def createRecipe(ingredientIds: Vector[IngredientId]): ZIO[
-    RecipesRepo & IngredientsRepo & RecipeIngredientsRepo,
+    AuthenticatedUser & RecipesRepo,
     InternalServerError | DbError,
     RecipeId
   ] =
     for
       name <- randomString
-      link <- randomString
+      link <- randomString.map(Some(_))
       recipeId <- ZIO.serviceWithZIO[RecipesRepo](
         _.addRecipe(name, link, ingredientIds.toList)
       )
