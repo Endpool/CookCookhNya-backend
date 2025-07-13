@@ -30,7 +30,7 @@ private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
     .in("suggested")
     .get
     .in(PaginationParams.query)
-    .in(query[Vector[StorageId]]("storageId"))
+    .in(query[Vector[StorageId]]("storage-id"))
     .out(jsonBody[SuggestedRecipesResp])
     .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
     .zServerLogic(getSuggestedHandler)
