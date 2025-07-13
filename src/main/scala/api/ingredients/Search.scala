@@ -12,9 +12,9 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type SearchAllEnv = IngredientsRepo & StorageIngredientsRepo
+private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 
-private val search: ZServerEndpoint[SearchAllEnv, Any] =
+private val search: ZServerEndpoint[SearchEnv, Any] =
   ingredientsEndpoint
     .get
     .in(SearchParams.query)
@@ -26,7 +26,7 @@ private val search: ZServerEndpoint[SearchAllEnv, Any] =
 private def searchHandler(
   searchParams: SearchParams,
   paginationParams: PaginationParams,
-): ZIO[AuthenticatedUser & SearchAllEnv, InternalServerError, SearchResp[IngredientResp]] =
+): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
     allDbIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_
       .getAllVisible

@@ -7,22 +7,20 @@ import db.repositories.{RecipesRepo, StorageIngredientsRepo}
 import domain.InternalServerError
 
 import io.circe.generic.auto.*
+import sttp.tapir.{Codec, Schema, Validator, EndpointInput}
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import sttp.tapir.Codec.*
-import sttp.tapir.Codec
-import sttp.tapir.Schema
-import sttp.tapir.Validator
-import sttp.tapir.EndpointInput
-import sttp.tapir.EndpointInput.Query
 
-case class RecipeSearchResp(name: String, sourceLink: Option[String]) extends Searchable
+case class RecipeSearchResp(
+  name: String,
+  sourceLink: Option[String],
+) extends Searchable
 
 case class SearchAllRecipesResp(
   results: Vector[RecipeSearchResp],
-  found: Int
+  found: Int,
 )
 
 enum SearchRecipesFilter:
@@ -30,10 +28,11 @@ enum SearchRecipesFilter:
 
 object SearchRecipesFilter:
   val query: EndpointInput.Query[SearchRecipesFilter] = query()
-  def query(default: SearchRecipesFilter = SearchRecipesFilter.All): Query[SearchRecipesFilter] =
+  def query(default: SearchRecipesFilter = SearchRecipesFilter.All):
+    EndpointInput.Query[SearchRecipesFilter] =
     sttp.tapir.query[SearchRecipesFilter]("filter").default(default)
 
-  given PlainCodec[SearchRecipesFilter] =
+  given Codec.PlainCodec[SearchRecipesFilter] =
     Codec.derivedEnumeration.defaultStringBased
 
 private type SearchEnv = RecipesRepo & StorageIngredientsRepo
