@@ -19,11 +19,16 @@ object DbPublicationRequestStatus:
     case PublicationRequestStatus.Rejected(reason) => (Some(reason), Rejected)
 
   val createType: String = """
+  DO $$
+  BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'publication_request_status') THEN
     CREATE TYPE publication_request_status AS ENUM (
       'pending',
       'accepted',
       'rejected'
     );
+    END IF;
+  END $$;
   """
 
   given JdbcDecoder[DbPublicationRequestStatus](
