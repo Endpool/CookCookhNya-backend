@@ -13,6 +13,7 @@ import zio.http.Request.get
 import zio.http.{Response, Client, Path, Request, Status, URL}
 import zio.test.*
 import db.repositories.StorageMembersRepo
+import domain.StorageNotFound
 
 object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
   private val endpointPath = URL(Path.root / "recipes" / "suggested")
@@ -175,6 +176,18 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
                                     + recipe2Storage1Availability
                                     + recipe2Storage2Availability
          ) ?? "Recipe 2 exists and its 'available' fields are correct"
+    },
+    test("When querying with non-existant storages, should get 404") {
+      for
+        user <- registerUser
+        storageId <- getRandomUUID
+
+        resp <- getSuggestedRecipes(user, Seq(storageId))
+
+        bodyStr <- resp.body.asString
+        storageNotFound <- ZIO.fromEither(decode[StorageNotFound](bodyStr))
+      yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(storageNotFound.storageId == storageId.toString)
     },
   ).provideLayer(testLayer)
 
