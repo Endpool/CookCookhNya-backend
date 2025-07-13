@@ -9,6 +9,7 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.common.search.PaginationParams
 import db.DbError.{FailedDbQuery, DbNotRespondingError}
 import db.repositories.{RecipesDomainRepo, StorageIngredientsRepo}
@@ -33,12 +34,14 @@ private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
     .in(query[Vector[StorageId]]("storage-id"))
     .out(jsonBody[SuggestedRecipesResp])
     .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
-    .zServerLogic(getSuggestedHandler)
+    .zSecuredServerLogic(getSuggestedHandler)
 
 private def getSuggestedHandler(
   paginationParams: PaginationParams,
   storageIds: Vector[StorageId]
-): ZIO[GetSuggestedEnv, InternalServerError | StorageNotFound, SuggestedRecipesResp] = {
+): ZIO[AuthenticatedUser & GetSuggestedEnv,
+       InternalServerError | StorageNotFound,
+       SuggestedRecipesResp] = {
   for
     suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
       _.getSuggestedIngredients(paginationParams, storageIds)
