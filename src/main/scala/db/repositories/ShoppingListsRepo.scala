@@ -4,53 +4,62 @@ import api.Authentication.AuthenticatedUser
 import db.tables.{DbShoppingList, shoppingListTable}
 import db.{DbError, handleDbError}
 import domain.{IngredientId, UserId}
+import db.QuillConfig.provideDS
 
+import javax.sql.DataSource
 import com.augustnagro.magnum.magzio.*
+import io.getquill.*
+import db.QuillConfig.ctx.*
+import db.repositories.ShoppingListsQueries.*
 import zio.{ZIO, ZLayer}
 
 trait ShoppingListsRepo:
-  def addIngredients(ingredients: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
+  def addIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
+  def addIngredients(ingredientIds: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
 
   def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]]
 
-  def deleteIngredients(ingredients: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
+  def deleteIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
+  def deleteIngredients(ingredientIds: Seq[IngredientId]): ZIO[AuthenticatedUser, DbError, Unit]
 
-private final case class ShoppingListsLive(xa: Transactor)
+private final case class ShoppingListsLive(xa: Transactor, dataSource: DataSource)
   extends Repo[DbShoppingList, DbShoppingList, Null] with ShoppingListsRepo:
 
-  override def addIngredients(ingredients: Seq[IngredientId]):
-    ZIO[AuthenticatedUser, DbError, Unit] = for
-    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    _ <- xa.transact {
-        sql"""
-           INSERT INTO $shoppingListTable (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId})
-           SELECT $ownerId, unnest(${ingredients.toArray})
-           ON CONFLICT DO NOTHING
-         """.update.run()
-    }.mapError(handleDbError)
-  yield ()
+  private given DataSource = dataSource
+  def addIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
+    for 
+      ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      res <- run(addIngredientQ(lift(ownerId), lift(ingredientId))).unit.provideDS
+    yield res 
 
-  override def getIngredients: ZIO[AuthenticatedUser, DbError, Vector[IngredientId]] = for
-    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    ingredientIds <- xa.transact {
-      sql"""
-        SELECT ${shoppingListTable.ingredientId} FROM $shoppingListTable
-        WHERE ${shoppingListTable.ownerId} = $ownerId
-      """.query[IngredientId].run()
-    }.mapError(handleDbError)
-  yield ingredientIds
+  override def addIngredients(ingredientIds: Seq[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, Unit] = ZIO.foreachParDiscard(ingredientIds)(addIngredient) 
 
-  override def deleteIngredients(ingredients: Seq[IngredientId]):
-    ZIO[AuthenticatedUser, DbError, Unit] = for
+  override def getIngredients: ZIO[AuthenticatedUser, DbError, List[IngredientId]] = for
     ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    _ <- xa.transact {
-      sql"""
-        DELETE FROM $shoppingListTable
-        WHERE ${shoppingListTable.ownerId} = $ownerId
-        AND ${shoppingListTable.ingredientId} = ANY(${ingredients.toArray})
-      """.update.run()
-    }.mapError(handleDbError)
-  yield ()
+    res <- run(getIngredientsQ(lift(ownerId))).provideDS
+  yield res
+
+  override def deleteIngredient(ingredientId: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
+    run(deleteIngredientQ(lift(ingredientId))).unit.provideDS
+
+  override def deleteIngredients(ingredientIds: Seq[IngredientId]):
+    ZIO[AuthenticatedUser, DbError, Unit] = ZIO.foreachParDiscard(ingredientIds)(deleteIngredient)
+
+object ShoppingListsQueries:
+  inline def addIngredientQ(inline userId: UserId, inline ingredientId: IngredientId): Unit =
+    query[DbShoppingList]
+      .insertValue(DbShoppingList(userId, ingredientId))
+      
+  inline def deleteIngredientQ(inline ingredientId: IngredientId): Delete[DbShoppingList] =
+    query[DbShoppingList]
+      .filter(_.ingredientId == ingredientId)
+      .delete
+
+  inline def getIngredientsQ(inline ownerId: UserId): EntityQuery[IngredientId] =
+    query[DbShoppingList]
+      .filter(_.ownerId == ownerId)
+      .map(_.ingredientId)
 
 object ShoppingListsRepo:
-  val layer = ZLayer.fromFunction(ShoppingListsLive(_))
+  val layer = ZLayer.fromFunction(ShoppingListsLive.apply)
