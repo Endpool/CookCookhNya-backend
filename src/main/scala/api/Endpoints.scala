@@ -7,22 +7,14 @@ import api.recipes.recipeEndpoints
 import api.shoppinglist.shoppingListEndpoints
 import api.invitations.invitationEndpoints
 
-import sttp.tapir.server.metrics.prometheus.PrometheusMetrics 
 import sttp.tapir.ztapir.ZServerEndpoint
 import sttp.tapir.ztapir.RichZServerEndpoint
 
-
-import MetricsConfig.metrics
-
 object AppEndpoints:
-  
-  // Initialise API endpoints
-  val apiEndpoints: List[ZServerEndpoint[AppEnv, Any]] =
-    storageEndpoints.map(_.widen) ++
-    ingredientsEndpoints.map(_.widen) ++
-    usersEndpoints.map(_.widen) ++
-    recipeEndpoints.map(_.widen) ++
-    shoppingListEndpoints.map(_.widen) ++
-    invitationEndpoints.map(_.widen)
-
-  apiEndpoints :+ metrics.metricsEndpoint.widen[AppEnv]
+  val endpoints: List[ZServerEndpoint[AppEnv, Any]]
+    =  storageEndpoints.map(_.widen)
+    ++ ingredientsEndpoints.map(_.widen)
+    ++ usersEndpoints.map(_.widen)
+    ++ recipeEndpoints.map(_.widen)
+    ++ shoppingListEndpoints.map(_.widen)
+    ++ invitationEndpoints.map(_.widen)

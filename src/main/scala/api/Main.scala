@@ -5,53 +5,51 @@ import _root_.db.repositories.*
 import _root_.db.DataSourceDescription
 
 import sttp.tapir.*
-import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
-
-import MetricsConfig.metrics
 import com.augustnagro.magnum.magzio.Transactor
+import sttp.tapir.server.ziohttp.ZioHttpServerOptions
 
 object Main extends ZIOAppDefault:
-
-  // Configure server options with the metrics interceptor
-  private val serverOptions: ZioHttpServerOptions[AppEnv] =
+  val serverOptions: ZioHttpServerOptions[AppEnv] =
     ZioHttpServerOptions
       .customiseInterceptors[AppEnv]
-      .metricsInterceptor(metrics.metricsInterceptor()) // Adds response time tracking
+      .metricsInterceptor(MetricsConfig.metrics.metricsInterceptor())
       .options
 
-  // Define Swagger endpoints with the server options
-  val swaggerEndpoints: Routes[AppEnv, Response] =
-    ZioHttpInterpreter(serverOptions).toHttp(
-      SwaggerInterpreter()
-        .fromServerEndpoints(
-          AppEndpoints.apiEndpoints,
-          "CookCookhNya",
-          "1.0"
-        )
-    )
+  val swaggerEndpoints: Routes[AppEnv, Response] = ZioHttpInterpreter(serverOptions).toHttp(
+    SwaggerInterpreter()
+      .fromServerEndpoints(
+        AppEndpoints.endpoints,
+        "CookCookhNya",
+        "1.0"
+      )
+  )
 
-  // Define API endpoints with the server options
   val endpoints: Routes[AppEnv, Response] =
-    ZioHttpInterpreter(serverOptions).toHttp(AppEndpoints.apiEndpoints)
+    ZioHttpInterpreter(serverOptions).toHttp(AppEndpoints.endpoints)
 
-  // Combine all routes
-  val app: Routes[AppEnv, Response] = endpoints ++ swaggerEndpoints
+  val metricsEndpoints: Routes[AppEnv, Response] =
+    ZioHttpInterpreter(serverOptions).toHttp(List(MetricsConfig.metrics.metricsEndpoint))
 
-  // Define the repository layer
-  val reposLayer: RLayer[Transactor & InvitationsSecretKey, 
-    IngredientsRepo & 
-    InvitationsRepo & 
-    RecipesDomainRepo & 
-    RecipesRepo & 
-    RecipeIngredientsRepo & 
-    ShoppingListsRepo & 
-    StorageIngredientsRepo & 
-    StorageMembersRepo & 
-    StoragesRepo & 
-    UsersRepo] =
+  val app: Routes[AppEnv, Response] =
+    swaggerEndpoints ++ endpoints ++ metricsEndpoints
+
+  val reposLayer:
+    RLayer[Transactor & InvitationsSecretKey
+      , IngredientsRepo
+      & InvitationsRepo
+      & RecipesDomainRepo
+      & RecipesRepo
+      & RecipeIngredientsRepo
+      & ShoppingListsRepo
+      & StorageIngredientsRepo
+      & StorageMembersRepo
+      & StoragesRepo
+      & UsersRepo
+    ] =
     IngredientsRepo.layer ++
     InvitationsRepo.layer ++
     RecipeIngredientsRepo.layer ++
@@ -63,11 +61,9 @@ object Main extends ZIOAppDefault:
     StoragesRepo.layer ++
     UsersRepo.layer
 
-  // Override the run method to start the server
-  override def run: ZIO[Any, Throwable, Unit] =
-    Server
-      .serve(app)
-      .provideSomeLayer[AppEnv](Server.defaultWithPort(8080))
+  override def run =
+    Server.serve(app)
+      .provideSomeLayer(Server.defaultWithPort(8080))
       .provideLayer(
         DataSourceDescription.layerFromEnv >>> dbLayer >+>
         (InvitationsSecretKey.layerFromEnv >>> reposLayer)
