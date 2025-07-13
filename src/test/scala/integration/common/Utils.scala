@@ -91,16 +91,17 @@ object Utils:
       (1 to n).map(_ => createIngredient).toVector
     )
 
-  def createRecipe(ingredientIds: Vector[IngredientId]): ZIO[
-    AuthenticatedUser & RecipesRepo,
+  def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
+    RecipesRepo,
     InternalServerError | DbError,
     RecipeId
   ] =
     for
       name <- randomString
       link <- randomString.map(Some(_))
-      recipeId <- ZIO.serviceWithZIO[RecipesRepo](
-        _.addRecipe(name, link, ingredientIds.toList)
+      recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
+        .addRecipe(name, link, ingredientIds.toList)
+        .provideUser(user)
       )
     yield recipeId
 

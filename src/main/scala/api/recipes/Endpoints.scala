@@ -1,11 +1,15 @@
 package api.recipes
 
+import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
 
-val recipesEndpoint =
+val recipesEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
+  recipesEndpoint()
+
+def recipesEndpoint(path: String = "recipes"): Endpoint[Unit, Unit, Unit, Unit, Any] =
   endpoint
     .tag("Recipes")
-    .in("recipes")
+    .in(path)
 
 val recipeEndpoints = List(
   create.widen,
