@@ -24,6 +24,19 @@ object DbPublicationRequestStatus:
       'accepted',
       'rejected'
     );
+
+    CREATE TRIGGER update_timestamp
+    BEFORE UPDATE ON recipe_publication_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_set_updated_at();
+
+    CREATE FUNCTION trigger_set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = CURRENT_TIMESTAMP;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
   """
 
   given JdbcDecoder[DbPublicationRequestStatus](
