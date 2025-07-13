@@ -12,7 +12,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.repositories.RecipeIngredientsQueries.getAllIngredientsQ
 
 enum SearchIngredientsFilter:
   case Custom, Public, All
