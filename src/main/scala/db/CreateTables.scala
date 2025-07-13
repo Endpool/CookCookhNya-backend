@@ -3,13 +3,17 @@ package db
 import db.tables.*
 
 import com.augustnagro.magnum.magzio.*
+import com.augustnagro.magnum.FragWriter
 
-def createTables(xa: Transactor) = {
+def createTables(xa: Transactor) =
+  def sql(str: String) = Frag(str, Seq.empty, FragWriter.empty)
   xa.transact {
     val tableList = List(
       sql"""
-         CREATE EXTENSION IF NOT EXISTS pgcrypto
-       """,
+        CREATE EXTENSION IF NOT EXISTS pgcrypto
+      """,
+
+      sql(DbPublicationRequestStatus.createType),
 
       // alias cannot be referenced with magnum DDL due to its option type
       sql"""
@@ -80,25 +84,25 @@ def createTables(xa: Transactor) = {
       """,
 
       sql"""
-       CREATE TABLE IF NOT EXISTS $shoppingListTable(
-         ${shoppingListTable.ownerId} BIGINT NOT NULL,
-         ${shoppingListTable.ingredientId} UUID NOT NULL,
-         PRIMARY KEY (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId}),
-         FOREIGN KEY (${shoppingListTable.ownerId}) REFERENCES $usersTable(${usersTable.id}) ON DELETE CASCADE,
-         FOREIGN KEY (${shoppingListTable.ingredientId}) REFERENCES $ingredientsTable(${ingredientsTable.id}) ON DELETE CASCADE
-       )
-     """,
+        CREATE TABLE IF NOT EXISTS $shoppingListTable(
+          ${shoppingListTable.ownerId} BIGINT NOT NULL,
+          ${shoppingListTable.ingredientId} UUID NOT NULL,
+          PRIMARY KEY (${shoppingListTable.ownerId}, ${shoppingListTable.ingredientId}),
+          FOREIGN KEY (${shoppingListTable.ownerId}) REFERENCES $usersTable(${usersTable.id}) ON DELETE CASCADE,
+          FOREIGN KEY (${shoppingListTable.ingredientId}) REFERENCES $ingredientsTable(${ingredientsTable.id}) ON DELETE CASCADE
+        )
+      """,
 
       sql"""
-       CREATE TABLE IF NOT EXISTS $storageInvitationTable(
-         ${storageInvitationTable.storageId} UUID NOT NULL,
-         ${storageInvitationTable.invitation} VARCHAR(255) NOT NULL,
-         PRIMARY KEY (${storageInvitationTable.storageId}, ${storageInvitationTable.invitation}),
-         FOREIGN KEY (${storageInvitationTable.storageId}) REFERENCES $storagesTable(${storagesTable.id}) ON DELETE CASCADE
-       )
-     """
+        CREATE TABLE IF NOT EXISTS $storageInvitationTable(
+          ${storageInvitationTable.storageId} UUID NOT NULL,
+          ${storageInvitationTable.invitation} VARCHAR(255) NOT NULL,
+          PRIMARY KEY (${storageInvitationTable.storageId}, ${storageInvitationTable.invitation}),
+          FOREIGN KEY (${storageInvitationTable.storageId}) REFERENCES $storagesTable(${storagesTable.id}) ON DELETE CASCADE
+        )
+      """,
+      sql(DbRecipePublicationRequest.createTable),
     )
 
     tableList.map(_.update.run())
   }
-}
