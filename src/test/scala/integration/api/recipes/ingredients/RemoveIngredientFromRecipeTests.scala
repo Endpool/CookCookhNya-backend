@@ -199,4 +199,81 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(recipeIngredients.contains(ingredientId))
     },
+    test("""When removing non-existant ingredient from created unpublished recipe without that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        user <- registerUser
+        initialRecipeIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialRecipeIngredients)
+
+        ingredientId <- getRandomUUID
+
+        resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialRecipeIngredients)
+    },
+    test("""When removing other user's custom ingredient from created unpublished recipe without that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        otherUser <- registerUser
+        ingredientId <- createCustomIngredient(otherUser)
+
+        user <- registerUser
+        initialRecipeIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialRecipeIngredients)
+
+        resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialRecipeIngredients)
+    },
+    test("""When removing public ingredient from created unpublished recipe without that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        user <- registerUser
+        initialRecipeIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialRecipeIngredients)
+
+        ingredientId <- createPublicIngredient
+
+        resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialRecipeIngredients)
+    },
+    test("""When removing custom ingredient from created unpublished recipe without that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        user <- registerUser
+        initialRecipeIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialRecipeIngredients)
+
+        ingredientId <- createCustomIngredient(user)
+
+        resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialRecipeIngredients)
+    },
   ).provideLayer(testLayer)
