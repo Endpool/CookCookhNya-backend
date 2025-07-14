@@ -1,17 +1,17 @@
 package db.repositories
 
 import api.Authentication.AuthenticatedUser
-import db.tables.{DbShoppingList, shoppingListTable}
-import db.{DbError, handleDbError}
-import domain.{IngredientId, IngredientNotFound, StorageId, UserId}
+import db.tables.DbShoppingList
+import db.DbError
+import domain.{IngredientId, StorageId, UserId}
 import db.QuillConfig.provideDS
 import db.repositories.StorageIngredientsQueries.addIngredientToStorageQ
+import db.QuillConfig.ctx.*
+import db.repositories.ShoppingListsQueries.*
 
 import javax.sql.DataSource
 import com.augustnagro.magnum.magzio.*
 import io.getquill.*
-import db.QuillConfig.ctx.*
-import db.repositories.ShoppingListsQueries.*
 import zio.{ZIO, ZLayer}
 
 trait ShoppingListsRepo:
