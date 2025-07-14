@@ -12,7 +12,7 @@ trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[DbError, List[IngredientId]]
   def addIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
   def addIngredients(recipeId: RecipeId, ingredientIds: List[IngredientId]): IO[DbError, Unit]
-  def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
+  def removeIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
 
 private inline def recipeIngredients = query[DbRecipeIngredient]
 
@@ -35,7 +35,7 @@ final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends Recip
     IO[DbError, Unit] =
     run(addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))).unit.provideDS
 
-  override def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId):
+  override def removeIngredient(recipeId: RecipeId, ingredientId: IngredientId):
     IO[DbError, Unit] =
     run(deleteIngredientQ(lift(recipeId), lift(ingredientId))).unit.provideDS
 
