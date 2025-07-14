@@ -43,4 +43,14 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         )
       yield assertTrue(resp.status == Status.Unauthorized)
     },
+    test("When authorized should get 204") {
+      for
+        user <- registerUser
+
+        recipeId <- createRecipe(user, Vector.empty)
+        ingredientId <- createIngredient
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+      yield assertTrue(resp.status == Status.NoContent)
+    },
   ).provideLayer(testLayer)
