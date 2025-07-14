@@ -17,6 +17,8 @@ import zio.http.Response
 import zio.test.*
 import zio.Cause
 import domain.RecipeId
+import db.repositories.RecipeIngredientsRepo
+import db.tables.recipeIngredientsTable
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
@@ -52,5 +54,21 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
       yield assertTrue(resp.status == Status.NoContent)
+    },
+    test("When adding public ingredient to created unpublished recipe, ingredient should be added to the recipe") {
+      for
+        user <- registerUser
+
+        recipeId <- createRecipe(user, Vector.empty)
+        ingredientId <- createIngredient
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients.contains(ingredientId))
     },
   ).provideLayer(testLayer)
