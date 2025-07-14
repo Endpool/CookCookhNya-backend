@@ -64,4 +64,20 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NoContent)
          && assertTrue(recipeIngredients.contains(ingredientId))
     },
+    test("When adding custom ingredient to created unpublished recipe, ingredient should be added to the recipe") {
+      for
+        user <- registerUser
+
+        recipeId <- createRecipe(user, Vector.empty)
+        ingredientId <- createCustomIngredient(user)
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients.contains(ingredientId))
+    },
   ).provideLayer(testLayer)

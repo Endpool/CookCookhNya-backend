@@ -86,6 +86,17 @@ object Utils:
       )
     )
 
+  def createCustomIngredient(creator: AuthenticatedUser):
+    ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+    randomString.flatMap(name =>
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addCustom(name)
+        .provideUser(creator)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
+    )
+
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
     ZIO.collectAll(
       (1 to n).map(_ => createIngredient).toVector
