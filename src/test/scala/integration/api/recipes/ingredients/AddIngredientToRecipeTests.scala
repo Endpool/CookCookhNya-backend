@@ -145,4 +145,25 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
+    test("""When adding public ingredient to published recipe,
+            should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
+      for
+        recipeId <- registerUser.flatMap(createRecipe(_, Vector.empty))
+        _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
+
+        ingredientId <- createPublicIngredient
+
+        user <- registerUser
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        error <- resp.body.asString.map(decode[CannotModifyPublishedRecipe])
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.Forbidden)
+         && assertTrue(error.is(_.right).recipeId == recipeId)
+         && assertTrue(!recipeIngredients.contains(ingredientId))
+    },
   ).provideLayer(testLayer)
