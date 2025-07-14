@@ -23,6 +23,10 @@ final case class RecipeNotFound(
   recipeId: String,
   message: String = "Recipe not found",
 )
+final case class RecipeAccessForbidden(
+  recipeId: RecipeId,
+  message: String = "Access to the recipe is forbidden",
+)
 
 final case class InternalServerError(
   message: String = "Something went wrong on the server side",

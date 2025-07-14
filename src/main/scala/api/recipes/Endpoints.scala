@@ -16,5 +16,6 @@ val recipeEndpoints = List(
   getSuggested.widen,
   get.widen,
   searchAll.widen,
+  delete.widen,
   requestPublication.widen,
 )

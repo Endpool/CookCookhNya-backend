@@ -77,8 +77,11 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
-      run(getVisibleRecipeQ(lift(user.userId), lift(recipeId)).delete)
-        .unit.provideDS
+      run(
+        customRecipesQ(lift(user.userId))
+          .filter(_.id == lift(recipeId))
+          .delete
+      ).unit.provideDS
     )
 
   override def publish(recipeId: RecipeId): IO[DbError, Unit] =
