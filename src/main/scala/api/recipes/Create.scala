@@ -43,9 +43,9 @@ private def createHandler(recipe: CreateRecipeReqBody):
       .map(_.id)
       .filter(id => liftQuery(recipe.ingredients).contains(id))
   ).provideDS(using dataSource).orElseFail(InternalServerError())
-  uknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
-  _ <- ZIO.fail(IngredientNotFound(uknownIngredientIds.head.toString))
-    .when(uknownIngredientIds.nonEmpty)
+  unknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
+  _ <- ZIO.fail(IngredientNotFound(unknownIngredientIds.head.toString))
+    .when(unknownIngredientIds.nonEmpty)
 
   recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
     .addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)

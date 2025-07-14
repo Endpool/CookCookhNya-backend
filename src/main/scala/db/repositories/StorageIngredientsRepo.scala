@@ -5,6 +5,7 @@ import db.DbError
 import domain.{IngredientId, StorageId}
 
 import io.getquill.*
+import db.QuillConfig.ctx.*
 import javax.sql.DataSource
 import zio.{RLayer, IO, ZLayer}
 
@@ -78,6 +79,10 @@ object StorageIngredientsQueries:
       .filter(si => si.storageId == storageId && si.ingredientId == ingredientId)
       .map(_ => 1)
       .nonEmpty
+
+  inline def addIngredientToStorageQ(inline storageId: StorageId, inline ingredientId: IngredientId) =
+    query[DbStorageIngredient]
+      .insertValue(DbStorageIngredient(storageId, ingredientId))
 
 object StorageIngredientsRepo:
   val layer: RLayer[DataSource, StorageIngredientsRepo] =

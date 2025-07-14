@@ -11,4 +11,5 @@ val shoppingListEndpoints = List(
   addIngredients.widen,
   getIngredients.widen,
   deleteIngredients.widen,
+  buy.widen
 )
