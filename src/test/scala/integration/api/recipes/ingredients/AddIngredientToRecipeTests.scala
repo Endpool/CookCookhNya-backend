@@ -12,6 +12,7 @@ import io.circe.parser.*
 import zio.http.*
 import zio.*
 import zio.test.*
+import domain.RecipeNotFound
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
@@ -114,12 +115,33 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
-        recipeNotFound <- resp.body.asString.map(decode[IngredientNotFound])
+        recipeNotFound <- resp.body.asString.map(decode[RecipeNotFound])
         recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
           .getAllIngredients(recipeId)
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId.toString)
+         && assertTrue(!recipeIngredients.contains(ingredientId))
+    },
+    test("""When adding custom ingredient to other user's custom unpublished recipe,
+            should get 404 recipe not found and ingredient should NOT be added to the recipe""") {
+      for
+        otherUser <- registerUser
+        recipeId <- createRecipe(otherUser, Vector.empty)
+
+        user <- registerUser
+        ingredientId <- createCustomIngredient(user)
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeNotFound <- resp.body.asString.map(decode[RecipeNotFound])
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId.toString)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
   ).provideLayer(testLayer)
