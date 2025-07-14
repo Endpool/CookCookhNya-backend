@@ -100,7 +100,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
                 )
               ))
       },
-      test("2 users, 1 shared storage and 1 personal storage for every user") {
+      test("2 users, 1 shared storage and 1 owned storage for every user") {
         for
           user1 <- registerUser
           user2 <- registerUser
@@ -186,7 +186,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           }
         yield assertCase1 && assertCase2
       },
-      test("When get other user's personal recipe, should get 404") {
+      test("When get other user's custom recipe, should get 404") {
         for
           user1 <- registerUser
           user2 <- registerUser

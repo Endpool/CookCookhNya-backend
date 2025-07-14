@@ -16,12 +16,12 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class CannotPublishRecipeWithPersonalIngredients(
+final case class CannotPublishRecipeWithCustomIngredients(
   ingredients: Seq[IngredientId],
-  message: String = "Cannot publish recipe with personal ingredients",
+  message: String = "Cannot publish recipe with custom ingredients",
 )
-object CannotPublishRecipeWithPersonalIngredients:
-  val variant = BadRequest.variantJson[CannotPublishRecipeWithPersonalIngredients]
+object CannotPublishRecipeWithCustomIngredients:
+  val variant = BadRequest.variantJson[CannotPublishRecipeWithCustomIngredients]
 
 final case class CannotPublishPublishedRecipe(
   recipeId: RecipeId,
@@ -43,7 +43,7 @@ private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
     .errorOut(oneOf(
       serverErrorVariant,
       recipeNotFoundVariant,
-      CannotPublishRecipeWithPersonalIngredients.variant,
+      CannotPublishRecipeWithCustomIngredients.variant,
       CannotPublishPublishedRecipe.variant,
     ))
     .out(statusCode(NoContent))
@@ -52,7 +52,7 @@ private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
 private def requestPublicationHandler(recipeId: RecipeId):
   ZIO[AuthenticatedUser & PublishEnv,
       InternalServerError | CannotPublishPublishedRecipe |
-      CannotPublishRecipeWithPersonalIngredients | RecipeNotFound,
+      CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
       Unit] =
   for
     recipe <- ZIO.serviceWithZIO[RecipesRepo](_
@@ -64,15 +64,15 @@ private def requestPublicationHandler(recipeId: RecipeId):
 
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     dataSource <- ZIO.service[DataSource]
-    personalIngredientIdsInRecipe <- run(
+    customIngredientIdsInRecipe <- run(
       IngredientsQueries.customIngredientsQ(lift(userId))
         .filter(i => liftQuery(recipe.ingredients).contains(i.id))
         .map(_.id)
     ).provideDS(using dataSource)
       .orElseFail(InternalServerError())
 
-    _ <- ZIO.fail(CannotPublishRecipeWithPersonalIngredients(personalIngredientIdsInRecipe))
-      .when(personalIngredientIdsInRecipe.nonEmpty)
+    _ <- ZIO.fail(CannotPublishRecipeWithCustomIngredients(customIngredientIdsInRecipe))
+      .when(customIngredientIdsInRecipe.nonEmpty)
 
     _ <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
       .requestPublication(recipeId)

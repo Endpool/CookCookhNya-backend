@@ -62,7 +62,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(recipe.is(_.some).sourceLink == recipeSourceLink)
          && assertTrue(recipe.get.ingredients hasSameElementsAs ingredientIds)
     },
-    test("When create valid recipe with global and personal ingredients, recipe should be added to db") {
+    test("When create valid recipe with global and custom ingredients, recipe should be added to db") {
       for
         user <- registerUser
         recipeName <- randomString
@@ -73,11 +73,11 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
-            personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
+            customIngredientIds <- Gen.alphaNumericString.runCollectN(10)
               .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(user)
               .map(_.map(_.id))
               .map(Vector.from)
-          yield globalIngredientIds ++ personalIngredientIds
+          yield globalIngredientIds ++ customIngredientIds
         )
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
@@ -119,7 +119,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(ingredientNotFound.isRight)
          && assertTrue(recipeDoesNotExist)
     },
-    test("When create recipe with other user's personal ingredients, should get 404 ingredient not found and recipe should NOT be added to db") {
+    test("When create recipe with other user's custom ingredients, should get 404 ingredient not found and recipe should NOT be added to db") {
       for
         otherUser <- registerUser
         recipeName <- randomString
@@ -130,11 +130,11 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
-            personalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
+            customIngredientIds <- Gen.alphaNumericString.runCollectN(10)
               .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(otherUser)
               .map(_.map(_.id))
               .map(Vector.from)
-          yield globalIngredientIds ++ personalIngredientIds
+          yield globalIngredientIds ++ customIngredientIds
         )
 
         user <- registerUser
