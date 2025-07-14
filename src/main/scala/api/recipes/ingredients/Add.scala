@@ -6,23 +6,12 @@ import api.EndpointErrorVariants.{
   serverErrorVariant,
   recipeNotFoundVariant,
 }
-import api.variantJson
 import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo}
 import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId, RecipeNotFound}
 
-import io.circe.generic.auto.*
-import sttp.model.StatusCode.{NoContent, Forbidden}
-import sttp.tapir.generic.auto.*
+import sttp.model.StatusCode.NoContent
 import sttp.tapir.ztapir.*
 import zio.ZIO
-
-final case class CannotModifyPublishedRecipe(
-  recipeId: RecipeId,
-  messae: String = "Cannot modify published recipe",
-)
-
-object CannotModifyPublishedRecipe:
-  val variant = Forbidden.variantJson[CannotModifyPublishedRecipe]
 
 private type AddEnv = RecipeIngredientsRepo & IngredientsRepo & RecipesRepo
 

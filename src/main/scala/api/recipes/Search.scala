@@ -4,6 +4,7 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.*
 import db.repositories.{RecipesRepo, StorageIngredientsRepo}
+import db.tables.DbRecipe
 import domain.{RecipeId, InternalServerError}
 
 import io.circe.generic.auto.*
@@ -12,7 +13,6 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.tables.DbRecipe
 
 case class RecipeSearchResp(
   recipeId: RecipeId,
