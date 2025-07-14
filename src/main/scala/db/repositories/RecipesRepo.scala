@@ -20,6 +20,7 @@ trait RecipesRepo:
   def getAllPublic: IO[DbError, List[DbRecipe]]
 
   def isVisible(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean]
+  def isPublic(recipeId: RecipeId): IO[DbError, Boolean]
 
   def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit]
 
@@ -82,6 +83,13 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
           .nonEmpty
       ).provideDS
     )
+
+  override def isPublic(recipeId: RecipeId): IO[DbError, Boolean] =
+    run(
+      publicRecipesQ
+        .filter(_.id == lift(recipeId))
+        .nonEmpty
+    ).provideDS
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>

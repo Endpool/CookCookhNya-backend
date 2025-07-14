@@ -1,25 +1,28 @@
 package api.recipes.ingredients
 
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.{
   ingredientNotFoundVariant,
   serverErrorVariant,
+  recipeNotFoundVariant,
 }
-import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
-import db.repositories.RecipeIngredientsRepo
-import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId}
+import api.variantJson
+import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo}
+import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId, RecipeNotFound}
 
-import sttp.model.StatusCode
+import io.circe.generic.auto.*
+import sttp.model.StatusCode.{NoContent, Forbidden}
+import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.repositories.IngredientsRepo
-import domain.RecipeNotFound
-import db.repositories.RecipesRepo
-import api.EndpointErrorVariants.recipeNotFoundVariant
 
 final case class CannotModifyPublishedRecipe(
   recipeId: RecipeId,
   messae: String = "Cannot modify published recipe",
 )
+
+object CannotModifyPublishedRecipe:
+  val variant = Forbidden.variantJson[CannotModifyPublishedRecipe]
 
 private type AddEnv = RecipeIngredientsRepo & IngredientsRepo & RecipesRepo
 
@@ -27,17 +30,18 @@ private val add: ZServerEndpoint[AddEnv, Any] =
   recipesIngredientsEndpoint
     .put
     .in(path[IngredientId]("ingredientId"))
-    .out(statusCode(StatusCode.NoContent))
+    .out(statusCode(NoContent))
     .errorOut(oneOf(
       ingredientNotFoundVariant,
       recipeNotFoundVariant,
+      CannotModifyPublishedRecipe.variant,
       serverErrorVariant,
     ))
     .zSecuredServerLogic(addHandler)
 
 private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
   ZIO[AuthenticatedUser & AddEnv,
-      InternalServerError | IngredientNotFound | RecipeNotFound,
+      InternalServerError | IngredientNotFound | RecipeNotFound | CannotModifyPublishedRecipe,
       Unit] = for
   ingredientIsVisible <- ZIO.serviceWithZIO[IngredientsRepo](_
     .isVisible(ingredientId)
@@ -52,6 +56,13 @@ private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
   )
   _ <- ZIO.fail(RecipeNotFound(recipeId))
     .unless(recipeIsVisible)
+
+  recipeIsPublic <- ZIO.serviceWithZIO[RecipesRepo](_
+    .isPublic(recipeId)
+    .orElseFail(InternalServerError())
+  )
+  _ <- ZIO.fail(CannotModifyPublishedRecipe(recipeId))
+    .when(recipeIsPublic)
 
   _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
     .addIngredient(recipeId, ingredientId)
