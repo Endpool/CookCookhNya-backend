@@ -13,18 +13,18 @@ import zio.{ZIO, IO, RLayer, ZLayer}
 trait RecipesRepo:
   def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
     ZIO[AuthenticatedUser, DbError, RecipeId]
-  def getRecipe(recipeId: RecipeId):
-    ZIO[AuthenticatedUser, DbError, Option[Recipe]]
-  def getAll:
-    ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
-  def getAllCustom:
-    ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
-  def getAllPublic:
-    IO[DbError, List[DbRecipe]]
-  def deleteRecipe(recipeId: RecipeId):
-    ZIO[AuthenticatedUser, DbError, Unit]
-  def publish(recipeId: RecipeId):
-    IO[DbError, Unit]
+
+  def getRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Option[Recipe]]
+  def getAll: ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
+  def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
+  def getAllPublic: IO[DbError, List[DbRecipe]]
+
+  def isVisible(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean]
+  def isPublic(recipeId: RecipeId): IO[DbError, Boolean]
+
+  def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit]
+
+  def publish(recipeId: RecipeId): IO[DbError, Unit]
 
 final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
   import db.QuillConfig.ctx.*
@@ -42,8 +42,10 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
           .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
-      _ <- run(RecipeIngredientsQueries
-        .addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
+      _ <- run(
+        liftQuery(ingredientIds).foreach(
+          RecipeIngredientsQueries.addIngredientQ(lift(recipeId), _)
+        )
       )
     yield recipeId
   }.provideDS
@@ -74,6 +76,22 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
 
   override def getAllPublic: IO[DbError, List[DbRecipe]] =
     run(publicRecipesQ).provideDS
+
+  override def isVisible(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(
+        visibleRecipesQ(lift(user.userId))
+          .filter(_.id == lift(recipeId))
+          .nonEmpty
+      ).provideDS
+    )
+
+  override def isPublic(recipeId: RecipeId): IO[DbError, Boolean] =
+    run(
+      publicRecipesQ
+        .filter(_.id == lift(recipeId))
+        .nonEmpty
+    ).provideDS
 
   override def deleteRecipe(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Unit] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>

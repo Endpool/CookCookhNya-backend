@@ -3,6 +3,8 @@ package api.recipes
 import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
 
+import api.recipes.ingredients.recipesIngredientsEndpoints
+
 val recipesEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
   recipesEndpoint()
 
@@ -17,4 +19,4 @@ val recipeEndpoints = List(
   get.widen,
   searchAll.widen,
   requestPublication.widen,
-)
+) ++ recipesIngredientsEndpoints.map(_.widen)

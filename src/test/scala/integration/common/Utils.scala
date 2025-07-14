@@ -35,6 +35,9 @@ object Utils:
       =  seq1.length == seq2.length // for optimization
       && seq1.sorted == seq2.sorted
 
+    def isSubsetOf(seq2: Seq[A]): Boolean =
+      seq1.diff(seq2).isEmpty
+
   extension[R, E, A](zio: ZIO[AuthenticatedUser & R, E, A])
     def provideUser(user: AuthenticatedUser): ZIO[R, E, A] =
       zio.provideSomeLayer(ZLayer.succeed(user))
@@ -77,7 +80,7 @@ object Utils:
     .runHead
     .someOrElse("randomString")
 
-  def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+  def createPublicIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
       ZIO.serviceWithZIO[IngredientsRepo](_
         .addPublic(name)
@@ -86,9 +89,20 @@ object Utils:
       )
     )
 
+  def createCustomIngredient(creator: AuthenticatedUser):
+    ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+    randomString.flatMap(name =>
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addCustom(name)
+        .provideUser(creator)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
+    )
+
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
     ZIO.collectAll(
-      (1 to n).map(_ => createIngredient).toVector
+      (1 to n).map(_ => createPublicIngredient).toVector
     )
 
   def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[

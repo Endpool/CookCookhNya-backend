@@ -1,11 +1,10 @@
 package db.repositories
 
 import api.Authentication.AuthenticatedUser
-import db.{DbError, handleDbError}
-import db.tables.{DbIngredient, DbIngredientCreator, ingredientsTable}
+import db.DbError
+import db.tables.DbIngredient
 import domain.{IngredientId, UserId}
 
-import com.augustnagro.magnum.magzio.*
 import io.getquill.*
 import javax.sql.DataSource
 import zio.{IO, RLayer, ZIO, ZLayer}
@@ -18,70 +17,85 @@ trait IngredientsRepo:
   def getAllPublic: IO[DbError, List[DbIngredient]]
   def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
   def getAll: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
+  def isVisible(id: IngredientId): ZIO[AuthenticatedUser, DbError, Boolean]
   def remove(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
 
-private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSource)
-  extends Repo[DbIngredientCreator, DbIngredient, IngredientId] with IngredientsRepo:
-
-  override def addPublic(name: String): IO[DbError, DbIngredient] =
-    xa.transact(insertReturning(DbIngredientCreator(None, name)))
-      .mapError(handleDbError)
-
-  override def addCustom(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient] =
-    ZIO.serviceWithZIO[AuthenticatedUser] { case AuthenticatedUser(userId) =>
-      xa.transact(insertReturning(DbIngredientCreator(Some(userId), name)))
-        .mapError(handleDbError)
-    }
-
-  override def remove(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] = for
-    ownerId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    _       <- xa.transact {
-      sql"""
-        DELETE FROM $ingredientsTable
-        WHERE ${ingredientsTable.id} = $id
-          AND ${ingredientsTable.ownerId} = $ownerId
-      """.update.run()
-    }.mapError(handleDbError)
-  yield ()
-
+private final case class IngredientsRepoLive(dataSource: DataSource) extends IngredientsRepo:
   private given DataSource = dataSource
   import db.QuillConfig.ctx.*
   import db.QuillConfig.provideDS
   import IngredientsQueries.*
 
+  override def addPublic(name: String): IO[DbError, DbIngredient] =
+    run(
+      ingredientsQ
+        .insert(_.name -> lift(name))
+        .returning(ingredient => ingredient)
+    ).provideDS
+
+  override def addCustom(name: String): ZIO[AuthenticatedUser, DbError, DbIngredient] =
+    ZIO.serviceWithZIO[AuthenticatedUser] { owner =>
+      run(
+        ingredientsQ
+          .insert(_.name -> lift(name), _.ownerId -> Some(lift(owner.userId)))
+          .returning(ingredient => ingredient)
+      ).provideDS
+    }
+
+  override def remove(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit] =
+    ZIO.serviceWithZIO[AuthenticatedUser] { owner =>
+      run(
+        customIngredientsQ(lift(owner.userId))
+          .filter(_.id == lift(id))
+          .delete
+      ).unit.provideDS
+    }
+
   override def getAllPublic: IO[DbError, List[DbIngredient]] =
-    run(getAllPublicQ).provideDS
+    run(publicIngredientsQ).provideDS
 
   override def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbIngredient]] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
-      run(getAllCustomQ(lift(user.userId))).provideDS
+      run(customIngredientsQ(lift(user.userId))).provideDS
     )
 
   override def getAll: ZIO[AuthenticatedUser, DbError, List[DbIngredient]] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
-      run(getAllVisibleQ(lift(user.userId))).provideDS
+      run(visibleIngredientsQ(lift(user.userId))).provideDS
     )
 
   override def get(id: IngredientId): ZIO[AuthenticatedUser, DbError, Option[DbIngredient]] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>
-      run(getAllVisibleQ(lift(user.userId)).filter(_.id == (lift(id))))
+      run(visibleIngredientsQ(lift(user.userId)).filter(_.id == (lift(id))))
         .map(_.headOption).provideDS
     )
 
   override def getPublic(id: IngredientId): IO[DbError, Option[DbIngredient]] =
-    run(getAllPublicQ.filter(_.id == (lift(id))))
+    run(publicIngredientsQ.filter(_.id == (lift(id))))
       .map(_.headOption).provideDS
 
+  override def isVisible(id: IngredientId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(
+        visibleIngredientsQ(lift(user.userId))
+          .filter(_.id == (lift(id)))
+          .nonEmpty
+      ).provideDS
+    )
+
 object IngredientsQueries:
-  inline def getAllPublicQ: Quoted[EntityQuery[DbIngredient]] =
-    query[DbIngredient].filter(_.ownerId.isEmpty)
+  inline def ingredientsQ: EntityQuery[DbIngredient] =
+    query[DbIngredient]
 
-  inline def getAllCustomQ(inline userId: UserId): Quoted[EntityQuery[DbIngredient]] =
-    query[DbIngredient].filter(_.ownerId == Some(userId))
+  inline def publicIngredientsQ: EntityQuery[DbIngredient] =
+    ingredientsQ.filter(_.ownerId.isEmpty)
 
-  inline def getAllVisibleQ(inline userId: UserId): Quoted[EntityQuery[DbIngredient]] =
-    query[DbIngredient].filter(_.ownerId.forall(_ == userId))
+  inline def customIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
+    ingredientsQ.filter(_.ownerId == Some(userId))
+
+  inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
+    ingredientsQ.filter(i => i.ownerId == None || i.ownerId == Some(userId))
 
 object IngredientsRepo:
-  val layer: RLayer[Transactor & DataSource, IngredientsRepo] =
+  val layer: RLayer[DataSource, IngredientsRepo] =
     ZLayer.fromFunction(IngredientsRepoLive.apply)

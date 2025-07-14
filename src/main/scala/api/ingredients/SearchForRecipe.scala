@@ -47,7 +47,7 @@ private def searchForRecipeHandler(
     dataSource <- ZIO.service[DataSource]
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     allIngredientsAvailability <- run(
-      IngredientsQueries.getAllVisibleQ(lift(userId))
+      IngredientsQueries.visibleIngredientsQ(lift(userId))
         .leftJoin(quillQuery[DbRecipeIngredient])
         .on((i, ri) => i.id == ri.ingredientId && ri.recipeId == lift(recipeId))
         .map((i, ri) => IngredientsForRecipeResp(i.id, i.name, ri.map(_.recipeId).isDefined))

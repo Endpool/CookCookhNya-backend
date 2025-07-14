@@ -47,7 +47,7 @@ private def searchForStorageHandler(
     dataSource <- ZIO.service[DataSource]
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     allIngredientsAvailability <- run(
-      IngredientsQueries.getAllVisibleQ(lift(userId))
+      IngredientsQueries.visibleIngredientsQ(lift(userId))
         .leftJoin(quillQuery[DbStorageIngredient])
         .on((i, si) => i.id == si.ingredientId && si.storageId == lift(storageId))
         .map((i, si) => IngredientsForStorageResp(i.id, i.name, si.map(_.storageId).isDefined))

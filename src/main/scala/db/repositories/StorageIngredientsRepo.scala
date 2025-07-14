@@ -1,10 +1,9 @@
 package db.repositories
 
-import db.tables.{DbStorageIngredient, storageIngredientsTable}
-import db.{DbError, handleDbError}
-import domain.{IngredientId, StorageId, UserId}
+import db.tables.DbStorageIngredient
+import db.DbError
+import domain.{IngredientId, StorageId}
 
-import com.augustnagro.magnum.magzio.*
 import io.getquill.*
 import db.QuillConfig.ctx.*
 import javax.sql.DataSource
@@ -25,8 +24,8 @@ trait StorageIngredientsRepo:
 
   def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean]
 
-private final case class StorageIngredientsRepoLive(xa: Transactor, dataSource: DataSource)
-  extends Repo[DbStorageIngredient, DbStorageIngredient, (StorageId, UserId)] with StorageIngredientsRepo:
+private final case class StorageIngredientsRepoLive(dataSource: DataSource)
+  extends StorageIngredientsRepo:
 
   import db.QuillConfig.ctx.*
   import db.QuillConfig.provideDS
@@ -35,46 +34,48 @@ private final case class StorageIngredientsRepoLive(xa: Transactor, dataSource: 
   private given DataSource = dataSource
 
   override def addIngredientToStorage(storageId: StorageId, ingredientId: IngredientId):
-    IO[DbError, Unit] = run(addIngredientToStorageQ(lift(storageId), lift(ingredientId))).unit.provideDS
+    IO[DbError, Unit] =
+    run(
+      storageIngredientsQ
+        .insertValue(lift(DbStorageIngredient(storageId, ingredientId)))
+        .onConflictIgnore
+    ).unit.provideDS
 
   override def removeIngredientFromStorageById(storageId: StorageId, ingredientId: IngredientId):
     IO[DbError, Unit] =
-    xa.transact {
-      sql"""
-        DELETE FROM $storageIngredientsTable
-        WHERE ${storageIngredientsTable.storageId} = $storageId
-          AND ${storageIngredientsTable.ingredientId} = $ingredientId
-      """.update.run()
-      ()
-    }.mapError(handleDbError)
+    run(
+      storageIngredientsQ
+        .filter(si => si.storageId    == lift(storageId)
+                   && si.ingredientId == lift(ingredientId))
+        .delete
+    ).unit.provideDS
 
   override def removeIngredientsFromStorage(storageId: StorageId, ingredientIds: Vector[IngredientId]):
-    IO[DbError, Unit] = {
-    xa.transact {
-      sql"""
-        DELETE FROM $storageIngredientsTable
-        WHERE ${storageIngredientsTable.storageId} = $storageId
-        AND ${storageIngredientsTable.ingredientId} = ANY(${ingredientIds.toArray})
-      """.update.run()
-      ()
-    }.mapError(handleDbError)
-  }
+    IO[DbError, Unit] =
+    run(
+      storageIngredientsQ
+        .filter(si => si.storageId == lift(storageId)
+                   && liftQuery(ingredientIds).contains(si.ingredientId))
+        .delete
+    ).unit.provideDS
 
   override def getAllIngredientsFromStorage(storageId: StorageId):
     IO[DbError, Vector[IngredientId]] =
-    xa.transact {
-      sql"""
-        SELECT ${storageIngredientsTable.ingredientId} FROM $storageIngredientsTable
-        WHERE ${storageIngredientsTable.storageId} = $storageId
-      """.query[IngredientId].run()
-    }.mapError(handleDbError)
+    run(
+      storageIngredientsQ
+        .filter(_.storageId == lift(storageId))
+        .map(_.ingredientId)
+    ).map(Vector.from).provideDS
 
   override def inStorage(storageId: StorageId, ingredientId: IngredientId): IO[DbError, Boolean] =
     run(inStorageQ(lift(storageId), lift(ingredientId))).provideDS
 
 object StorageIngredientsQueries:
-  inline def inStorageQ(inline storageId: StorageId, inline ingredientId: IngredientId) =
+  inline def storageIngredientsQ: EntityQuery[DbStorageIngredient] =
     query[DbStorageIngredient]
+
+  inline def inStorageQ(inline storageId: StorageId, inline ingredientId: IngredientId) =
+    storageIngredientsQ
       .filter(si => si.storageId == storageId && si.ingredientId == ingredientId)
       .map(_ => 1)
       .nonEmpty
@@ -84,5 +85,5 @@ object StorageIngredientsQueries:
       .insertValue(DbStorageIngredient(storageId, ingredientId))
 
 object StorageIngredientsRepo:
-  val layer: RLayer[Transactor & DataSource, StorageIngredientsRepo] =
+  val layer: RLayer[DataSource, StorageIngredientsRepo] =
     ZLayer.fromFunction(StorageIngredientsRepoLive.apply)

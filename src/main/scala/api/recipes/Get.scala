@@ -71,7 +71,7 @@ private def getHandler(recipeId: RecipeId):
       .transact(rawRecipeQuery(userId, recipeId).run().headOption)
       .mapError(handleDbError)
     )
-  }.someOrFail(RecipeNotFound(recipeId.toString)).flatMap { rawResult =>
+  }.someOrFail(RecipeNotFound(recipeId)).flatMap { rawResult =>
     // Parse the JSON ingredients string
     ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
       .map(RecipeResp(
