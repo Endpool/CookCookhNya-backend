@@ -225,4 +225,44 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
+    test("""When adding public ingredient to created unpublished recipe which already has that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        user <- registerUser
+
+        ingredientId <- createPublicIngredient
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+          .map(_ :+ ingredientId)
+        recipeId <- createRecipe(user, initialIngredients)
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialIngredients)
+    },
+    test("""When adding custom ingredient to created unpublished recipe which already has that ingredient,
+            should get 204 and recipe should not change""") {
+      for
+        user <- registerUser
+
+        ingredientId <- createCustomIngredient(user)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+          .map(_ :+ ingredientId)
+        recipeId <- createRecipe(user, initialIngredients)
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NoContent)
+         && assertTrue(recipeIngredients hasSameElementsAs initialIngredients)
+    },
   ).provideLayer(testLayer)
