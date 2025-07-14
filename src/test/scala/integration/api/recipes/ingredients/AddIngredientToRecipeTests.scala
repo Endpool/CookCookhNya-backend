@@ -1,9 +1,10 @@
 package integration.api.recipes.ingredients
 
 import api.Authentication.AuthenticatedUser
+import api.recipes.ingredients.CannotModifyPublishedRecipe
 import db.repositories.{IngredientsRepo, RecipesRepo}
 import db.repositories.RecipeIngredientsRepo
-import domain.{RecipeId, IngredientId, IngredientNotFound}
+import domain.{RecipeId, RecipeNotFound, IngredientId, IngredientNotFound}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
@@ -12,8 +13,6 @@ import io.circe.parser.*
 import zio.http.*
 import zio.*
 import zio.test.*
-import domain.RecipeNotFound
-import api.recipes.ingredients.CannotModifyPublishedRecipe
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
@@ -189,11 +188,11 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
     test("""When adding public ingredient to own created published recipe,
             should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
       for
-        ingredientId <- createPublicIngredient
-
         user <- registerUser
         recipeId <- createRecipe(user, Vector.empty)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
+
+        ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
