@@ -41,7 +41,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         resp <- createRecipe(user, CreateRecipeReqBody("recipe", Some("sourceLink"), List.empty))
       yield assertTrue(resp.status == Status.Ok)
     },
-    test("When create valid recipe with global ingredients, recipe should be added to db") {
+    test("When create valid recipe with public ingredients, recipe should be added to db") {
       for
         recipeName <- randomString
         recipeSourceLink <- randomString.map(Some(_))
@@ -62,14 +62,14 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
          && assertTrue(recipe.is(_.some).sourceLink == recipeSourceLink)
          && assertTrue(recipe.get.ingredients hasSameElementsAs ingredientIds)
     },
-    test("When create valid recipe with global and custom ingredients, recipe should be added to db") {
+    test("When create valid recipe with public and custom ingredients, recipe should be added to db") {
       for
         user <- registerUser
         recipeName <- randomString
         recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
-            globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
+            publicIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
               .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
@@ -77,7 +77,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(user)
               .map(_.map(_.id))
               .map(Vector.from)
-          yield globalIngredientIds ++ customIngredientIds
+          yield publicIngredientIds ++ customIngredientIds
         )
 
         resp <- createRecipe(user, CreateRecipeReqBody(recipeName, recipeSourceLink, ingredientIds.toList))
@@ -96,12 +96,12 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
-            globalIngredientIds <- Gen.alphaNumericString.runCollectN(10)
+            publicIngredientIds <- Gen.alphaNumericString.runCollectN(10)
               .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
             nonExistantIngredientIds <- Gen.uuid.runCollectN(10)
-          yield globalIngredientIds ++ nonExistantIngredientIds
+          yield publicIngredientIds ++ nonExistantIngredientIds
         )
 
         user <- registerUser
@@ -126,7 +126,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
         recipeSourceLink <- randomString.map(Some(_))
         ingredientIds <- ZIO.serviceWithZIO[IngredientsRepo](repo =>
           for
-            globalIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
+            publicIngredientIds   <- Gen.alphaNumericString.runCollectN(10)
               .flatMap(ZIO.foreach(_)(repo.addPublic))
               .map(_.map(_.id))
               .map(Vector.from)
@@ -134,7 +134,7 @@ object CreateRecipeTests extends ZIOIntegrationTestSpec:
               .flatMap(ZIO.foreach(_)(repo.addCustom)).provideUser(otherUser)
               .map(_.map(_.id))
               .map(Vector.from)
-          yield globalIngredientIds ++ customIngredientIds
+          yield publicIngredientIds ++ customIngredientIds
         )
 
         user <- registerUser
