@@ -39,7 +39,7 @@ private def createHandler(recipe: CreateRecipeReqBody):
   userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
   dataSource <- ZIO.service[DataSource]
   existingIngredientIds <- run(
-    IngredientsQueries.getAllVisibleQ(lift(userId))
+    IngredientsQueries.visibleIngredientsQ(lift(userId))
       .map(_.id)
       .filter(id => liftQuery(recipe.ingredients).contains(id))
   ).provideDS(using dataSource).orElseFail(InternalServerError())
