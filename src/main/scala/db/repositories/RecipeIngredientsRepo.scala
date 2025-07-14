@@ -10,6 +10,7 @@ import zio.{IO, ZIO, RLayer, ZLayer}
 
 trait RecipeIngredientsRepo:
   def getAllIngredients(recipeId: RecipeId): IO[DbError, List[IngredientId]]
+  def addIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
   def addIngredients(recipeId: RecipeId, ingredientIds: List[IngredientId]): IO[DbError, Unit]
   def deleteIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
 
@@ -25,6 +26,10 @@ final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends Recip
   override def getAllIngredients(recipeId: RecipeId):
     IO[DbError, List[IngredientId]] =
     run(getAllIngredientsQ(lift(recipeId))).provideDS
+
+  override def addIngredient(recipeId: RecipeId, ingredientId: IngredientId):
+    IO[DbError, Unit] =
+    run(addIngredientQ(lift(recipeId), lift(ingredientId))).unit.provideDS
 
   override def addIngredients(recipeId: RecipeId, ingredientIds: List[IngredientId]):
     IO[DbError, Unit] =
@@ -42,8 +47,11 @@ object RecipeIngredientsQueries:
       .filter(_.recipeId == recipeId)
       .map(_.ingredientId)
 
+  inline def addIngredientQ(inline recipeId: RecipeId, inline ingredientIds: IngredientId) =
+    recipeIngredients.insertValue((DbRecipeIngredient(recipeId, ingredientIds)))
+
   inline def addIngredientsQ(inline recipeId: RecipeId, inline ingredientIds: Query[IngredientId]) =
-    ingredientIds.foreach(id => recipeIngredients.insertValue((DbRecipeIngredient(recipeId, id))))
+    ingredientIds.foreach(addIngredientQ(recipeId, _))
 
   inline def deleteIngredientQ(inline recipeId: RecipeId, inline ingredientId: IngredientId) =
     recipeIngredients

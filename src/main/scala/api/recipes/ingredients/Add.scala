@@ -6,16 +6,14 @@ import api.EndpointErrorVariants.{
   storageNotFoundVariant
 }
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
-import common.OptionExtensions.<|>
-import db.DbError.{DbNotRespondingError, FailedDbQuery}
-import db.repositories.StorageIngredientsRepo
-import domain.{IngredientNotFound, IngredientId, InternalServerError, StorageNotFound, StorageId}
+import db.repositories.RecipeIngredientsRepo
+import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId}
 
 import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type AddEnv = StorageIngredientsRepo
+private type AddEnv = RecipeIngredientsRepo
 
 private val add: ZServerEndpoint[AddEnv, Any] =
   recipesIngredientsEndpoint
@@ -29,8 +27,12 @@ private val add: ZServerEndpoint[AddEnv, Any] =
     ))
     .zSecuredServerLogic(addHandler)
 
-private def addHandler(storageId : StorageId, ingredientId: IngredientId):
+private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
   ZIO[AuthenticatedUser & AddEnv,
-      InternalServerError | IngredientNotFound | StorageNotFound,
-      Unit] = ZIO.unit
+      InternalServerError,
+      Unit] =
+  ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+    .addIngredient(recipeId, ingredientId)
+    .orElseFail(InternalServerError())
+  )
 
