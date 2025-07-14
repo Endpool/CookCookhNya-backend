@@ -94,13 +94,32 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
         ingredientNotFound <- resp.body.asString.map(decode[IngredientNotFound])
-
         recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
           .getAllIngredients(recipeId)
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(ingredientNotFound.is(_.right).ingredientId == ingredientId.toString)
+         && assertTrue(!recipeIngredients.contains(ingredientId))
+    },
+    test("""When adding public ingredient to other user's custom unpublished recipe,
+            should get 404 recipe not found and ingredient should NOT be added to the recipe""") {
+      for
+        otherUser <- registerUser
+        recipeId <- createRecipe(otherUser, Vector.empty)
+
+        ingredientId <- createIngredient
+
+        user <- registerUser
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        recipeNotFound <- resp.body.asString.map(decode[IngredientNotFound])
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
   ).provideLayer(testLayer)
