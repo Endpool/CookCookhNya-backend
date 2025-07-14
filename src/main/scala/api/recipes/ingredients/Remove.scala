@@ -16,7 +16,7 @@ private type RemoveEnv = RecipeIngredientsRepo & IngredientsRepo & RecipesRepo
 
 private val remove: ZServerEndpoint[RemoveEnv, Any] =
   recipesIngredientsEndpoint
-    .put
+    .delete
     .in(path[IngredientId]("ingredientId"))
     .out(statusCode(NoContent))
     .errorOut(oneOf(
