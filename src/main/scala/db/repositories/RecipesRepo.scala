@@ -42,8 +42,10 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
           .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
-      _ <- run(RecipeIngredientsQueries
-        .addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))
+      _ <- run(
+        liftQuery(ingredientIds).foreach(
+          RecipeIngredientsQueries.addIngredientQ(lift(recipeId), _)
+        )
       )
     yield recipeId
   }.provideDS

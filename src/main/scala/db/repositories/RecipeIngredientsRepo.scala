@@ -29,11 +29,19 @@ final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends Recip
 
   override def addIngredient(recipeId: RecipeId, ingredientId: IngredientId):
     IO[DbError, Unit] =
-    run(addIngredientQ(lift(recipeId), lift(ingredientId))).unit.provideDS
+    run(
+      addIngredientQ(lift(recipeId), lift(ingredientId))
+        .onConflictIgnore
+    ).unit.provideDS
 
   override def addIngredients(recipeId: RecipeId, ingredientIds: List[IngredientId]):
     IO[DbError, Unit] =
-    run(addIngredientsQ(lift(recipeId), liftQuery(ingredientIds))).unit.provideDS
+    run(
+      liftQuery(ingredientIds).foreach(
+        addIngredientQ(lift(recipeId), _)
+          .onConflictIgnore
+      )
+    ).unit.provideDS
 
   override def removeIngredient(recipeId: RecipeId, ingredientId: IngredientId):
     IO[DbError, Unit] =
@@ -49,9 +57,6 @@ object RecipeIngredientsQueries:
 
   inline def addIngredientQ(inline recipeId: RecipeId, inline ingredientIds: IngredientId) =
     recipeIngredients.insertValue((DbRecipeIngredient(recipeId, ingredientIds)))
-
-  inline def addIngredientsQ(inline recipeId: RecipeId, inline ingredientIds: Query[IngredientId]) =
-    ingredientIds.foreach(addIngredientQ(recipeId, _))
 
   inline def deleteIngredientQ(inline recipeId: RecipeId, inline ingredientId: IngredientId) =
     recipeIngredients
