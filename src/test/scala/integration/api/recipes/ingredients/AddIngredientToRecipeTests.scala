@@ -2,16 +2,16 @@ package integration.api.recipes.ingredients
 
 import api.Authentication.AuthenticatedUser
 import db.repositories.{IngredientsRepo, RecipesRepo}
-import domain.{IngredientId}
+import db.repositories.RecipeIngredientsRepo
+import domain.{RecipeId, IngredientId, IngredientNotFound}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
-import zio.http.{Client, Path, Status, URL}
-import zio.{Scope, ZIO, RIO}
-import zio.http.Response
+import io.circe.generic.auto.*
+import io.circe.parser.*
+import zio.http.*
+import zio.*
 import zio.test.*
-import domain.RecipeId
-import db.repositories.RecipeIngredientsRepo
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
@@ -48,7 +48,8 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
       yield assertTrue(resp.status == Status.NoContent)
     },
-    test("When adding public ingredient to created unpublished recipe, ingredient should be added to the recipe") {
+    test("""When adding public ingredient to created unpublished recipe,
+            ingredient should be added to the recipe""") {
       for
         user <- registerUser
 
@@ -64,7 +65,8 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NoContent)
          && assertTrue(recipeIngredients.contains(ingredientId))
     },
-    test("When adding custom ingredient to created unpublished recipe, ingredient should be added to the recipe") {
+    test("""When adding custom ingredient to created unpublished recipe,
+            ingredient should be added to the recipe""") {
       for
         user <- registerUser
 
@@ -79,5 +81,26 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         )
       yield assertTrue(resp.status == Status.NoContent)
          && assertTrue(recipeIngredients.contains(ingredientId))
+    },
+    test("""When adding other user's custom ingredient to created unpublished recipe,
+            should get 404 ingredient not found and ingredient should NOT be added to the recipe""") {
+      for
+        otherUser <- registerUser
+        ingredientId <- createCustomIngredient(otherUser)
+
+        user <- registerUser
+        recipeId <- createRecipe(user, Vector.empty)
+
+        resp <- addIngredientToRecipe(user, recipeId, ingredientId)
+
+        ingredientNotFound <- resp.body.asString.map(decode[IngredientNotFound])
+
+        recipeIngredients <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
+          .getAllIngredients(recipeId)
+          .provideUser(user)
+        )
+      yield assertTrue(resp.status == Status.NotFound)
+         && assertTrue(ingredientNotFound.is(_.right).ingredientId == ingredientId.toString)
+         && assertTrue(!recipeIngredients.contains(ingredientId))
     },
   ).provideLayer(testLayer)
