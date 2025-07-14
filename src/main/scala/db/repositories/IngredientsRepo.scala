@@ -18,6 +18,7 @@ trait IngredientsRepo:
   def getAllPublic: IO[DbError, List[DbIngredient]]
   def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
   def getAll: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
+  def isVisible(id: IngredientId): ZIO[AuthenticatedUser, DbError, Boolean]
   def remove(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
 
 private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSource)
@@ -71,6 +72,16 @@ private final case class IngredientsRepoLive(xa: Transactor, dataSource: DataSou
   override def getPublic(id: IngredientId): IO[DbError, Option[DbIngredient]] =
     run(getAllPublicQ.filter(_.id == (lift(id))))
       .map(_.headOption).provideDS
+
+  override def isVisible(id: IngredientId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    ZIO.serviceWithZIO[AuthenticatedUser](user =>
+      run(
+        getAllVisibleQ(lift(user.userId))
+          .filter(_.id == (lift(id)))
+          .nonEmpty
+      ).provideDS
+    )
+
 
 object IngredientsQueries:
   inline def getAllPublicQ: Quoted[EntityQuery[DbIngredient]] =
