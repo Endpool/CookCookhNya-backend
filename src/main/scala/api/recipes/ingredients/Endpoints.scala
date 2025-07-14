@@ -13,6 +13,4 @@ val recipesIngredientsEndpoint =
 
 val recipesIngredientsEndpoints = List(
   add.widen,
-  getAll.widen,
-  remove.widen,
 )

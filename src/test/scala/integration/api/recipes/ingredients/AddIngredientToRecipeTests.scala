@@ -1,24 +1,17 @@
 package integration.api.recipes.ingredients
 
 import api.Authentication.AuthenticatedUser
-import api.recipes.CreateRecipeReqBody
 import db.repositories.{IngredientsRepo, RecipesRepo}
-import db.tables.recipesTable
-import domain.{IngredientId, IngredientNotFound}
+import domain.{IngredientId}
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
-import com.augustnagro.magnum.magzio.{Transactor, sql}
-import io.circe.parser.*
-import io.circe.generic.auto.*
 import zio.http.{Client, Path, Status, URL}
 import zio.{Scope, ZIO, RIO}
 import zio.http.Response
 import zio.test.*
-import zio.Cause
 import domain.RecipeId
 import db.repositories.RecipeIngredientsRepo
-import db.tables.recipeIngredientsTable
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
