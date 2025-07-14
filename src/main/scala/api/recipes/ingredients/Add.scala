@@ -16,6 +16,11 @@ import domain.RecipeNotFound
 import db.repositories.RecipesRepo
 import api.EndpointErrorVariants.recipeNotFoundVariant
 
+final case class CannotModifyPublishedRecipe(
+  recipeId: RecipeId,
+  messae: String = "Cannot modify published recipe",
+)
+
 private type AddEnv = RecipeIngredientsRepo & IngredientsRepo & RecipesRepo
 
 private val add: ZServerEndpoint[AddEnv, Any] =
@@ -45,7 +50,7 @@ private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
     .isVisible(recipeId)
     .orElseFail(InternalServerError())
   )
-  _ <- ZIO.fail(RecipeNotFound(ingredientId.toString()))
+  _ <- ZIO.fail(RecipeNotFound(recipeId))
     .unless(recipeIsVisible)
 
   _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_

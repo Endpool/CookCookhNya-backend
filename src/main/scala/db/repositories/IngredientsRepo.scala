@@ -83,7 +83,6 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
       ).provideDS
     )
 
-
 object IngredientsQueries:
   inline def ingredientsQ: EntityQuery[DbIngredient] =
     query[DbIngredient]
@@ -95,7 +94,7 @@ object IngredientsQueries:
     ingredientsQ.filter(_.ownerId == Some(userId))
 
   inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
-    ingredientsQ.filter(_.ownerId.forall(_ == userId))
+    ingredientsQ.filter(i => i.ownerId == None || i.ownerId == Some(userId))
 
 object IngredientsRepo:
   val layer: RLayer[DataSource, IngredientsRepo] =

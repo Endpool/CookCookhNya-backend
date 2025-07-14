@@ -13,6 +13,7 @@ import zio.http.*
 import zio.*
 import zio.test.*
 import domain.RecipeNotFound
+import api.recipes.ingredients.CannotModifyPublishedRecipe
 
 object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId, ingredientId: IngredientId): URL =
@@ -44,7 +45,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
 
         recipeId <- createRecipe(user, Vector.empty)
-        ingredientId <- createIngredient
+        ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
       yield assertTrue(resp.status == Status.NoContent)
@@ -55,7 +56,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
 
         recipeId <- createRecipe(user, Vector.empty)
-        ingredientId <- createIngredient
+        ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
@@ -109,7 +110,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         otherUser <- registerUser
         recipeId <- createRecipe(otherUser, Vector.empty)
 
-        ingredientId <- createIngredient
+        ingredientId <- createPublicIngredient
 
         user <- registerUser
 
@@ -121,7 +122,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NotFound)
-         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId.toString)
+         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
     test("""When adding custom ingredient to other user's custom unpublished recipe,
@@ -141,7 +142,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NotFound)
-         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId.toString)
+         && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
     },
   ).provideLayer(testLayer)

@@ -231,7 +231,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           strBody <- resp.body.asString
           errorResponse <- ZIO.fromEither(decode[RecipeNotFound](strBody))
         yield assertTrue(resp.status == Status.NotFound)
-           && assertTrue(errorResponse.recipeId == recipeId.toString)
+           && assertTrue(errorResponse.recipeId == recipeId)
       }
     ).provideLayer(testLayer)
 

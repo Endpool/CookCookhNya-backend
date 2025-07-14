@@ -77,7 +77,7 @@ object Utils:
     .runHead
     .someOrElse("randomString")
 
-  def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+  def createPublicIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
       ZIO.serviceWithZIO[IngredientsRepo](_
         .addPublic(name)
@@ -99,7 +99,7 @@ object Utils:
 
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
     ZIO.collectAll(
-      (1 to n).map(_ => createIngredient).toVector
+      (1 to n).map(_ => createPublicIngredient).toVector
     )
 
   def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[

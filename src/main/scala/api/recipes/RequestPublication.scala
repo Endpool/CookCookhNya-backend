@@ -57,7 +57,7 @@ private def requestPublicationHandler(recipeId: RecipeId):
   for
     recipe <- ZIO.serviceWithZIO[RecipesRepo](_
       .getRecipe(recipeId)
-      .some.orElseFail(RecipeNotFound(recipeId.toString))
+      .some.orElseFail(RecipeNotFound(recipeId))
     )
     _ <- ZIO.fail(CannotPublishPublishedRecipe(recipeId))
       .when(recipe.isPublished)

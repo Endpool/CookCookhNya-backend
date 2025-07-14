@@ -20,7 +20,7 @@ final case class UserNotFound(
 )
 
 final case class RecipeNotFound(
-  recipeId: String,
+  recipeId: RecipeId,
   message: String = "Recipe not found",
 )
 
