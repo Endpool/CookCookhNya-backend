@@ -4,7 +4,7 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.*
 import db.repositories.{RecipesRepo, StorageIngredientsRepo}
-import domain.InternalServerError
+import domain.{RecipeId, InternalServerError}
 
 import io.circe.generic.auto.*
 import sttp.tapir.{Codec, Schema, Validator, EndpointInput}
@@ -12,11 +12,17 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
+import db.tables.DbRecipe
 
 case class RecipeSearchResp(
+  recipeId: RecipeId,
   name: String,
   sourceLink: Option[String],
 ) extends Searchable
+
+object RecipeSearchResp:
+  def fromDb(dbRecipe: DbRecipe): RecipeSearchResp =
+    RecipeSearchResp(dbRecipe.id, dbRecipe.name, dbRecipe.sourceLink)
 
 case class SearchAllRecipesResp(
   results: Vector[RecipeSearchResp],
@@ -61,6 +67,6 @@ private def searchAllRecipesHandler(
     allDbRecipes <- getRecipes
       .map(Vector.from)
       .orElseFail(InternalServerError())
-    allRecipes = allDbRecipes.map(dbRecipe => RecipeSearchResp(dbRecipe.name, dbRecipe.sourceLink))
+    allRecipes = allDbRecipes.map(RecipeSearchResp.fromDb)
     res = Searchable.search(allRecipes, searchParams)
   yield SearchAllRecipesResp(res.paginate(paginationParams), res.length)
