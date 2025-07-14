@@ -35,6 +35,9 @@ object Utils:
       =  seq1.length == seq2.length // for optimization
       && seq1.sorted == seq2.sorted
 
+    def isSubsetOf(seq2: Seq[A]): Boolean =
+      seq1.diff(seq2).isEmpty
+
   extension[R, E, A](zio: ZIO[AuthenticatedUser & R, E, A])
     def provideUser(user: AuthenticatedUser): ZIO[R, E, A] =
       zio.provideSomeLayer(ZLayer.succeed(user))

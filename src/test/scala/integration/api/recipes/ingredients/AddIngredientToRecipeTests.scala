@@ -43,7 +43,8 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       for
         user <- registerUser
 
-        recipeId <- createRecipe(user, Vector.empty)
+        recipeId <- createNIngredients(5)
+          .flatMap(createRecipe(user, _))
         ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -54,7 +55,9 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       for
         user <- registerUser
 
-        recipeId <- createRecipe(user, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialIngredients)
         ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -64,14 +67,17 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NoContent)
-         && assertTrue(recipeIngredients.contains(ingredientId))
+         && assertTrue(recipeIngredients contains ingredientId)
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding custom ingredient to created unpublished recipe,
             ingredient should be added to the recipe""") {
       for
         user <- registerUser
 
-        recipeId <- createRecipe(user, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialIngredients)
         ingredientId <- createCustomIngredient(user)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -81,7 +87,8 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
           .provideUser(user)
         )
       yield assertTrue(resp.status == Status.NoContent)
-         && assertTrue(recipeIngredients.contains(ingredientId))
+         && assertTrue(recipeIngredients contains ingredientId)
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding other user's custom ingredient to created unpublished recipe,
             should get 404 ingredient not found and ingredient should NOT be added to the recipe""") {
@@ -90,7 +97,9 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createCustomIngredient(otherUser)
 
         user <- registerUser
-        recipeId <- createRecipe(user, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialIngredients)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
@@ -102,12 +111,15 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(ingredientNotFound.is(_.right).ingredientId == ingredientId.toString)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding public ingredient to other user's custom unpublished recipe,
             should get 404 recipe not found and ingredient should NOT be added to the recipe""") {
       for
         otherUser <- registerUser
-        recipeId <- createRecipe(otherUser, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(otherUser, initialIngredients)
 
         ingredientId <- createPublicIngredient
 
@@ -123,12 +135,15 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding custom ingredient to other user's custom unpublished recipe,
             should get 404 recipe not found and ingredient should NOT be added to the recipe""") {
       for
         otherUser <- registerUser
-        recipeId <- createRecipe(otherUser, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(otherUser, initialIngredients)
 
         user <- registerUser
         ingredientId <- createCustomIngredient(user)
@@ -143,11 +158,14 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.NotFound)
          && assertTrue(recipeNotFound.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding public ingredient to published recipe,
             should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
       for
-        recipeId <- registerUser.flatMap(createRecipe(_, Vector.empty))
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- registerUser.flatMap(createRecipe(_,  initialIngredients))
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createPublicIngredient
@@ -164,11 +182,14 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Forbidden)
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding custom ingredient to published recipe,
             should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
       for
-        recipeId <- registerUser.flatMap(createRecipe(_, Vector.empty))
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- registerUser.flatMap(createRecipe(_,  initialIngredients))
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         user <- registerUser
@@ -184,12 +205,15 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Forbidden)
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding public ingredient to own created published recipe,
             should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
       for
         user <- registerUser
-        recipeId <- createRecipe(user, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialIngredients)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createPublicIngredient
@@ -204,12 +228,15 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Forbidden)
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding custom ingredient to own created published recipe,
             should get 403 cannot modify published recipe and ingredient should NOT be added to the recipe""") {
       for
         user <- registerUser
-        recipeId <- createRecipe(user, Vector.empty)
+        initialIngredients <- Gen.int(0, 5).runHead.some
+          .flatMap(createNIngredients)
+        recipeId <- createRecipe(user, initialIngredients)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createCustomIngredient(user)
@@ -224,6 +251,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Forbidden)
          && assertTrue(error.is(_.right).recipeId == recipeId)
          && assertTrue(!recipeIngredients.contains(ingredientId))
+         && assertTrue(initialIngredients isSubsetOf recipeIngredients)
     },
     test("""When adding public ingredient to created unpublished recipe which already has that ingredient,
             should get 204 and recipe should not change""") {
