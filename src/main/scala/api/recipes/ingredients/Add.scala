@@ -12,8 +12,11 @@ import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.ZIO
 import db.repositories.IngredientsRepo
+import domain.RecipeNotFound
+import db.repositories.RecipesRepo
+import api.EndpointErrorVariants.recipeNotFoundVariant
 
-private type AddEnv = RecipeIngredientsRepo & IngredientsRepo
+private type AddEnv = RecipeIngredientsRepo & IngredientsRepo & RecipesRepo
 
 private val add: ZServerEndpoint[AddEnv, Any] =
   recipesIngredientsEndpoint
@@ -22,13 +25,14 @@ private val add: ZServerEndpoint[AddEnv, Any] =
     .out(statusCode(StatusCode.NoContent))
     .errorOut(oneOf(
       ingredientNotFoundVariant,
+      recipeNotFoundVariant,
       serverErrorVariant,
     ))
     .zSecuredServerLogic(addHandler)
 
 private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
   ZIO[AuthenticatedUser & AddEnv,
-      InternalServerError | IngredientNotFound,
+      InternalServerError | IngredientNotFound | RecipeNotFound,
       Unit] = for
   ingredientIsVisible <- ZIO.serviceWithZIO[IngredientsRepo](_
     .isVisible(ingredientId)
@@ -36,6 +40,14 @@ private def addHandler(recipeId : RecipeId, ingredientId: IngredientId):
   )
   _ <- ZIO.fail(IngredientNotFound(ingredientId.toString()))
     .unless(ingredientIsVisible)
+
+  recipeIsVisible <- ZIO.serviceWithZIO[RecipesRepo](_
+    .isVisible(recipeId)
+    .orElseFail(InternalServerError())
+  )
+  _ <- ZIO.fail(RecipeNotFound(ingredientId.toString()))
+    .unless(recipeIsVisible)
+
   _ <- ZIO.serviceWithZIO[RecipeIngredientsRepo](_
     .addIngredient(recipeId, ingredientId)
     .orElseFail(InternalServerError())
