@@ -14,7 +14,7 @@ final case class DbIngredientPublicationRequest(
   def toDomain: IngredientPublicationRequest =
     IngredientPublicationRequest(ingredientId, createdAt, updatedAt, status.toDomain(reason))
 
-object DbRecipePublicationRequest:
+object DbIngredientPublicationRequest:
   def fromDomain(req: IngredientPublicationRequest): DbIngredientPublicationRequest =
     val (reason, status) = DbPublicationRequestStatus.fromDomain(req.status)
     DbIngredientPublicationRequest(req.ingredientId, req.createdAt, req.updatedAt, status, reason)
