@@ -17,12 +17,11 @@ import zio.ZIO
 case class RecipeSearchResp(
   recipeId: RecipeId,
   name: String,
-  sourceLink: Option[String],
 ) extends Searchable
 
 object RecipeSearchResp:
   def fromDb(dbRecipe: DbRecipe): RecipeSearchResp =
-    RecipeSearchResp(dbRecipe.id, dbRecipe.name, dbRecipe.sourceLink)
+    RecipeSearchResp(dbRecipe.id, dbRecipe.name)
 
 case class SearchAllRecipesResp(
   results: Vector[RecipeSearchResp],
