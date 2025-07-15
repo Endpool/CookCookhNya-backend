@@ -3,7 +3,7 @@ package db
 import db.tables.*
 import com.augustnagro.magnum.magzio.*
 import com.augustnagro.magnum.FragWriter
-import db.tables.publication.recipes.{DbPublicationRequestStatus, DbRecipePublicationRequest}
+import db.tables.publication.{DbPublicationRequestStatus, DbRecipePublicationRequest}
 
 def createTables(xa: Transactor) =
   def sql(str: String) = Frag(str, Seq.empty, FragWriter.empty)

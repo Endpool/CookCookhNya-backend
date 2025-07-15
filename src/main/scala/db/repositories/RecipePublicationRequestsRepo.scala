@@ -1,7 +1,7 @@
 package db.repositories
 
 import db.DbError
-import db.tables.publication.recipes.DbRecipePublicationRequest
+import db.tables.publication.DbRecipePublicationRequest
 import domain.RecipeId
 
 import io.getquill.*

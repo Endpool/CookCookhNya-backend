@@ -1,7 +1,6 @@
-package db.tables.publication.recipes
+package db.tables.publication
 
 import db.QuillConfig.ctx.*
-import db.tables.DbPublicationRequestStatus
 import domain.PublicationRequestStatus
 
 enum DbPublicationRequestStatus:
