@@ -8,7 +8,7 @@ Global / cancelable := true
 
 val zioVersion = "2.1.19"
 val zioHttpVersion = "3.2.0"
-val zioLogginVersion = "2.5.1"
+val zioLoggingVersion = "2.5.1"
 val sttpVersion = "4.0.7"
 val tapirVersion = "1.11.33"
 val quillVersion = "4.8.6"
@@ -54,8 +54,10 @@ lazy val root = (project in file("."))
       "org.testcontainers" % "postgresql" % "1.21.3" % Test,
 
       // logging
-      "dev.zio" %% "zio-logging" % zioLogginVersion,
-      "dev.zio" %% "zio-logging-slf4j" % zioLogginVersion,
+      "dev.zio" %% "zio-logging" % zioLoggingVersion,
+      "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
+      "dev.zio" %% "zio-logging-slf4j-bridge" % zioLoggingVersion,
+      "net.logstash.logback" % "logstash-logback-encoder" % "7.4",
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )

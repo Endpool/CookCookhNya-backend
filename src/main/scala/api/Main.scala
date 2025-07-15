@@ -6,13 +6,12 @@ import _root_.db.repositories.*
 import com.augustnagro.magnum.magzio.Transactor
 import javax.sql.DataSource
 import sttp.tapir.*
+import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.*
 import zio.http.*
-import zio.logging.{consoleLogger, LogFormat}
-import zio.logging.ConsoleLoggerConfig
-import sttp.tapir.server.interceptor.log.DefaultServerLog
+import zio.logging.backend.SLF4J
 
 object Main extends ZIOAppDefault:
   type AppEnvRIO[A] = RIO[AppEnv, A]
@@ -81,10 +80,8 @@ object Main extends ZIOAppDefault:
     StoragesRepo.layer ++
     UsersRepo.layer
 
-  override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
-    Runtime.removeDefaultLoggers >>> consoleLogger(
-      ConsoleLoggerConfig.default.copy(format=LogFormat.colored)
-    )
+  override val bootstrap: RLayer[ZIOAppArgs, Any] =
+    Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   val port: Int = 8080
 
