@@ -7,7 +7,7 @@ ThisBuild / scalaVersion := "3.3.6"
 Global / cancelable := true
 
 val zioHttpVersion = "3.2.0"
-val zioVersion = "2.1.19"
+val zioVersion = "2.1.20"
 val sttpVersion = "4.0.7"
 val tapirVersion = "1.11.33"
 val quillVersion = "4.8.6"
