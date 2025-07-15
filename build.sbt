@@ -6,8 +6,9 @@ ThisBuild / scalaVersion := "3.3.6"
 
 Global / cancelable := true
 
+val zioVersion = "2.1.19"
 val zioHttpVersion = "3.2.0"
-val zioVersion = "2.1.20"
+val zioLogginVersion = "2.5.1"
 val sttpVersion = "4.0.7"
 val tapirVersion = "1.11.33"
 val quillVersion = "4.8.6"
@@ -51,6 +52,10 @@ lazy val root = (project in file("."))
 
       "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test,
       "org.testcontainers" % "postgresql" % "1.21.3" % Test,
+
+      // logging
+      "dev.zio" %% "zio-logging" % zioLogginVersion,
+      "dev.zio" %% "zio-logging-slf4j" % zioLogginVersion,
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
