@@ -25,7 +25,7 @@ object RecipeSearchResp:
     RecipeSearchResp(dbRecipe.id, dbRecipe.name, dbRecipe.sourceLink)
 
 case class SearchAllRecipesResp(
-  recipes: Vector[RecipeSearchResp],
+  results: Vector[RecipeSearchResp],
   found: Int,
 )
 
