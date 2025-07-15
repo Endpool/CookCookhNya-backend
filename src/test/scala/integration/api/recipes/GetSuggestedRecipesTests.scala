@@ -2,7 +2,7 @@ package integration.api.recipes
 
 import api.Authentication.AuthenticatedUser
 import api.recipes.SuggestedRecipesResp
-import domain.{StorageId}
+import domain.StorageId
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
 
@@ -58,8 +58,8 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
         bodyStr <- resp.body.asString
         suggestedRecipes <- ZIO.fromEither(decode[SuggestedRecipesResp](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
-         && assertTrue(suggestedRecipes.recipes.map(_.id).forall(recipeIds.contains))
-         && assertTrue(suggestedRecipes.recipes.map(_.available).forall(_ == 0))
+         && assertTrue(suggestedRecipes.results.map(_.id).forall(recipeIds.contains))
+         && assertTrue(suggestedRecipes.results.map(_.available).forall(_ == 0))
     },
     test("When querying with owned storages, availabilities should be correct") {
       for
@@ -102,12 +102,12 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
         suggestedRecipes <- ZIO.fromEither(decode[SuggestedRecipesResp](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(
-           suggestedRecipes.recipes
+           suggestedRecipes.results
              .find(_.id == recipe1Id)
              .is(_.some).available == recipe1Storage1Availability + recipe1Storage2Availability
          ) ?? "Recipe 1 exists and its 'available' fields are correct"
          && assertTrue(
-           suggestedRecipes.recipes
+           suggestedRecipes.results
              .find(_.id == recipe2Id)
              .is(_.some).available == recipe2Storage1Availability + recipe2Storage2Availability
          ) ?? "Recipe 2 exists and its 'available' fields are correct"
@@ -163,14 +163,14 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
         suggestedRecipes <- ZIO.fromEither(decode[SuggestedRecipesResp](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(
-           suggestedRecipes.recipes
+           suggestedRecipes.results
              .find(_.id == recipe1Id)
              .is(_.some).available == recipe1MemberedStorageAvailability
                                     + recipe1Storage1Availability
                                     + recipe1Storage2Availability
          ) ?? "Recipe 1 exists and its 'available' fields are correct"
          && assertTrue(
-           suggestedRecipes.recipes
+           suggestedRecipes.results
              .find(_.id == recipe2Id)
              .is(_.some).available == recipe2MemberedStorageAvailability
                                     + recipe2Storage1Availability
