@@ -1,7 +1,8 @@
-package db.tables
+package db.tables.publication.recipes
 
-import domain.PublicationRequestStatus
 import db.QuillConfig.ctx.*
+import db.tables.DbPublicationRequestStatus
+import domain.PublicationRequestStatus
 
 enum DbPublicationRequestStatus:
   case Pending
