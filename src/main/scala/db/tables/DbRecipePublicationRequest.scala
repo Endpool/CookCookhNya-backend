@@ -22,6 +22,7 @@ object DbRecipePublicationRequest:
 
   val createTable: String = """
     CREATE TABLE IF NOT EXISTS recipe_publication_requests(
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       recipe_id UUID NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
