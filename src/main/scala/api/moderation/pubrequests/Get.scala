@@ -24,7 +24,7 @@ import zio.ZIO
 
 import java.util.UUID
 
-private type GetReq
+private type GetReqEnv
   = RecipePublicationRequestsRepo
   & IngredientPublicationRequestsRepo
   & RecipesRepo
@@ -32,16 +32,16 @@ private type GetReq
 
 private type PublicationRequest = RecipePublicationRequest | IngredientPublicationRequest
 
-private val getRequest: ZServerEndpoint[GetReq, Any] =
+private val getRequest: ZServerEndpoint[GetReqEnv, Any] =
   publicationRequestEndpoint
     .get
-    .in(query[UUID]("id"))
+    .in(path[UUID]("id"))
     .out(jsonBody[PublicationRequestResponse])
     .errorOut(oneOf(serverErrorVariant, publicationRequestNotFound))
     .zSecuredServerLogic(getRequestHandler)
 
 private def getRequestHandler(reqId: UUID):
-  ZIO[AuthenticatedUser & GetReq,
+  ZIO[AuthenticatedUser & GetReqEnv,
     InternalServerError | PublicationRequestNotFound,
     PublicationRequestResponse] =
 

@@ -64,5 +64,3 @@ private def getSomePendingHandler(paginationParams: PaginationParams):
         .slice(offset, offset + count)
     }.mapError(_ => InternalServerError())
 }
-
-

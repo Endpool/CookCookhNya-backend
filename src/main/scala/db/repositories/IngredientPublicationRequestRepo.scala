@@ -1,11 +1,11 @@
 package db.repositories
 
 import db.DbError
-import db.tables.publication.DbIngredientPublicationRequest
+import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.IngredientId
+import domain.{IngredientId, PublicationRequestNotFound}
 import io.getquill.*
-import zio.{IO, RLayer, ZLayer}
+import zio.{IO, RLayer, ZLayer, ZIO}
 
 import java.util.UUID
 import javax.sql.DataSource
@@ -14,6 +14,8 @@ trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
   def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
   def get(id: UUID): IO[DbError, Option[DbIngredientPublicationRequest]]
+  def update(id: UUID, comment: String, status: DbPublicationRequestStatus):
+    IO[DbError | PublicationRequestNotFound, Unit]
 
 private inline def ingredientPublicationRequests = query[DbIngredientPublicationRequest]
 
@@ -34,6 +36,14 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   override def get(id: UUID): IO[DbError, Option[DbIngredientPublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
 
+  override def update(id: IngredientId, comment: String, status: DbPublicationRequestStatus):
+    IO[DbError | PublicationRequestNotFound, Unit] =
+
+    run(updateQ(id, comment, status)).provideDS.flatMap {
+      case 0 => ZIO.fail(PublicationRequestNotFound(id.toString))
+      case _ => ZIO.unit
+    }
+
 object IngredientPublicationRequestsQueries:
   import db.QuillConfig.ctx.*
   inline def requestPublicationQ(inline ingredientId: IngredientId): Insert[DbIngredientPublicationRequest] =
@@ -44,6 +54,13 @@ object IngredientPublicationRequestsQueries:
 
   inline def getQ(inline id: UUID) =
     ingredientPublicationRequests.filter(_.id == lift(id)).take(1)
+
+  inline def updateQ(inline id: UUID, inline comment: String, inline status: DbPublicationRequestStatus) =
+    ingredientPublicationRequests.filter(_.id == lift(id))
+      .update(
+        _.comment -> lift(comment),
+        _.status -> lift(status)
+      )
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =

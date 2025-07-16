@@ -11,4 +11,8 @@ val publicationRequestEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
     .subTag("publication-requests")
     .in("publication-requests")
 
-val publicationRequestEndpoints = ???
+val publicationRequestEndpoints = List(
+  getSomePending.widen,
+  getRequest.widen,
+  updatePublicationRequest.widen
+)
