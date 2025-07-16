@@ -8,7 +8,8 @@ import com.augustnagro.magnum.*
 final case class DbIngredient(
   @Id id: IngredientId,
   ownerId: Option[UserId],
-  name: String
+  name: String,
+  isPublished: Boolean
 ) derives DbCodec
 
 final case class DbIngredientCreator(ownerId: Option[UserId], name: String)
@@ -21,6 +22,7 @@ object DbIngredient:
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       owner_id BIGINT DEFAULT NULL,
       name VARCHAR(255) NOT NULL,
+      is_published BOOLEAN NOT NULL,
       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
     );
   """

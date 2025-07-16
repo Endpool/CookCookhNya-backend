@@ -1,7 +1,9 @@
-package db.tables
+package db.tables.publication
 
-import domain.PublicationRequestStatus
 import db.QuillConfig.ctx.*
+import domain.PublicationRequestStatus
+
+import java.sql.{PreparedStatement, Types}
 
 enum DbPublicationRequestStatus:
   case Pending
@@ -38,4 +40,14 @@ object DbPublicationRequestStatus:
         case "pending"  => DbPublicationRequestStatus.Pending
         case "accepted" => DbPublicationRequestStatus.Accepted
         case "rejected" => DbPublicationRequestStatus.Rejected
+  )
+
+  given JdbcEncoder[DbPublicationRequestStatus] = encoder(
+    Types.VARCHAR,
+    (index: Int, value: DbPublicationRequestStatus, row: PreparedStatement) =>
+      val statusString = value match
+        case DbPublicationRequestStatus.Pending => "pending"
+        case DbPublicationRequestStatus.Accepted => "accepted"
+        case DbPublicationRequestStatus.Rejected => "rejected"
+      row.setString(index, statusString)
   )

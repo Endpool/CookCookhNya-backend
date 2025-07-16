@@ -57,6 +57,7 @@ object Main extends ZIOAppDefault:
   val reposLayer:
     RLayer[Transactor & DataSource & InvitationsSecretKey
       , IngredientsRepo
+      & IngredientPublicationRequestsRepo
       & InvitationsRepo
       & RecipesDomainRepo
       & RecipesRepo
@@ -69,6 +70,7 @@ object Main extends ZIOAppDefault:
       & UsersRepo
     ] =
     IngredientsRepo.layer ++
+    IngredientPublicationRequestsRepo.layer ++  
     InvitationsRepo.layer ++
     RecipeIngredientsRepoLive.layer ++
     RecipesDomainRepo.layer ++

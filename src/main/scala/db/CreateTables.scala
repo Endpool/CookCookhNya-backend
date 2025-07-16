@@ -1,6 +1,7 @@
 package db
 
 import db.tables.*
+import db.tables.publication.*
 
 import com.augustnagro.magnum.magzio.*
 import com.augustnagro.magnum.FragWriter
@@ -14,6 +15,7 @@ def createTables(xa: Transactor) =
       """,
 
       sql(DbPublicationRequestStatus.createType),
+      sql(SqlFunctions.triggerSetUpdatedAt),
 
       // alias cannot be referenced with magnum DDL due to its option type
       sql"""

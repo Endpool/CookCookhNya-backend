@@ -1,7 +1,6 @@
-package db.tables
+package db.tables.publication
 
-import domain.RecipePublicationRequest
-import domain.RecipeId
+import domain.{RecipeId, RecipePublicationRequest}
 
 import java.time.OffsetDateTime
 
