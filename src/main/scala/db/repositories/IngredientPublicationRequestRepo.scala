@@ -2,10 +2,11 @@ package db.repositories
 
 import db.DbError
 import db.tables.publication.DbIngredientPublicationRequest
+import db.tables.publication.DbPublicationRequestStatus.Pending
 import domain.IngredientId
-
 import io.getquill.*
-import zio.{IO, ZLayer, RLayer}
+import zio.{IO, RLayer, ZLayer}
+
 import javax.sql.DataSource
 
 trait IngredientPublicationRequestsRepo:
@@ -17,7 +18,7 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
   import db.QuillConfig.ctx.*
   import db.QuillConfig.provideDS
-  import RecipePublicationRequestsQueries.*
+  import IngredientPublicationRequestsQueries.*
 
   private given DataSource = dataSource
 
@@ -25,8 +26,12 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     run(requestPublicationQ(lift(ingredientId))).unit.provideDS
 
 object IngredientPublicationRequestsQueries:
-  inline def requestPublicationQ(inline ingredientId: IngredientId) =
+  import db.QuillConfig.ctx.*
+  inline def requestPublicationQ(inline ingredientId: IngredientId): Insert[DbIngredientPublicationRequest] =
     ingredientPublicationRequests.insert(_.ingredientId -> ingredientId)
+    
+  inline def allPendingQ = ingredientPublicationRequests.filter(_.status == lift(Pending))
+  inline def pendningRequestByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId) 
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
