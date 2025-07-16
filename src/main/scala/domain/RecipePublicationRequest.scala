@@ -9,5 +9,6 @@ final case class RecipePublicationRequest(
   createdAt: OffsetDateTime,
   updatedAt: OffsetDateTime,
   status: PublicationRequestStatus,
+  comment: String
 )
 

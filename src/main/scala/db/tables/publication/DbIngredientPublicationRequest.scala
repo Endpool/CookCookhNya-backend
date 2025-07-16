@@ -12,14 +12,15 @@ final case class DbIngredientPublicationRequest(
  updatedAt: OffsetDateTime,
  status: DbPublicationRequestStatus,
  reason: Option[String],
+ comment: String
 ):
   def toDomain: IngredientPublicationRequest =
-    IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status.toDomain(reason))
+    IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status.toDomain(reason), comment)
 
 object DbIngredientPublicationRequest:
   def fromDomain(req: IngredientPublicationRequest): DbIngredientPublicationRequest =
     val (reason, status) = DbPublicationRequestStatus.fromDomain(req.status)
-    DbIngredientPublicationRequest(req.id, req.ingredientId, req.createdAt, req.updatedAt, status, reason)
+    DbIngredientPublicationRequest(req.id, req.ingredientId, req.createdAt, req.updatedAt, status, reason, req.comment)
 
   val createTable: String = """
     CREATE TABLE IF NOT EXISTS ingredient_publication_requests(

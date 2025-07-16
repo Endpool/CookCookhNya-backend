@@ -4,7 +4,12 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.PaginationParams
 import api.moderation.pubrequests.PublicationRequestType.*
-import db.repositories.{IngredientPublicationRequestsRepo, IngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
+import db.repositories.{
+  IngredientPublicationRequestsRepo,
+  IngredientsRepo,
+  RecipePublicationRequestsRepo,
+  RecipesRepo
+}
 import domain.{IngredientPublicationRequest, InternalServerError, RecipePublicationRequest}
 import io.circe.generic.auto.*
 import sttp.model.StatusCode.NoContent
@@ -34,11 +39,11 @@ private def getSomePendingHandler(paginationParams: PaginationParams):
   ZIO[AuthenticatedUser & GetSomePendingEnv & RecipesRepo & IngredientsRepo, InternalServerError, Seq[PublicationRequestSummary]] = {
 
   def toPublicationRequest(req: PublicationRequest) = req match // some shitty code... I will fix this later
-    case RecipePublicationRequest(id, entityId, createdAt, updatedAt, _) =>
+    case RecipePublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
       ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(entityId))
         .someOrFail(InternalServerError())
         .map(recipe => PublicationRequestSummary(id, Recipe, recipe.name, createdAt))
-    case IngredientPublicationRequest(id, entityId, createdAt, updatedAt, _) =>
+    case IngredientPublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
       ZIO.serviceWithZIO[IngredientsRepo](_.get(entityId))
         .someOrFail(InternalServerError())
         .map(recipe => PublicationRequestSummary(id, Ingredient, recipe.name, createdAt))

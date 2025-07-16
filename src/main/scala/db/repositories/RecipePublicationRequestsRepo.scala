@@ -7,11 +7,13 @@ import domain.RecipeId
 import io.getquill.*
 import zio.{IO, RLayer, ZLayer}
 
+import java.util.UUID
 import javax.sql.DataSource
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
-  def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest       ]]
+  def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]]
+  def get(id: UUID): IO[DbError, Option[DbRecipePublicationRequest]]
 
 private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
@@ -29,6 +31,9 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]] =
     run(allPendingQ).provideDS
 
+  override def get(id: UUID): IO[DbError, Option[DbRecipePublicationRequest]] =
+    run(getQ(id)).map(_.headOption).provideDS
+
 object RecipePublicationRequestsQueries:
   import db.QuillConfig.ctx.*
   
@@ -37,6 +42,8 @@ object RecipePublicationRequestsQueries:
 
   inline def allPendingQ = recipePublicationRequests.filter(_.status == lift(Pending))
   inline def pendingRequestsByIdQ(inline recipeId: RecipeId) = allPendingQ.filter(_.recipeId == recipeId)
+  inline def getQ(inline id: UUID) =
+    recipePublicationRequests.filter(_.id == lift(id)).take(1)
   
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
