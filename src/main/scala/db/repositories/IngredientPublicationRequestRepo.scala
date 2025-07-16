@@ -31,7 +31,7 @@ object IngredientPublicationRequestsQueries:
     ingredientPublicationRequests.insert(_.ingredientId -> ingredientId)
     
   inline def allPendingQ = ingredientPublicationRequests.filter(_.status == lift(Pending))
-  inline def pendningRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId) 
+  inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId) 
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =
