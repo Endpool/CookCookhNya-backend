@@ -9,7 +9,7 @@ import sttp.tapir.generic.auto.*
 
 final case class CannotModifyPublishedRecipe(
   recipeId: RecipeId,
-  messae: String = "Cannot modify published recipe",
+  message: String = "Cannot modify published recipe",
 )
 
 object CannotModifyPublishedRecipe:

@@ -2,6 +2,7 @@ package api
 
 import _root_.db.repositories.{
   IngredientsRepo,
+  IngredientPublicationRequestsRepo,
   InvitationsRepo,
   RecipeIngredientsRepo,
   RecipesDomainRepo,
@@ -21,6 +22,7 @@ type AppEnv
   = Transactor
   & DataSource
   & IngredientsRepo
+  & IngredientPublicationRequestsRepo
   & InvitationsRepo
   & RecipeIngredientsRepo
   & RecipePublicationRequestsRepo
@@ -31,3 +33,4 @@ type AppEnv
   & StorageMembersRepo
   & StoragesRepo
   & UsersRepo
+  
