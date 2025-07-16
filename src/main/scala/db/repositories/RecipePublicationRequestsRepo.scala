@@ -31,8 +31,8 @@ object RecipePublicationRequestsQueries:
   inline def requestPublicationQ(inline recipeId: RecipeId) =
     recipePublicationRequests.insert(_.recipeId -> recipeId)
 
-  inline def allPendingQ = ingredientPublicationRequests.filter(_.status == lift(Pending))
-  inline def pendingRequestsByIdQ(inline recipeId: RecipeId) = allPendingQ.filter(_.ingredientId == recipeId)
+  inline def allPendingQ = recipePublicationRequests.filter(_.status == lift(Pending))
+  inline def pendingRequestsByIdQ(inline recipeId: RecipeId) = allPendingQ.filter(_.recipeId == recipeId)
   
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
