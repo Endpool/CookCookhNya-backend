@@ -60,7 +60,7 @@ def requestPublicationHandler(ingredientId: IngredientId):
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(
       IngredientPublicationRequestsQueries
-        .pendningRequestByIdQ(lift(ingredientId))
+        .pendningRequestsByIdQ(lift(ingredientId))
     ).provideDS(using dataSource).orElseFail(InternalServerError())
 
 
