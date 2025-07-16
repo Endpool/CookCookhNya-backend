@@ -30,7 +30,7 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
   override def addPublic(name: String): IO[DbError, DbIngredient] =
     run(
       ingredientsQ
-        .insert(_.name -> lift(name))
+        .insert(_.name -> lift(name), _.isPublished -> false)
         .returning(ingredient => ingredient)
     ).provideDS
 
@@ -38,7 +38,7 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
     ZIO.serviceWithZIO[AuthenticatedUser] { owner =>
       run(
         ingredientsQ
-          .insert(_.name -> lift(name), _.ownerId -> Some(lift(owner.userId)))
+          .insert(_.name -> lift(name), _.ownerId -> Some(lift(owner.userId)), _.isPublished -> false)
           .returning(ingredient => ingredient)
       ).provideDS
     }
