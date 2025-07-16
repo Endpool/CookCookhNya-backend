@@ -34,5 +34,5 @@ object IngredientPublicationRequestsQueries:
   inline def pendningRequestByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId) 
 
 object IngredientPublicationRequestsRepo:
-  def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
-    ZLayer.fromFunction(RecipePublicationRequestsRepoLive.apply)
+  def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =
+    ZLayer.fromFunction(IngredientPublicationRequestsRepoLive.apply)
