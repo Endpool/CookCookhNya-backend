@@ -114,7 +114,10 @@ private inline def rawRecipeQuery(
             'name', i.${ingredientsTable.name},
             'inStorages', COALESCE(
               (
-                SELECT JSON_AGG(DISTINCT si.storage_id si)
+                SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                  'id', si.${storageIngredientsTable.storageId},
+                  'name', s.${storagesTable.name}
+                ))
                 FROM $storageIngredientsTable si
                 JOIN $storagesTable AS s ON si.${storageIngredientsTable.storageId} = s.${storagesTable.id}
                 WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
