@@ -29,7 +29,7 @@ private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 
 private val search: ZServerEndpoint[SearchEnv, Any] =
   ingredientsEndpoint
-    .post
+    .get
     .in(SearchParams.query)
     .in(PaginationParams.query)
     .in(SearchIngredientsFilter.query)
