@@ -75,11 +75,10 @@ private def requestPublicationHandler(recipeId: RecipeId):
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(
       RecipePublicationRequestsQueries
-        .pendningRequestsByIdQ(lift(recipeId))
+        .pendningRequestsByIdQ(lift(recipeId)).nonEmpty
     )
       .provideDS(using dataSource)
       .orElseFail(InternalServerError())
-      .map(_.nonEmpty)
     _ <- ZIO.fail(RecipeAlreadyPending(recipeId))
       .when(alreadyPending)
 

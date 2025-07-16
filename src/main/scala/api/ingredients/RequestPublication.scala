@@ -37,7 +37,7 @@ object IngredientAlreadyPending:
 private type RequestPublicationEnv = IngredientPublicationRequestsRepo & IngredientsRepo & DataSource
 private val requestPublication: ZServerEndpoint[RequestPublicationEnv, Any] =
   ingredientsEndpoint
-    .get
+    .post
     .in(path[IngredientId]("ingredientId") / "request-publication")
     .errorOut(oneOf(
       serverErrorVariant, IngredientAlreadyPublished.variant,
@@ -63,11 +63,10 @@ def requestPublicationHandler(ingredientId: IngredientId):
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(
       IngredientPublicationRequestsQueries
-        .pendningRequestsByIdQ(lift(ingredientId))
+        .pendningRequestsByIdQ(lift(ingredientId)).nonEmpty
     )
       .provideDS(using dataSource)
       .orElseFail(InternalServerError())
-      .map(_.nonEmpty)
     _ <- ZIO.fail(IngredientAlreadyPending(ingredientId))
       .when(alreadyPending)
 
