@@ -27,7 +27,12 @@ import zio.ZIO
 final case class IngredientResp(
   id: IngredientId,
   name: String,
-  inStorages: Vector[StorageId],
+  inStorages: Vector[StorageSummary],
+)
+
+final case class StorageSummary(
+  id: StorageId,
+  name: String
 )
 
 final case class RecipeCreatorResp(
@@ -109,8 +114,12 @@ private inline def rawRecipeQuery(
             'name', i.${ingredientsTable.name},
             'inStorages', COALESCE(
               (
-                SELECT JSON_AGG(DISTINCT si.storage_id)
+                SELECT JSON_AGG(JSON_BUILD_OBJECT(
+                  'id', si.${storageIngredientsTable.storageId},
+                  'name', s.${storagesTable.name}
+                ))
                 FROM $storageIngredientsTable si
+                JOIN $storagesTable AS s ON si.${storageIngredientsTable.storageId} = s.${storagesTable.id}
                 WHERE si.${storageIngredientsTable.ingredientId} = i.${ingredientsTable.id}
                   AND si.${storageIngredientsTable.storageId} IN (
                     SELECT ${storageMembersTable.storageId} FROM $storageMembersTable
@@ -120,6 +129,7 @@ private inline def rawRecipeQuery(
                     FROM $storagesTable
                     WHERE ${storagesTable.ownerId} = $userId
                   )
+
               ),
               '[]'::json
             )
