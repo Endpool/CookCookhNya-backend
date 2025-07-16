@@ -58,7 +58,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(recipeResp.ingredients.map(_.id) hasSameElementsAs ingredientIds)
-           && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
+           && assertTrue(recipeResp.ingredients.forall(_.inStorages.map(_.id) == Vector(storageId)))
       },
       test("1 user with 2 storages") {
         for
@@ -91,7 +91,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
            && assertTrue(recipeResp.ingredients.forall(ingredient =>
-                ingredient.inStorages == (
+                ingredient.inStorages.map(_.id) == (
                   if storage1UsedIngredientIds.contains(ingredient.id)
                     then Vector(storage1Id)
                   else if storage2UsedIngredientIds.contains(ingredient.id)
@@ -152,7 +152,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             yield assertTrue(resp.status == Status.Ok)
                && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
                && assertTrue(recipeResp.ingredients.forall( ingredient =>
-                   ingredient.inStorages == (
+                   ingredient.inStorages.map(_.id) == (
                      if (user1StorageIngredientIds.contains(ingredient.id))
                        Vector(user1StorageId)
                      else if (sharedStorageIngredientIds.contains(ingredient.id))
@@ -174,7 +174,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
            yield assertTrue(resp.status == Status.Ok)
               && assertTrue(recipeRespIngredientsIds.hasSameElementsAs(recipeIngredientsIds))
               && assertTrue(recipeResp.ingredients.forall( ingredient =>
-                  ingredient.inStorages == (
+                  ingredient.inStorages.map(_.id) == (
                     if (user2StorageIngredientIds.contains(ingredient.id))
                       Vector(user2StorageId)
                     else if (sharedStorageIngredientIds.contains(ingredient.id))
