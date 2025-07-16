@@ -19,6 +19,7 @@ trait IngredientsRepo:
   def getAll: ZIO[AuthenticatedUser, DbError, List[DbIngredient]]
   def isVisible(id: IngredientId): ZIO[AuthenticatedUser, DbError, Boolean]
   def remove(id: IngredientId): ZIO[AuthenticatedUser, DbError, Unit]
+  def publish(ingredientId: IngredientId): IO[DbError, Unit]
 
 private final case class IngredientsRepoLive(dataSource: DataSource) extends IngredientsRepo:
   private given DataSource = dataSource
@@ -83,9 +84,15 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
       ).provideDS
     )
 
+  def publish(ingredientId: IngredientId): IO[DbError, Unit] =
+    run(getIngredientsQ(lift(ingredientId)).update(_.isPublished -> true)).unit.provideDS
+    
 object IngredientsQueries:
   inline def ingredientsQ: EntityQuery[DbIngredient] =
     query[DbIngredient]
+    
+  inline def publishedIngredientsQ: EntityQuery[DbIngredient] =
+    ingredientsQ.filter(_.isPublished)
 
   inline def publicIngredientsQ: EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.ownerId.isEmpty)
@@ -95,6 +102,9 @@ object IngredientsQueries:
 
   inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
     ingredientsQ.filter(i => i.ownerId == None || i.ownerId == Some(userId))
+    
+  inline def getIngredientsQ(inline ingredientId: IngredientId): EntityQuery[DbIngredient] =
+    ingredientsQ.filter(_.id == ingredientId)
 
 object IngredientsRepo:
   val layer: RLayer[DataSource, IngredientsRepo] =
