@@ -11,6 +11,7 @@ import javax.sql.DataSource
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
+  def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest       ]]
 
 private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
@@ -24,6 +25,9 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
 
   override def requestPublication(recipeId: RecipeId): IO[DbError, Unit] =
     run(requestPublicationQ(lift(recipeId))).unit.provideDS
+
+  override def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]] =
+    run(allPendingQ).provideDS
 
 object RecipePublicationRequestsQueries:
   import db.QuillConfig.ctx.*
