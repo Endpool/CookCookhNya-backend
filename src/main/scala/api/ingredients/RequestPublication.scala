@@ -39,13 +39,16 @@ private val requestPublication: ZServerEndpoint[RequestPublicationEnv, Any] =
   ingredientsEndpoint
     .get
     .in(path[IngredientId]("ingredientId") / "request-publication")
-    .errorOut(oneOf(serverErrorVariant, IngredientAlreadyPublished.variant, ingredientNotFoundVariant))
+    .errorOut(oneOf(
+      serverErrorVariant, IngredientAlreadyPublished.variant,
+      IngredientAlreadyPending.variant, ingredientNotFoundVariant
+    ))
     .zSecuredServerLogic(requestPublicationHandler)
     
 def requestPublicationHandler(ingredientId: IngredientId): 
   ZIO[
     AuthenticatedUser & RequestPublicationEnv,
-    InternalServerError | IngredientAlreadyPublished | IngredientNotFound,
+    InternalServerError | IngredientAlreadyPublished | IngredientAlreadyPending | IngredientNotFound,
     Unit
   ] =
   for 
@@ -61,8 +64,12 @@ def requestPublicationHandler(ingredientId: IngredientId):
     alreadyPending <- run(
       IngredientPublicationRequestsQueries
         .pendningRequestsByIdQ(lift(ingredientId))
-    ).provideDS(using dataSource).orElseFail(InternalServerError())
-
+    )
+      .provideDS(using dataSource)
+      .orElseFail(InternalServerError())
+      .map(_.nonEmpty)
+    _ <- ZIO.fail(IngredientAlreadyPending(ingredientId))
+      .when(alreadyPending)
 
     _ <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
     .requestPublication(ingredientId)
