@@ -3,24 +3,27 @@ package db.tables.publication
 import domain.{IngredientId, IngredientPublicationRequest}
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 final case class DbIngredientPublicationRequest(
-                                             ingredientId: IngredientId,
-                                             createdAt: OffsetDateTime,
-                                             updatedAt: OffsetDateTime,
-                                             status: DbPublicationRequestStatus,
-                                             reason: Option[String],
-                                           ):
+ id: UUID,
+ ingredientId: IngredientId,
+ createdAt: OffsetDateTime,
+ updatedAt: OffsetDateTime,
+ status: DbPublicationRequestStatus,
+ reason: Option[String],
+):
   def toDomain: IngredientPublicationRequest =
-    IngredientPublicationRequest(ingredientId, createdAt, updatedAt, status.toDomain(reason))
+    IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status.toDomain(reason))
 
 object DbIngredientPublicationRequest:
   def fromDomain(req: IngredientPublicationRequest): DbIngredientPublicationRequest =
     val (reason, status) = DbPublicationRequestStatus.fromDomain(req.status)
-    DbIngredientPublicationRequest(req.ingredientId, req.createdAt, req.updatedAt, status, reason)
+    DbIngredientPublicationRequest(req.id, req.ingredientId, req.createdAt, req.updatedAt, status, reason)
 
   val createTable: String = """
     CREATE TABLE IF NOT EXISTS ingredient_publication_requests(
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       ingredient_id UUID NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

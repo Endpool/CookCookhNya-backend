@@ -3,8 +3,10 @@ package db.tables.publication
 import domain.{RecipeId, RecipePublicationRequest}
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 final case class DbRecipePublicationRequest(
+  id: UUID,
   recipeId: RecipeId,
   createdAt: OffsetDateTime,
   updatedAt: OffsetDateTime,
@@ -12,12 +14,12 @@ final case class DbRecipePublicationRequest(
   reason: Option[String],
 ):
   def toDomain: RecipePublicationRequest =
-    RecipePublicationRequest(recipeId, createdAt, updatedAt, status.toDomain(reason))
+    RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status.toDomain(reason))
 
 object DbRecipePublicationRequest:
   def fromDomain(req: RecipePublicationRequest): DbRecipePublicationRequest =
     val (reason, status) = DbPublicationRequestStatus.fromDomain(req.status)
-    DbRecipePublicationRequest(req.recipeId, req.createdAt, req.updatedAt, status, reason)
+    DbRecipePublicationRequest(req.id, req.recipeId, req.createdAt, req.updatedAt, status, reason)
 
   val createTable: String = """
     CREATE TABLE IF NOT EXISTS recipe_publication_requests(
