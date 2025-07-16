@@ -23,12 +23,12 @@ final case class CannotPublishRecipeWithCustomIngredients(
 object CannotPublishRecipeWithCustomIngredients:
   val variant = BadRequest.variantJson[CannotPublishRecipeWithCustomIngredients]
 
-final case class CannotPublishPublishedRecipe(
+final case class RecipeAlreadyPublished(
   recipeId: RecipeId,
-  message: String = "Cannot publish recipe that is published",
+  message: String = "Recipe already published",
 )
-object CannotPublishPublishedRecipe:
-  val variant = BadRequest.variantJson[CannotPublishPublishedRecipe]
+object RecipeAlreadyPublished:
+  val variant = BadRequest.variantJson[RecipeAlreadyPublished]
 
 
 private final case class RecipeAlreadyPending(
@@ -54,14 +54,14 @@ private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
       recipeNotFoundVariant,
       CannotPublishRecipeWithCustomIngredients.variant,
       RecipeAlreadyPending.variant,
-      CannotPublishPublishedRecipe.variant,
+      RecipeAlreadyPublished.variant,
     ))
     .out(statusCode(NoContent))
     .zSecuredServerLogic(requestPublicationHandler)
 
 private def requestPublicationHandler(recipeId: RecipeId):
   ZIO[AuthenticatedUser & PublishEnv,
-      InternalServerError | CannotPublishPublishedRecipe | RecipeAlreadyPending |
+      InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending |
       CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
       Unit] =
   for
@@ -69,7 +69,7 @@ private def requestPublicationHandler(recipeId: RecipeId):
       .getRecipe(recipeId)
       .some.orElseFail(RecipeNotFound(recipeId))
     )
-    _ <- ZIO.fail(CannotPublishPublishedRecipe(recipeId))
+    _ <- ZIO.fail(RecipeAlreadyPublished(recipeId))
       .when(recipe.isPublished)
 
     dataSource <- ZIO.service[DataSource]
