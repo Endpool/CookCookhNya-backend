@@ -40,8 +40,6 @@ final case class PublicationRequestResp(
 private type GetReqEnv
   = RecipePublicationRequestsRepo
   & IngredientPublicationRequestsRepo
-  & RecipesRepo
-  & IngredientsRepo
 
 private type PublicationRequest = RecipePublicationRequest | IngredientPublicationRequest
 
@@ -57,49 +55,61 @@ private def getRequestHandler(reqId: UUID):
   ZIO[AuthenticatedUser & GetReqEnv,
       InternalServerError | PublicationRequestNotFound,
       PublicationRequestResp] =
+  
   def getIngredientRequest =
-    ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.get(reqId))
-      .flatMap {
-        _.map { dbEntity =>
-          val IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
-          ZIO.serviceWithZIO[IngredientsRepo] {
-            _.get(ingredientId).some.map { ingredient =>
-              PublicationRequestResp(
-                reqId,
-                Ingredient,
-                ingredientId,
-                ingredient.name,
-                createdAt,
-                updatedAt,
-                comment,
-                status
-              )
-            }
-          }
-        }.getOrElse(ZIO.fail(PublicationRequestNotFound(reqId)))
+    ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getWithIngredient(reqId))
+      .someOrFail(PublicationRequestNotFound(reqId))
+      .map {
+        case (dbPubReq, dbIngredient) =>
+          val IngredientPublicationRequest(
+            id,
+            ingredientId,
+            createdAt,
+            updatedAt,
+            status,
+            comment
+          ) = dbPubReq.toDomain
+          
+          PublicationRequestResp(
+            reqId,
+            Ingredient,
+            ingredientId,
+            dbIngredient.name,
+            createdAt,
+            updatedAt,
+            comment,
+            status
+          )
+      }
+      
+  def getRecipeRequestOrIngredientRequest =
+    ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getWithRecipe(reqId))
+      .someOrElseZIO(getIngredientRequest)
+      .map {
+        case (dbPubReq, dbRecipe) =>
+          val RecipePublicationRequest(
+            id,
+            recipeId,
+            createdAt,
+            updatedAt,
+            status,
+            comment
+          ) = dbPubReq.toDomain
+          
+          PublicationRequestResp(
+            reqId,
+            Recipe,
+            recipeId,
+            dbRecipe.name,
+            createdAt,
+            updatedAt,
+            comment,
+            status
+          )
       }
 
-  ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.get(reqId))
-    .flatMap {
-      _.map { dbEntity =>
-        val RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
-        ZIO.serviceWithZIO[RecipesRepo] {
-          _.getRecipe(recipeId).some.map { recipe =>
-            PublicationRequestResp(
-              reqId,
-              Recipe,
-              recipeId,
-              recipe.name,
-              createdAt,
-              updatedAt,
-              comment,
-              status
-            )
-          }
-        }
-      }.getOrElse(getIngredientRequest)
-    }.mapError {
-      case _: (Option[_] | FailedDbQuery) => PublicationRequestNotFound(reqId)
-      case _: DbNotRespondingError => InternalServerError()
-      case x: PublicationRequestNotFound => x
-    }
+  getRecipeRequestOrIngredientRequest.mapError {
+    case _: FailedDbQuery              => PublicationRequestNotFound(reqId)
+    case _: DbNotRespondingError       => InternalServerError()
+    case x: PublicationRequestNotFound => x
+  }

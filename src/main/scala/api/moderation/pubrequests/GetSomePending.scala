@@ -1,18 +1,15 @@
 package api.moderation.pubrequests
 
+import api.common.search.paginate
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
-import api.EndpointErrorVariants.serverErrorVariant
+import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
 import api.common.search.PaginationParams
 import api.moderation.pubrequests.PublicationRequestType.*
-import db.repositories.{
-  IngredientPublicationRequestsRepo,
-  IngredientsRepo,
-  RecipePublicationRequestsRepo,
-  RecipesRepo
-}
-import domain.{IngredientPublicationRequest, InternalServerError, RecipePublicationRequest}
-
+import db.DbError
+import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
+import domain.{IngredientPublicationRequest, InternalServerError, PublicationRequestNotFound, RecipePublicationRequest}
 import io.circe.generic.auto.*
+
 import java.time.OffsetDateTime
 import java.util.UUID
 import sttp.model.StatusCode.NoContent
@@ -31,8 +28,6 @@ final case class PublicationRequestSummary(
 private type GetSomePendingEnv
   = RecipePublicationRequestsRepo
   & IngredientPublicationRequestsRepo
-  & RecipesRepo
-  & IngredientsRepo
 
 private type PublicationRequest = RecipePublicationRequest | IngredientPublicationRequest
 
@@ -41,33 +36,45 @@ private val getSomePending: ZServerEndpoint[GetSomePendingEnv, Any] =
     .get
     .in(PaginationParams.query)
     .out(statusCode(NoContent))
-    .out(jsonBody[Seq[PublicationRequestSummary]])
-    .errorOut(oneOf(serverErrorVariant))
+    .out(jsonBody[Vector[PublicationRequestSummary]])
+    .errorOut(oneOf(serverErrorVariant, publicationRequestNotFound))
     .zSecuredServerLogic(getSomePendingHandler)
 
 private def getSomePendingHandler(paginationParams: PaginationParams):
-  ZIO[AuthenticatedUser & GetSomePendingEnv, InternalServerError, Seq[PublicationRequestSummary]] =
-
-  def toPublicationRequest(req: PublicationRequest) = req match // some shitty code... I will fix this later
-    case RecipePublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
-      ZIO.serviceWithZIO[RecipesRepo](_.getRecipe(entityId))
-        .someOrFail(InternalServerError())
-        .map(recipe => PublicationRequestSummary(id, Recipe, recipe.name, createdAt))
-    case IngredientPublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
-      ZIO.serviceWithZIO[IngredientsRepo](_.get(entityId))
-        .someOrFail(InternalServerError())
-        .map(ingredient => PublicationRequestSummary(id, Ingredient, ingredient.name, createdAt))
-
-  val PaginationParams(count, offset) = paginationParams
-  for
-    pendingIngredientReqs <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllPending)
-      .flatMap { reqs =>
-        ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
-      }.orElseFail(InternalServerError())
-    pendingRecipeReqs <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllPending)
-      .flatMap { reqs =>
-        ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
-      }.orElseFail(InternalServerError())
-  yield (pendingRecipeReqs ++ pendingIngredientReqs)
-    .sortWith(_.createdAt.toEpochSecond < _.createdAt.toEpochSecond)
-    .slice(offset, offset + count)
+  ZIO[AuthenticatedUser & GetSomePendingEnv, InternalServerError | PublicationRequestNotFound, Vector[PublicationRequestSummary]] =
+  
+  {
+    for
+      pendingIngredientReqs <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllPendingIds)
+        .flatMap { ids =>
+          ZIO.collectAll {
+            ids.map { id =>
+              ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getWithIngredient(id))
+                .someOrFail(PublicationRequestNotFound(id))
+                .map {
+                  case (dbPubReq, dbIngredient) =>
+                    PublicationRequestSummary(id, Ingredient, dbIngredient.name, dbPubReq.createdAt)
+                }
+            }
+          }
+        }
+      pendingRecipeReqs <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllPendingIds)
+        .flatMap { ids =>
+          ZIO.collectAll {
+            ids.map { id =>
+              ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getWithRecipe(id))
+                .someOrFail(PublicationRequestNotFound(id))
+                .map {
+                  case (dbPubReq, dbRecipe) =>
+                    PublicationRequestSummary(id, Recipe, dbRecipe.name, dbPubReq.createdAt)
+                }
+            }
+          }
+        }
+    yield (pendingRecipeReqs ++ pendingIngredientReqs)
+      .sortWith(_.createdAt.toEpochSecond < _.createdAt.toEpochSecond)
+      .paginate(paginationParams)
+  }.mapError {
+    case _: DbError                    => InternalServerError()
+    case x: PublicationRequestNotFound => x
+  }

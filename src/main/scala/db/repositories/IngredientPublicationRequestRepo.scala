@@ -1,18 +1,20 @@
 package db.repositories
 
 import db.DbError
+import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.{PublicationRequestId, IngredientId, PublicationRequestNotFound}
-
+import domain.{IngredientId, PublicationRequestId, PublicationRequestNotFound}
 import io.getquill.*
+
 import javax.sql.DataSource
-import zio.{IO, RLayer, ZLayer, ZIO}
+import zio.{IO, RLayer, ZIO, ZLayer}
 
 trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
-  def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
+  def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
+  def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit]
 
@@ -27,8 +29,9 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   override def requestPublication(ingredientId: IngredientId): IO[DbError, Unit] =
     run(requestPublicationQ(lift(ingredientId))).unit.provideDS
 
-  override def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]] =
-    run(allPendingQ).provideDS
+  override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] = {
+    run(allPendingQ.map(_.id)).provideDS.map(Vector.from)
+  }
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
@@ -40,6 +43,15 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
       case _ => ZIO.unit
     }
 
+  override def getWithIngredient(id: PublicationRequestId):
+    IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
+
+    run(
+      getQ(id)
+        .join(IngredientsQueries.ingredientsQ)
+        .on((rpq, r) => rpq.ingredientId == r.id)
+    ).map(_.headOption).provideDS
+
 object IngredientPublicationRequestsQueries:
   import db.QuillConfig.ctx.*
 
@@ -49,12 +61,16 @@ object IngredientPublicationRequestsQueries:
     ingredientPublicationRequestsQ
       .insert(_.ingredientId -> ingredientId)
 
-  inline def allPendingQ = ingredientPublicationRequestsQ.filter(_.status == lift(Pending))
+  inline def allPendingQ = 
+    ingredientPublicationRequestsQ
+      .filter(_.status == lift(Pending))
+
   inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId)
 
   inline def getQ(inline id: PublicationRequestId) =
     ingredientPublicationRequestsQ
       .filter(_.id == lift(id))
+      .take(1)
 
   inline def updateQ(inline id: PublicationRequestId, inline comment: String, inline status: DbPublicationRequestStatus) =
     ingredientPublicationRequestsQ

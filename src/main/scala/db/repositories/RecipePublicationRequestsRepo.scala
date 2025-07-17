@@ -13,7 +13,7 @@ import db.tables.DbRecipe
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
-  def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]]
+  def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
   def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
@@ -30,8 +30,8 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def requestPublication(recipeId: RecipeId): IO[DbError, Unit] =
     run(requestPublicationQ(lift(recipeId))).unit.provideDS
 
-  override def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]] =
-    run(allPendingQ).provideDS
+  override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] =
+    run(allPendingQ.map(_.id)).provideDS.map(Vector.from)
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
@@ -75,7 +75,7 @@ object RecipePublicationRequestsQueries:
       .filter(_.id == lift(id))
       .update(
         _.comment -> lift(comment),
-        _.status  -> lift(status),
+        _.status  -> lift(status)
       )
 
 object RecipePublicationRequestsRepo:
