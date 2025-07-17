@@ -28,9 +28,9 @@ object IngredientAlreadyPublished:
   val variant = BadRequest.variantJson[IngredientAlreadyPublished]
 
 private final case class IngredientAlreadyPending(
-   ingredientId: IngredientId,
-   message: String = "Ingredient already pending"
- )
+  ingredientId: IngredientId,
+  message: String = "Ingredient already pending"
+)
 object IngredientAlreadyPending:
   val variant = BadRequest.variantJson[IngredientAlreadyPending]
 
@@ -64,14 +64,13 @@ def requestPublicationHandler(ingredientId: IngredientId):
     alreadyPending <- run(
       IngredientPublicationRequestsQueries
         .pendingRequestsByIdQ(lift(ingredientId)).nonEmpty
-    )
-      .provideDS(using dataSource)
+    ).provideDS(using dataSource)
       .orElseFail(InternalServerError())
     _ <- ZIO.fail(IngredientAlreadyPending(ingredientId))
       .when(alreadyPending)
 
     _ <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
-    .requestPublication(ingredientId)
-    .orElseFail(InternalServerError())
+      .requestPublication(ingredientId)
+      .orElseFail(InternalServerError())
     )
   yield ()
