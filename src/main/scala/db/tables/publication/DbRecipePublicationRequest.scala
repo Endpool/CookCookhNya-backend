@@ -29,14 +29,6 @@ object DbRecipePublicationRequest:
       FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
     );
 
-    CREATE OR REPLACE FUNCTION trigger_set_updated_at()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      NEW.updated_at = CURRENT_TIMESTAMP;
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-
     CREATE OR REPLACE TRIGGER update_timestamp
     BEFORE UPDATE ON recipe_publication_requests
     FOR EACH ROW

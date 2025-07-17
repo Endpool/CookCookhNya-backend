@@ -1,8 +1,7 @@
 package db.tables.publication
 
 object SqlFunctions:
-  val triggerSetUpdatedAt =
-    """
+  val triggerSetUpdatedAt: String = """
     CREATE OR REPLACE FUNCTION trigger_set_updated_at()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -10,4 +9,4 @@ object SqlFunctions:
       RETURN NEW;
     END;
     $$ LANGUAGE plpgsql;
-    """
+  """
