@@ -1,33 +1,26 @@
 package db.repositories
 
-import db.tables.{
-  DbStorage,
-  DbStorageCreator,
-  recipeIngredientsTable,
-  recipesTable,
-  storageMembersTable,
-  storagesTable
-}
+import api.common.search.PaginationParams
+import db.tables.{recipeIngredientsTable, recipesTable}
 import db.{DbError, handleDbError}
-import domain.{RecipeId, StorageId, UserId}
-import com.augustnagro.magnum.magzio.*
+import domain.{RecipeId, StorageId}
 
-import zio.{IO, RLayer, UIO, ZIO, ZLayer}
+import com.augustnagro.magnum.magzio.*
+import zio.{ZIO, ZLayer}
 
 trait RecipesDomainRepo:
   protected type RecipeSummary = (RecipeId, String, Int, Int, Int)
   def getSuggestedIngredients(
-    size: Int,
-    offset: Int,
+    paginationParams: PaginationParams,
     storageIds: Vector[StorageId]
   ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
 
 private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
   override def getSuggestedIngredients(
-    size: Int,
-    offset: Int,
+    paginationParams: PaginationParams,
     storageIds: Vector[StorageId]
   ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
+    val PaginationParams(size, offset) = paginationParams
     val table = recipeIngredientsTable
     for
       allIngredients <- ZIO.collectAll(storageIds.map { storageId =>

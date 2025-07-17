@@ -9,11 +9,11 @@ import io.circe.generic.auto.*
 import io.circe.parser.decode
 import zio.http.{Client, Status, URL, Path}
 import zio.http.Request.get
-import zio.{Scope, ZIO, ZLayer}
+import zio.{Scope, ZIO}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 
 object GetAllStoragesTests extends ZIOIntegrationTestSpec:
-  private val endpointPath: URL = URL(Path.root / "my" / "storages")
+  private val endpointPath: URL = URL(Path.root / "storages")
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Get all storages tests")(
     test("When unauthorized should get 401") {

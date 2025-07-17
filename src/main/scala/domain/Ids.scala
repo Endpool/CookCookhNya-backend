@@ -1,7 +1,8 @@
 package domain
 
-type BaseId = Long
+import java.util.UUID
 
-type UserId = BaseId
-type StorageId = BaseId
-type IngredientId = BaseId
+type UserId = Long
+type StorageId = UUID
+type IngredientId = UUID
+type RecipeId = UUID

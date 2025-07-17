@@ -1,22 +1,19 @@
 package integration.api.invitations
 
-import domain.{IngredientId, StorageId}
+
+import api.Authentication.AuthenticatedUser
+import db.repositories.StorageMembersRepo
+import db.tables.storageInvitationTable
+import domain.StorageId
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
-import api.recipes.{IngredientSummary, RecipeResp}
-import db.repositories.{StorageIngredientsRepo, StorageMembersRepo}
-import io.circe.parser.*
-import io.circe.generic.auto.*
-import zio.http.{Client, Path, Request, Status, URL}
+
+import com.augustnagro.magnum.magzio.{Transactor, sql}
+import java.util.UUID
+import zio.http.{Client, Path, Status, URL}
+import zio.http.Response
 import zio.{Scope, ZIO, RIO}
 import zio.test.{Gen, Spec, TestEnvironment, assertTrue, TestLensOptionOps, SmartAssertionOps}
-import api.Authentication.AuthenticatedUser
-import zio.http.Body
-import zio.http.Response
-import zio.http.ZClient
-import db.repositories.InvitationsRepo
-import com.augustnagro.magnum.magzio.{Transactor, sql}
-import db.tables.storageInvitationTable
 
 object CreateInvitationTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
@@ -32,7 +29,7 @@ object CreateInvitationTests extends ZIOIntegrationTestSpec:
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Create invitation tests")(
     test("When unauthorized should get 401") {
       for
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- Gen.uuid.runHead.some
         resp <- Client.batched(post(endpointPath(storageId)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
@@ -80,7 +77,7 @@ object CreateInvitationTests extends ZIOIntegrationTestSpec:
     test("When create invitation to non-existent storage should get 404 and invitation should not be created"){
       for
         user <- registerUser
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- Gen.uuid.runHead.some
 
         resp <- createInvitation(user, storageId)
 

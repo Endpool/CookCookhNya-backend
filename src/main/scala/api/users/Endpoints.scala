@@ -1,10 +1,10 @@
 package api.users
 
-import domain.UserId
 import sttp.tapir.ztapir.*
 
 val usersEndpoint =
   endpoint
+    .tag("Users")
     .in("users")
 
 val usersEndpoints = List(

@@ -1,16 +1,12 @@
 package api.recipes
 
-import api.{
-  handleFailedSqlQuery,
-  toStorageNotFound,
-  ForeignKeyViolation,
-}
 import api.EndpointErrorVariants.{
   serverErrorVariant,
   storageNotFoundVariant
 }
-import db.DbError.{FailedDbQuery, DbNotRespondingError}
-import db.repositories.RecipesDomainRepo
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
+import api.common.search.PaginationParams
+import db.repositories.{RecipesDomainRepo, StorageIngredientsRepo, StoragesRepo}
 import domain.{InternalServerError, RecipeId, StorageId, StorageNotFound}
 
 import io.circe.generic.auto.*
@@ -18,42 +14,40 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import db.repositories.StorageIngredientsRepo
-import zio.RIO
-import sttp.tapir.server.ServerEndpoint
 
-case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
-case class SuggestedRecipesResp(recipesFound: Int, recipes: Vector[SuggestedRecipeResp])
+final case class SuggestedRecipeResp(id: RecipeId, name: String, available: Int, total: Int)
+final case class SuggestedRecipesResp(found: Int, results: Vector[SuggestedRecipeResp])
 
-private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo
+private type GetSuggestedEnv = RecipesDomainRepo & StorageIngredientsRepo & StoragesRepo
 
 private val getSuggested: ZServerEndpoint[GetSuggestedEnv, Any] =
-  recipesEndpoint
-    .get
-    .in(query[Int]("size").default(2))
-    .in(query[Int]("offset").default(0))
-    .in(query[Vector[StorageId]]("storageId"))
+  recipesEndpoint(
+    path = "suggested-recipes"
+  ).get
+    .in(PaginationParams.query)
+    .in(query[Vector[StorageId]]("storage-id"))
     .out(jsonBody[SuggestedRecipesResp])
     .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
-    .zServerLogic(getSuggestedHandler)
+    .zSecuredServerLogic(getSuggestedHandler)
 
 private def getSuggestedHandler(
-  size: Int,
-  offset: Int,
+  paginationParams: PaginationParams,
   storageIds: Vector[StorageId]
-): ZIO[GetSuggestedEnv, InternalServerError | StorageNotFound, SuggestedRecipesResp] = {
-  for
-    suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo] {
-      _.getSuggestedIngredients(size, offset, storageIds)
-    }
-    suggested = suggestedTuples.map { (id, name, available, totalIngredients, _) =>
-      SuggestedRecipeResp(id, name, available, totalIngredients)
-    }
-    recipesFound = suggestedTuples.collectFirst(_._5).getOrElse(0)
-  yield SuggestedRecipesResp(recipesFound, suggested)
-}.mapError {
-  case e: FailedDbQuery => handleFailedSqlQuery(e)
-    .flatMap(toStorageNotFound)
-    .getOrElse(InternalServerError())
-  case _: DbNotRespondingError => InternalServerError()
-}
+): ZIO[AuthenticatedUser & GetSuggestedEnv,
+       InternalServerError | StorageNotFound,
+       SuggestedRecipesResp] = for
+  _ <- ZIO.serviceWithZIO[StoragesRepo](repo =>
+    ZIO.foreach(storageIds)(storageId => repo
+      .getById(storageId)
+      .some.orElseFail(StorageNotFound(storageId.toString))
+    )
+  )
+  suggestedTuples <- ZIO.serviceWithZIO[RecipesDomainRepo](_
+    .getSuggestedIngredients(paginationParams, storageIds)
+    .orElseFail(InternalServerError())
+  )
+  suggested = suggestedTuples.map { (id, name, available, totalIngredients, _) =>
+    SuggestedRecipeResp(id, name, available, totalIngredients)
+  }
+  recipesFound = suggestedTuples.collectFirst(_._5).getOrElse(0)
+yield SuggestedRecipesResp(recipesFound, suggested)

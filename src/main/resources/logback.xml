@@ -1,0 +1,21 @@
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <fieldNames>
+        <timestamp>timestamp</timestamp>
+        <thread>thread</thread>
+        <level>level</level>
+        <logger>logger</logger>
+      </fieldNames>
+      <escapeHtmlChars>false</escapeHtmlChars>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+  </root>
+
+  <!-- Adjust third-party log levels -->
+  <logger name="com.zaxxer.hikari" level="DEBUG"/>
+  <logger name="io.getquill" level="DEBUG"/>
+</configuration>

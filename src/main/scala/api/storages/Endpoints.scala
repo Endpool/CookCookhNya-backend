@@ -2,13 +2,13 @@ package api.storages
 
 import api.storages.ingredients.storagesIngredientsEndpoints
 import api.storages.members.storagesMembersEndpoints
-import domain.UserId
 
 import sttp.tapir.ztapir.*
 
 val storagesEndpoint =
   endpoint
-  .in("my" / "storages")
+    .tag("Storages")
+    .in("storages")
 
 val storageEndpoints = List(
   create.widen,

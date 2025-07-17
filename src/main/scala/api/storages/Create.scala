@@ -1,15 +1,17 @@
 package api.storages
 
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
-import db.repositories.StoragesRepo
-import domain.{InternalServerError, StorageId, UserId}
+import api.EndpointErrorVariants.{userNotFoundVariant, serverErrorVariant}
+import api.{handleFailedSqlQuery, toUserNotFound}
 import db.DbError
+import db.repositories.StoragesRepo
+import domain.{UserNotFound, InternalServerError, StorageId}
+
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
-import api.EndpointErrorVariants.serverErrorVariant
 
 final case class CreateStorageReqBody(name: String)
 
@@ -19,12 +21,18 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
   storagesEndpoint
   .post
   .in(jsonBody[CreateStorageReqBody])
-  .out(jsonBody[StorageId])
-  .errorOut(oneOf(serverErrorVariant))
+  .out(plainBody[StorageId])
+  .errorOut(oneOf(userNotFoundVariant, serverErrorVariant))
   .zSecuredServerLogic(createHandler)
 
 private def createHandler(reqBody: CreateStorageReqBody):
-  ZIO[AuthenticatedUser & CreateEnv, InternalServerError, StorageId] =
-  ZIO.serviceWithZIO[StoragesRepo] {
-    _.createEmpty(reqBody.name)
-  }.mapError(_ => InternalServerError())
+  ZIO[AuthenticatedUser & CreateEnv, UserNotFound | InternalServerError, StorageId] =
+  ZIO.serviceWithZIO[StoragesRepo](_
+    .createEmpty(reqBody.name)
+    .mapError {
+      case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)
+        .flatMap(toUserNotFound)
+        .getOrElse(InternalServerError())
+      case _: DbError.DbNotRespondingError => InternalServerError()
+    }
+  )

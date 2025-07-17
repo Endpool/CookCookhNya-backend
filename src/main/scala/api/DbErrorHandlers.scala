@@ -2,14 +2,12 @@ package api
 
 import _root_.db.DbError.FailedDbQuery
 import _root_.db.tables.*
-import domain.{IngredientNotFound, InternalServerError, StorageNotFound, UserNotFound}
-
-import zio.{IO, ZIO}
+import domain.{IngredientNotFound, StorageNotFound, UserNotFound}
 
 case class ForeignKeyViolation(keyName: String, keyValue: String, tableName: String)
 
 def handleFailedSqlQuery(error: FailedDbQuery): Option[ForeignKeyViolation] =
-  val pattern = """Key \((.*)\)=\((.*)\) is not present in table "(.*)".""".r
+  val pattern = """Key \((.*)\)\=\((.*)\) is not present in table "(.*)"\.""".r
   pattern.findFirstMatchIn(error.sqlExc.getMessage).map { text =>
     ForeignKeyViolation(
       keyName   = text.group(1),
@@ -30,5 +28,6 @@ def toStorageNotFound(fkv: ForeignKeyViolation):
 
 def toUserNotFound(fkv: ForeignKeyViolation):
   Option[UserNotFound] =
-  Option.when(fkv.keyName == storageMembersTable.memberId.sqlName)
+  Option.when(fkv.keyName == storageMembersTable.memberId.sqlName
+           || fkv.keyName == storagesTable.ownerId.sqlName)
     (UserNotFound(fkv.keyValue))

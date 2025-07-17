@@ -1,47 +1,35 @@
 package integration.common
 
 import api.Main
-import api.users.CreateUserReqBody
-import db.{DataSourceDescription, dbLayer}
-import db.repositories.{
-  IngredientsRepo,
-  InvitationsRepo,
-  InvitationsSecretKey,
-  RecipeIngredientsRepo,
-  RecipesDomainRepo,
-  RecipesRepo,
-  ShoppingListsRepo,
-  StorageIngredientsRepo,
-  StorageMembersRepo,
-  StoragesRepo,
-  UsersRepo,
-}
-import domain.UserId
-import integration.common.Utils.{addAuthorization, put, withJsonBody}
+import db.{DataSourceDescription, dataSourceLayer, dbLayer}
+import db.repositories.*
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.dimafeng.testcontainers.PostgreSQLContainer
-import io.circe.generic.auto.deriveEncoder
+import javax.sql.DataSource
+import org.testcontainers.utility.DockerImageName
 import zio.http.{Client, Server, TestServer, URL}
-import zio.test.Gen
 import zio.test.ZIOSpecDefault
 import zio.{ZLayer, RLayer, URLayer, TaskLayer, ZIO, RIO, ZEnvironment}
 
 abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
+  private val postgreSQLContainerTag: String = "17"
+
   protected def testLayer:
     TaskLayer[
       Client
-      & Transactor
+      & Transactor & DataSource
       & IngredientsRepo
       & InvitationsRepo
       & RecipeIngredientsRepo
       & RecipesRepo
+      & RecipePublicationRequestsRepo
       & StorageIngredientsRepo
       & StorageMembersRepo
       & StoragesRepo
       & UsersRepo
     ] =
-    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dbLayer >+> (
+    psqlContainerLayer >>> dataSourceDescritptionLayer >>> dataSourceLayer >+> dbLayer >+> (
       testServerLayer >>> clientLayer ++ testReposLayer
     )
 
@@ -49,7 +37,7 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val psqlContainerLayer: TaskLayer[PostgreSQLContainer] = ZLayer.scoped {
     ZIO.acquireRelease(
       ZIO.attempt {
-        val container = PostgreSQLContainer()
+        val container = PostgreSQLContainer(DockerImageName(s"postgres:$postgreSQLContainerTag"))
         container.start
         container
       }
@@ -69,11 +57,11 @@ abstract class ZIOIntegrationTestSpec extends ZIOSpecDefault:
   private val testReposLayer =
     ZLayer.succeed(InvitationsSecretKey("Invit4ti0n553c7etK3yInv1t4t10n5Secret3ey")) >>> Main.reposLayer
 
-  private def initTestServer(testServer: TestServer): RIO[Transactor, Unit] =
+  private def initTestServer(testServer: TestServer): RIO[DataSource & Transactor, Unit] =
     testServer.addRoutes(Main.app)
       .provideSomeLayer(testReposLayer)
 
-  private val testServerLayer: RLayer[Transactor, TestServer] = for
+  private val testServerLayer: RLayer[DataSource & Transactor, TestServer] = for
     testServer <- TestServer.default
     _ <- ZLayer.fromZIO(initTestServer(testServer.get))
   yield testServer

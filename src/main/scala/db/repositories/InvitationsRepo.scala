@@ -3,13 +3,13 @@ package db.repositories
 import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
 import db.tables.{DbStorageInvitation, storageInvitationTable}
-import domain.{IngredientId, InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId, StorageNotFound, UserId}
+import domain.{InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId}
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.time.Instant
+import java.util.concurrent.TimeUnit
 import com.augustnagro.magnum.magzio.*
-import zio.{IO, URLayer, Layer, System, ZIO, ZLayer}
+import zio.{URLayer, Layer, System, ZIO, ZLayer, Clock}
 
 trait InvitationsRepo:
   def create(storageId: StorageId):
@@ -22,12 +22,12 @@ private final case class InvitationsRepoLive(xa: Transactor, secretKey: Invitati
 
   override def create(storageId: StorageId):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InternalServerError, String] =
-    val currentTime = Instant.now().toEpochMilli
-    val input = s"$currentTime:$storageId:${secretKey.value}"
-    val digest = MessageDigest.getInstance("SHA-256")
-    val hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
-    val invitationHash = hashBytes.map("%02x".format(_)).mkString
     for
+      currentTime <- Clock.currentTime(TimeUnit.NANOSECONDS)
+      input = s"$currentTime:$storageId:${secretKey.value}"
+      digest = MessageDigest.getInstance("SHA-256")
+      hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
+      invitationHash = hashBytes.map("%02x".format(_)).mkString
       _ <- xa.transact {
         insert(DbStorageInvitation(storageId, invitationHash))
       }.mapError(handleDbError)

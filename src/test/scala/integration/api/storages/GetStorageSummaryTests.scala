@@ -15,19 +15,19 @@ import zio.{Scope, ZIO, ZLayer}
 
 object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
-    URL(Path.root / "my" / "storages" / storageId.toString)
+    URL(Path.root / "storages" / storageId.toString)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("Get storage tests")(
     test("When unauthorized should get 401") {
       for
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- getRandomUUID
         resp <- Client.batched(get(endpointPath(storageId)))
       yield assertTrue(resp.status == Status.Unauthorized)
     },
     test("When authorized but storage does not exist should get 404") {
       for
         userId <- registerUser
-        storageId <- Gen.long(1, 10000000).runHead.some
+        storageId <- getRandomUUID
 
         resp <- Client.batched(
           get(endpointPath(storageId))

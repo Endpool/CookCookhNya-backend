@@ -1,6 +1,6 @@
 package api.storages.members
 
-import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant, userNotFoundVariant}
+import api.EndpointErrorVariants.{serverErrorVariant, storageNotFoundVariant}
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import db.DbError
 import db.repositories.{StorageMembersRepo, StoragesRepo}
@@ -20,7 +20,6 @@ private val remove: ZServerEndpoint[RemoveEnv, Any] =
   .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
   .zSecuredServerLogic(removeHandler)
 
-// TODO this endpoint ignores auth
 private def removeHandler(storageId: StorageId, memberId: UserId):
   ZIO[AuthenticatedUser & RemoveEnv, InternalServerError | StorageNotFound, Unit] =
   {

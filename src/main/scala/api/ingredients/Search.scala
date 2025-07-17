@@ -1,67 +1,55 @@
 package api.ingredients
 
+import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
+import api.common.search.{PaginationParams, paginate, SearchParams, Searchable}
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.{IngredientsRepo, StorageIngredientsRepo}
-import domain.{IngredientId, InternalServerError, StorageId, UserId}
+import domain.{IngredientId, InternalServerError}
 
 import io.circe.generic.auto.*
-import me.xdrop.fuzzywuzzy.FuzzySearch
+import sttp.tapir.{Codec, Schema, Validator, EndpointInput}
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-case class IngredientSearchResult(
-  id: IngredientId,
-  name: String,
-  available: Boolean
-)
+enum SearchIngredientsFilter:
+  case Custom, Public, All
 
-case class SearchResultsResp(
-  results: Vector[IngredientSearchResult],
-  found: Int
-)
+object SearchIngredientsFilter:
+  val query: EndpointInput.Query[SearchIngredientsFilter] = query()
+  def query(default: SearchIngredientsFilter = SearchIngredientsFilter.All):
+    EndpointInput.Query[SearchIngredientsFilter] =
+    sttp.tapir.query[SearchIngredientsFilter]("filter").default(default)
+
+  given Codec.PlainCodec[SearchIngredientsFilter] =
+    Codec.derivedEnumeration.defaultStringBased
 
 private type SearchEnv = IngredientsRepo & StorageIngredientsRepo
 
 private val search: ZServerEndpoint[SearchEnv, Any] =
-  endpoint
+  ingredientsEndpoint
     .get
-    .in("ingredients-for-storage")
-    .in(query[String]("query"))
-    .in(query[StorageId]("storage-id"))
-    .in(query[Int]("size").default(2))
-    .in(query[Int]("offset").default(0))
-    .in(query[Int]("threshold").default(50))
-    .out(jsonBody[SearchResultsResp])
+    .in(SearchParams.query)
+    .in(PaginationParams.query)
+    .in(SearchIngredientsFilter.query)
+    .out(jsonBody[SearchResp[IngredientResp]])
     .errorOut(oneOf(serverErrorVariant))
-    .zServerLogic(searchHandler)
+    .zSecuredServerLogic(searchHandler)
 
-// TODO this should be authenticated
 private def searchHandler(
-  query: String,
-  storageId: StorageId,
-  size: Int,
-  offset: Int,
-  threshold: Int
-): ZIO[SearchEnv, InternalServerError, SearchResultsResp] =
+  searchParams: SearchParams,
+  paginationParams: PaginationParams,
+  filter: SearchIngredientsFilter,
+): ZIO[AuthenticatedUser & SearchEnv, InternalServerError, SearchResp[IngredientResp]] =
   for
-    allIngredients <- ZIO.serviceWithZIO[IngredientsRepo](_.getAll.mapError(_ => InternalServerError()))
-    allIngredientsAvailability <- ZIO.foreachPar(allIngredients) {
-      ingredient =>
-        ZIO.serviceWithZIO[StorageIngredientsRepo](_.inStorage(storageId, ingredient.id))
-          .map(inStorage => IngredientSearchResult(ingredient.id, ingredient.name, inStorage))
-          .mapError(_ => InternalServerError())
-    }
-    res = allIngredientsAvailability
-      .map(i => (i, FuzzySearch.tokenSetPartialRatio(query, i.name)))
-      .filter((_, ratio) => ratio >= threshold)
-      .sortBy(
-        (i, ratio) => (
-          -ratio, // negate the ratio to make order descending
-          (i.name.length - query.length).abs // secondary sort by length difference
-        )
-      )
-      .map(_._1)
-
-  yield SearchResultsResp(res.slice(offset, offset + size), res.length)
+    getIngredients <- ZIO.serviceWith[IngredientsRepo](filter match
+      case SearchIngredientsFilter.Custom => _.getAllCustom
+      case SearchIngredientsFilter.Public => _.getAllPublic
+      case SearchIngredientsFilter.All    => _.getAll
+    )
+    allIngredients <- getIngredients
+      .map(_.map(IngredientResp.fromDb))
+      .orElseFail(InternalServerError())
+    res = Searchable.search(Vector.from(allIngredients), searchParams)
+  yield SearchResp(res.paginate(paginationParams), res.length)

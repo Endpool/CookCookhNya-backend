@@ -7,7 +7,6 @@ import domain.{InternalServerError, StorageNotFound, StorageId, UserId}
 
 import com.augustnagro.magnum.magzio.Transactor
 import com.augustnagro.magnum.sql
-import db.DbError
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
@@ -44,7 +43,7 @@ private def getAllHandler(storageId: StorageId):
           WHERE s.${storagesTable.id} = $storageId
         """.query[UserResp].run()
       }
-    }.mapError(_ => InternalServerError())
+    }.orElseFail(InternalServerError())
     _ <- ZIO.unless(members.map(_.id).contains(userId)) {
       ZIO.fail(StorageNotFound(storageId.toString))
     }

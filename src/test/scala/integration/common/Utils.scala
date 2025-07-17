@@ -1,21 +1,27 @@
 package integration.common
 
 import api.Authentication.AuthenticatedUser
-import api.ingredients.CreateIngredientReqBody
 import api.users.CreateUserReqBody
 import db.DbError
-import db.repositories.{IngredientsRepo, RecipeIngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
+import db.repositories.{IngredientsRepo, RecipesRepo, StorageIngredientsRepo, StoragesRepo}
 import domain.{IngredientId, InternalServerError, RecipeId, StorageId, UserId}
 
 import io.circe.Encoder
 import io.circe.generic.auto.deriveEncoder
-import io.circe.parser.decode
 import io.circe.syntax.*
 import zio.{RIO, UIO, ZIO, ZLayer}
 import zio.http.{Path, URL, Body, Client, Header, MediaType, Request}
 import zio.test.Gen
+import java.util.UUID
 
 object Utils:
+  def getRandomUUID: ZIO[Any, Option[Nothing], UUID] = Gen.uuid.runHead.some
+
+  extension(str: String)
+    def toUUID: Option[UUID] =
+      try Some(UUID.fromString(str))
+      catch(_ => None)
+
   extension(req: Request)
     def addAuthorization(authorizedUser: AuthenticatedUser): Request =
       req.addHeader(Header.Authorization.Bearer(authorizedUser.userId.toString))
@@ -28,6 +34,9 @@ object Utils:
     def hasSameElementsAs(seq2: Seq[A])(using ord: Ordering[A]): Boolean
       =  seq1.length == seq2.length // for optimization
       && seq1.sorted == seq2.sorted
+
+    def isSubsetOf(seq2: Seq[A]): Boolean =
+      seq1.diff(seq2).isEmpty
 
   extension[R, E, A](zio: ZIO[AuthenticatedUser & R, E, A])
     def provideUser(user: AuthenticatedUser): ZIO[R, E, A] =
@@ -71,28 +80,42 @@ object Utils:
     .runHead
     .someOrElse("randomString")
 
-  def createIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+  def createPublicIngredient: ZIO[IngredientsRepo, InternalServerError, IngredientId] =
     randomString.flatMap(name =>
-      ZIO.serviceWithZIO[IngredientsRepo] {
-        _.add(name).map(_.id)
-      }.mapError(_ => InternalServerError())
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addPublic(name)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
+    )
+
+  def createCustomIngredient(creator: AuthenticatedUser):
+    ZIO[IngredientsRepo, InternalServerError, IngredientId] =
+    randomString.flatMap(name =>
+      ZIO.serviceWithZIO[IngredientsRepo](_
+        .addCustom(name)
+        .provideUser(creator)
+        .map(_.id)
+        .orElseFail(InternalServerError())
+      )
     )
 
   def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
     ZIO.collectAll(
-      (1 to n).map(_ => createIngredient).toVector
+      (1 to n).map(_ => createPublicIngredient).toVector
     )
 
-  def createRecipe(ingredientIds: Vector[IngredientId]): ZIO[
-    RecipesRepo & IngredientsRepo & RecipeIngredientsRepo,
+  def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
+    RecipesRepo,
     InternalServerError | DbError,
     RecipeId
   ] =
     for
       name <- randomString
-      link <- randomString
-      recipeId <- ZIO.serviceWithZIO[RecipesRepo](
-        _.addRecipe(name, link, ingredientIds)
+      link <- randomString.map(Some(_))
+      recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
+        .addRecipe(name, link, ingredientIds.toList)
+        .provideUser(user)
       )
     yield recipeId
 
