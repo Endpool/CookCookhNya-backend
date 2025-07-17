@@ -44,7 +44,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
 
         recipeId <- createNIngredients(5)
-          .flatMap(createRecipe(user, _))
+          .flatMap(createCustomRecipe(user, _))
         ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -57,7 +57,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
 
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
         ingredientId <- createPublicIngredient
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -77,7 +77,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
 
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
         ingredientId <- createCustomIngredient(user)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
@@ -99,7 +99,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
@@ -119,7 +119,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         otherUser <- registerUser
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(otherUser, initialIngredients)
+        recipeId <- createCustomRecipe(otherUser, initialIngredients)
 
         ingredientId <- createPublicIngredient
 
@@ -143,7 +143,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         otherUser <- registerUser
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(otherUser, initialIngredients)
+        recipeId <- createCustomRecipe(otherUser, initialIngredients)
 
         user <- registerUser
         ingredientId <- createCustomIngredient(user)
@@ -165,7 +165,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       for
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- registerUser.flatMap(createRecipe(_,  initialIngredients))
+        recipeId <- registerUser.flatMap(createCustomRecipe(_,  initialIngredients))
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createPublicIngredient
@@ -189,7 +189,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
       for
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- registerUser.flatMap(createRecipe(_,  initialIngredients))
+        recipeId <- registerUser.flatMap(createCustomRecipe(_,  initialIngredients))
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         user <- registerUser
@@ -213,7 +213,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createPublicIngredient
@@ -236,7 +236,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         ingredientId <- createCustomIngredient(user)
@@ -262,7 +262,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
           .map(_ :+ ingredientId)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 
@@ -282,7 +282,7 @@ object AddIngredientToRecipeTests extends ZIOIntegrationTestSpec:
         initialIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
           .map(_ :+ ingredientId)
-        recipeId <- createRecipe(user, initialIngredients)
+        recipeId <- createCustomRecipe(user, initialIngredients)
 
         resp <- addIngredientToRecipe(user, recipeId, ingredientId)
 

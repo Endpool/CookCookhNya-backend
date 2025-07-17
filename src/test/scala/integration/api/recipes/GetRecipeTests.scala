@@ -50,7 +50,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           _extraIngredientIds <- createNIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(storageId, ingredientIds)
 
-          recipeId <- createRecipe(user, ingredientIds)
+          recipeId <- createCustomRecipe(user, ingredientIds)
 
           resp <- getRecipe(user, recipeId)
 
@@ -72,7 +72,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeIngredientsIds = storage1UsedIngredientIds
                               ++ storage2UsedIngredientIds
 
-          recipeId <- createRecipe(user, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user, recipeIngredientsIds)
 
           _ <- addIngredientsToStorage(storage1Id, storage1UsedIngredientIds)
           _ <- addIngredientsToStorage(storage2Id, storage2UsedIngredientIds)
@@ -130,7 +130,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
           _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
           // create some extra ingredients that are not used in the recipe
@@ -216,7 +216,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
 
           // create some extra ingredients that are not used in the recipe
           _ <- createNIngredients(defaultIngredientAmount)

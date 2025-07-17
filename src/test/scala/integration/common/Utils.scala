@@ -105,7 +105,7 @@ object Utils:
       (1 to n).map(_ => createPublicIngredient).toVector
     )
 
-  def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
+  def createCustomRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
     RecipesRepo,
     InternalServerError | DbError,
     RecipeId
