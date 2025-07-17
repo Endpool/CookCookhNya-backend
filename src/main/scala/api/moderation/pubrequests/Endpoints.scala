@@ -1,14 +1,14 @@
 package api.moderation.pubrequests
 
 import api.moderation.moderationEndpoint
+import api.TapirExtensions.subTag
+
 import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
 
-import api.TapirExtensions.subTag
-
 val publicationRequestEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
   moderationEndpoint
-    .subTag("publication-requests")
+    .subTag("Publication Requests")
     .in("publication-requests")
 
 val publicationRequestEndpoints = List(

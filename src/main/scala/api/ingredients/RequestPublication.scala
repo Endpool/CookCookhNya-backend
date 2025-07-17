@@ -4,17 +4,17 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.variantJson
 import api.EndpointErrorVariants.{ingredientNotFoundVariant, serverErrorVariant}
 import db.repositories.{
-  IngredientPublicationRequestsRepo, IngredientsQueries,
+  IngredientPublicationRequestsRepo,
   IngredientsRepo, IngredientPublicationRequestsQueries
 }
-import domain.{IngredientId, IngredientNotFound, InternalServerError, RecipeId}
+import domain.{IngredientId, IngredientNotFound, InternalServerError}
 import db.tables.publication.DbPublicationRequestStatus.given
 import db.QuillConfig.provideDS
 import db.QuillConfig.ctx.*
 
+import io.circe.generic.auto.*
 import io.getquill.*
 import javax.sql.DataSource
-import io.circe.generic.auto.*
 import sttp.model.StatusCode.BadRequest
 import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
@@ -44,19 +44,19 @@ private val requestPublication: ZServerEndpoint[RequestPublicationEnv, Any] =
       IngredientAlreadyPending.variant, ingredientNotFoundVariant
     ))
     .zSecuredServerLogic(requestPublicationHandler)
-    
-def requestPublicationHandler(ingredientId: IngredientId): 
+
+def requestPublicationHandler(ingredientId: IngredientId):
   ZIO[
     AuthenticatedUser & RequestPublicationEnv,
     InternalServerError | IngredientAlreadyPublished | IngredientAlreadyPending | IngredientNotFound,
     Unit
   ] =
-  for 
+  for
     ingredient <- ZIO.serviceWithZIO[IngredientsRepo](_
       .get(ingredientId)
       .some.orElseFail(IngredientNotFound(ingredientId.toString))
     )
-    
+
     _ <- ZIO.fail(IngredientAlreadyPublished(ingredientId))
     .when(ingredient.isPublished)
 
@@ -73,5 +73,5 @@ def requestPublicationHandler(ingredientId: IngredientId):
     _ <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
     .requestPublication(ingredientId)
     .orElseFail(InternalServerError())
-    ) 
-  yield ()  
+    )
+  yield ()

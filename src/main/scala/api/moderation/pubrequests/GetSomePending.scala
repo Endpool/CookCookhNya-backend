@@ -11,12 +11,22 @@ import db.repositories.{
   RecipesRepo
 }
 import domain.{IngredientPublicationRequest, InternalServerError, RecipePublicationRequest}
+
 import io.circe.generic.auto.*
+import java.time.OffsetDateTime
+import java.util.UUID
 import sttp.model.StatusCode.NoContent
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*
 import zio.ZIO
+
+final case class PublicationRequestSummary(
+  id: UUID,
+  requestType: PublicationRequestType,
+  entityName: String,
+  createdAt: OffsetDateTime
+)
 
 private type GetSomePendingEnv
   = RecipePublicationRequestsRepo
@@ -46,7 +56,7 @@ private def getSomePendingHandler(paginationParams: PaginationParams):
     case IngredientPublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
       ZIO.serviceWithZIO[IngredientsRepo](_.get(entityId))
         .someOrFail(InternalServerError())
-        .map(recipe => PublicationRequestSummary(id, Ingredient, recipe.name, createdAt))
+        .map(ingredient => PublicationRequestSummary(id, Ingredient, ingredient.name, createdAt))
 
   paginationParams match
     case PaginationParams(count, offset) => {

@@ -14,15 +14,28 @@ import domain.{
   IngredientPublicationRequest,
   InternalServerError,
   PublicationRequestNotFound,
-  RecipePublicationRequest
+  PublicationRequestStatus,
+  RecipePublicationRequest,
 }
+
 import io.circe.generic.auto.*
+import java.time.OffsetDateTime
+import java.util.UUID
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-import java.util.UUID
+final case class PublicationRequestResponse(
+  id: UUID,
+  requestType: PublicationRequestType,
+  entityId: UUID,
+  entityName: String,
+  createdAt: OffsetDateTime,
+  updatedAt: OffsetDateTime,
+  comment: String,
+  status: PublicationRequestStatus
+)
 
 private type GetReqEnv
   = RecipePublicationRequestsRepo
