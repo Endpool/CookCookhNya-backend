@@ -46,7 +46,7 @@ private val getSomePending: ZServerEndpoint[GetSomePendingEnv, Any] =
     .zSecuredServerLogic(getSomePendingHandler)
 
 private def getSomePendingHandler(paginationParams: PaginationParams):
-  ZIO[AuthenticatedUser & GetSomePendingEnv & RecipesRepo & IngredientsRepo, InternalServerError, Seq[PublicationRequestSummary]] = {
+  ZIO[AuthenticatedUser & GetSomePendingEnv, InternalServerError, Seq[PublicationRequestSummary]] =
 
   def toPublicationRequest(req: PublicationRequest) = req match // some shitty code... I will fix this later
     case RecipePublicationRequest(id, entityId, createdAt, updatedAt, _, _) =>
@@ -58,19 +58,16 @@ private def getSomePendingHandler(paginationParams: PaginationParams):
         .someOrFail(InternalServerError())
         .map(ingredient => PublicationRequestSummary(id, Ingredient, ingredient.name, createdAt))
 
-  paginationParams match
-    case PaginationParams(count, offset) => {
-      for
-        pendingIngredientReqs <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllPending)
-          .flatMap { reqs =>
-            ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
-          }
-        pendingRecipeReqs <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllPending)
-          .flatMap { reqs =>
-            ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
-          }
-      yield (pendingRecipeReqs ++ pendingIngredientReqs)
-        .sortWith((sum1, sum2) => sum1.createdAt.toEpochSecond < sum2.createdAt.toEpochSecond)
-        .slice(offset, offset + count)
-    }.mapError(_ => InternalServerError())
-}
+  val PaginationParams(count, offset) = paginationParams
+  for
+    pendingIngredientReqs <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllPending)
+      .flatMap { reqs =>
+        ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
+      }.orElseFail(InternalServerError())
+    pendingRecipeReqs <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllPending)
+      .flatMap { reqs =>
+        ZIO.collectAll(reqs.map(req => toPublicationRequest(req.toDomain)))
+      }.orElseFail(InternalServerError())
+  yield (pendingRecipeReqs ++ pendingIngredientReqs)
+    .sortWith(_.createdAt.toEpochSecond < _.createdAt.toEpochSecond)
+    .slice(offset, offset + count)

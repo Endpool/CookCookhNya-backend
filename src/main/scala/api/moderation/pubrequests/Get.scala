@@ -26,7 +26,7 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class PublicationRequestResponse(
+final case class PublicationRequestResp(
   id: UUID,
   requestType: PublicationRequestType,
   entityId: UUID,
@@ -49,60 +49,57 @@ private val getRequest: ZServerEndpoint[GetReqEnv, Any] =
   publicationRequestEndpoint
     .get
     .in(path[UUID]("id"))
-    .out(jsonBody[PublicationRequestResponse])
+    .out(jsonBody[PublicationRequestResp])
     .errorOut(oneOf(serverErrorVariant, publicationRequestNotFound))
     .zSecuredServerLogic(getRequestHandler)
 
 private def getRequestHandler(reqId: UUID):
   ZIO[AuthenticatedUser & GetReqEnv,
-    InternalServerError | PublicationRequestNotFound,
-    PublicationRequestResponse] =
-
+      InternalServerError | PublicationRequestNotFound,
+      PublicationRequestResp] =
   def getIngredientRequest =
     ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.get(reqId))
       .flatMap {
         _.map { dbEntity =>
-          dbEntity.toDomain match
-            case IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status, comment) =>
-              ZIO.serviceWithZIO[IngredientsRepo] {
-                _.get(ingredientId).some.map { ingredient =>
-                  PublicationRequestResponse(
-                    reqId,
-                    Ingredient,
-                    ingredientId,
-                    ingredient.name,
-                    createdAt,
-                    updatedAt,
-                    comment,
-                    status
-                  )
-                }
-              }
-        }.getOrElse(ZIO.fail(PublicationRequestNotFound(reqId.toString)))
+          val IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
+          ZIO.serviceWithZIO[IngredientsRepo] {
+            _.get(ingredientId).some.map { ingredient =>
+              PublicationRequestResp(
+                reqId,
+                Ingredient,
+                ingredientId,
+                ingredient.name,
+                createdAt,
+                updatedAt,
+                comment,
+                status
+              )
+            }
+          }
+        }.getOrElse(ZIO.fail(PublicationRequestNotFound(reqId)))
       }
 
   ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.get(reqId))
     .flatMap {
       _.map { dbEntity =>
-        dbEntity.toDomain match
-          case RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status, comment) =>
-            ZIO.serviceWithZIO[RecipesRepo] {
-              _.getRecipe(recipeId).some.map { recipe =>
-                PublicationRequestResponse(
-                  reqId,
-                  Recipe,
-                  recipeId,
-                  recipe.name,
-                  createdAt,
-                  updatedAt,
-                  comment,
-                  status
-                )
-              }
-            }
+        val RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
+        ZIO.serviceWithZIO[RecipesRepo] {
+          _.getRecipe(recipeId).some.map { recipe =>
+            PublicationRequestResp(
+              reqId,
+              Recipe,
+              recipeId,
+              recipe.name,
+              createdAt,
+              updatedAt,
+              comment,
+              status
+            )
+          }
+        }
       }.getOrElse(getIngredientRequest)
     }.mapError {
-      case _: (Option[_] | FailedDbQuery) => PublicationRequestNotFound(reqId.toString)
+      case _: (Option[_] | FailedDbQuery) => PublicationRequestNotFound(reqId)
       case _: DbNotRespondingError => InternalServerError()
       case x: PublicationRequestNotFound => x
     }

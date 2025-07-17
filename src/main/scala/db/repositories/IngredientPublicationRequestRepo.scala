@@ -3,21 +3,18 @@ package db.repositories
 import db.DbError
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.{IngredientId, PublicationRequestNotFound}
-import io.getquill.*
-import zio.{IO, RLayer, ZLayer, ZIO}
+import domain.{PublicationRequestId, IngredientId, PublicationRequestNotFound}
 
-import java.util.UUID
+import io.getquill.*
 import javax.sql.DataSource
+import zio.{IO, RLayer, ZLayer, ZIO}
 
 trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
   def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
-  def get(id: UUID): IO[DbError, Option[DbIngredientPublicationRequest]]
-  def update(id: UUID, comment: String, status: DbPublicationRequestStatus):
+  def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
+  def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit]
-
-private inline def ingredientPublicationRequests = query[DbIngredientPublicationRequest]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -33,30 +30,35 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]] =
     run(allPendingQ).provideDS
 
-  override def get(id: UUID): IO[DbError, Option[DbIngredientPublicationRequest]] =
+  override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
 
-  override def update(id: IngredientId, comment: String, status: DbPublicationRequestStatus):
+  override def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit] =
-
     run(updateQ(id, comment, status)).provideDS.flatMap {
-      case 0 => ZIO.fail(PublicationRequestNotFound(id.toString))
+      case 0 => ZIO.fail(PublicationRequestNotFound(id))
       case _ => ZIO.unit
     }
 
 object IngredientPublicationRequestsQueries:
   import db.QuillConfig.ctx.*
+
+  inline def ingredientPublicationRequestsQ = query[DbIngredientPublicationRequest]
+
   inline def requestPublicationQ(inline ingredientId: IngredientId): Insert[DbIngredientPublicationRequest] =
-    ingredientPublicationRequests.insert(_.ingredientId -> ingredientId)
-    
-  inline def allPendingQ = ingredientPublicationRequests.filter(_.status == lift(Pending))
+    ingredientPublicationRequestsQ
+      .insert(_.ingredientId -> ingredientId)
+
+  inline def allPendingQ = ingredientPublicationRequestsQ.filter(_.status == lift(Pending))
   inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId)
 
-  inline def getQ(inline id: UUID) =
-    ingredientPublicationRequests.filter(_.id == lift(id)).take(1)
+  inline def getQ(inline id: PublicationRequestId) =
+    ingredientPublicationRequestsQ
+      .filter(_.id == lift(id))
 
-  inline def updateQ(inline id: UUID, inline comment: String, inline status: DbPublicationRequestStatus) =
-    ingredientPublicationRequests.filter(_.id == lift(id))
+  inline def updateQ(inline id: PublicationRequestId, inline comment: String, inline status: DbPublicationRequestStatus) =
+    ingredientPublicationRequestsQ
+      .filter(_.id == lift(id))
       .update(
         _.comment -> lift(comment),
         _.status -> lift(status)

@@ -2,23 +2,20 @@ package db.repositories
 
 import db.DbError
 import db.QuillConfig.ctx
-import db.tables.publication.DbPublicationRequestStatus.{Pending, createType}
+import db.tables.publication.DbPublicationRequestStatus.Pending
 import db.tables.publication.{DbPublicationRequestStatus, DbRecipePublicationRequest}
-import domain.{RecipeId, PublicationRequestNotFound}
-import io.getquill.*
-import zio.{IO, RLayer, ZLayer, ZIO}
+import domain.{PublicationRequestId, RecipeId, PublicationRequestNotFound}
 
-import java.util.UUID
+import io.getquill.*
 import javax.sql.DataSource
+import zio.{IO, RLayer, ZLayer, ZIO}
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
   def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]]
-  def get(id: UUID): IO[DbError, Option[DbRecipePublicationRequest]]
-  def update(id: UUID, comment: String, status: DbPublicationRequestStatus):
+  def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
+  def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit]
-
-private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
@@ -34,37 +31,44 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]] =
     run(allPendingQ).provideDS
 
-  override def get(id: UUID): IO[DbError, Option[DbRecipePublicationRequest]] =
+  override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
 
   override def update(id: RecipeId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit] =
 
     run(updateQ(id, comment, status)).provideDS.flatMap {
-      case 0 => ZIO.fail(PublicationRequestNotFound(id.toString))
+      case 0 => ZIO.fail(PublicationRequestNotFound(id))
       case _ => ZIO.unit
     }
 
 object RecipePublicationRequestsQueries:
   import db.QuillConfig.ctx.*
-  
-  inline def requestPublicationQ(inline recipeId: RecipeId) =
-    recipePublicationRequests.insert(_.recipeId -> recipeId)
 
-  inline def allPendingQ = recipePublicationRequests.filter(_.status == lift(Pending))
+  inline def recipePublicationRequestsQ = query[DbRecipePublicationRequest]
+
+  inline def requestPublicationQ(inline recipeId: RecipeId) =
+    recipePublicationRequestsQ
+      .insert(_.recipeId -> recipeId)
+
+  inline def allPendingQ =
+    recipePublicationRequestsQ
+      .filter(_.status == lift(Pending))
 
   inline def pendingRequestsByIdQ(inline recipeId: RecipeId) = allPendingQ.filter(_.recipeId == recipeId)
 
-  inline def getQ(inline id: UUID) =
-    recipePublicationRequests.filter(_.id == lift(id)).take(1)
+  inline def getQ(inline id: PublicationRequestId) =
+    recipePublicationRequestsQ
+      .filter(_.id == lift(id)).take(1)
 
-  inline def updateQ(inline id: UUID, inline comment: String, inline status: DbPublicationRequestStatus) =
-    recipePublicationRequests.filter(_.id == lift(id))
+  inline def updateQ(inline id: PublicationRequestId, inline comment: String, inline status: DbPublicationRequestStatus) =
+    recipePublicationRequestsQ
+      .filter(_.id == lift(id))
       .update(
         _.comment -> lift(comment),
-        _.status  -> lift(status)
+        _.status  -> lift(status),
       )
-  
+
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
     ZLayer.fromFunction(RecipePublicationRequestsRepoLive.apply)

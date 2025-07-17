@@ -1,10 +1,9 @@
 package domain
 
 import java.time.OffsetDateTime
-import java.util.UUID
 
 final case class IngredientPublicationRequest(
-  id: UUID,                                           
+  id: PublicationRequestId,
   ingredientId: IngredientId,
   createdAt: OffsetDateTime,
   updatedAt: OffsetDateTime,

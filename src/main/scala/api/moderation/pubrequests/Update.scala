@@ -16,7 +16,7 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class PublicationRequestUpdate(
+final case class UpdatePublicationRequestReqBody(
   comment: String,
   status: PublicationRequestStatus
 )
@@ -29,14 +29,14 @@ private val updatePublicationRequest: ZServerEndpoint[UpdateReqEnv, Any] =
   publicationRequestEndpoint
     .patch
     .in(query[UUID]("id"))
-    .in(jsonBody[PublicationRequestUpdate])
+    .in(jsonBody[UpdatePublicationRequestReqBody])
     .out(statusCode(NoContent))
     .errorOut(oneOf(publicationRequestNotFound, serverErrorVariant))
     .zSecuredServerLogic(updatePublicationRequestHandler)
 
-private def updatePublicationRequestHandler(id: UUID, reqBody: PublicationRequestUpdate):
+private def updatePublicationRequestHandler(id: UUID, reqBody: UpdatePublicationRequestReqBody):
   ZIO[AuthenticatedUser & UpdateReqEnv, InternalServerError | PublicationRequestNotFound, Unit] =
-  val PublicationRequestUpdate(comment, status) = reqBody
+  val UpdatePublicationRequestReqBody(comment, status) = reqBody
   val (_, dbStatus) = DbPublicationRequestStatus.fromDomain(status)
   ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.update(id, comment, dbStatus))
     .catchSome {
