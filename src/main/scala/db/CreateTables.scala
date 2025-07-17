@@ -97,6 +97,7 @@ def createTables(xa: Transactor) =
         )
       """,
       sql(DbRecipePublicationRequest.createTable),
+      sql(DbIngredientPublicationRequest.createTable)
     )
 
     tableList.map(_.update.run())
