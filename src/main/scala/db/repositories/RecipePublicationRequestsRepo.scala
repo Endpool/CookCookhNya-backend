@@ -9,11 +9,13 @@ import domain.{PublicationRequestId, RecipeId, PublicationRequestNotFound}
 import io.getquill.*
 import javax.sql.DataSource
 import zio.{IO, RLayer, ZLayer, ZIO}
+import db.tables.DbRecipe
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
   def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
+  def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit]
 
@@ -33,6 +35,13 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
+
+  override def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
+    run(
+      getQ(id)
+        .join(RecipesQueries.recipesQ)
+        .on((rpq, r) => rpq.recipeId == r.id)
+    ).map(_.headOption).provideDS
 
   override def update(id: RecipeId, comment: String, status: DbPublicationRequestStatus):
     IO[DbError | PublicationRequestNotFound, Unit] =
