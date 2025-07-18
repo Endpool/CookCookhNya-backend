@@ -15,11 +15,24 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*
 import zio.ZIO
+import io.circe.Encoder
 
-final case class UpdatePublicationRequestReqBody(
-  comment: String,
-  status: PublicationRequestStatus
-)
+enum PublicationRequestStatusReq:
+  case Pending
+  case Accepted
+  case Rejected(reason: String)
+  def toDomain: PublicationRequestStatus = this match
+    case Pending          => PublicationRequestStatus.Pending
+    case Accepted         => PublicationRequestStatus.Accepted
+    case Rejected(reason) => PublicationRequestStatus.Rejected(reason)
+
+final case class UpdatePublicationRequestReqBody(status: PublicationRequestStatusReq)
+object UpdatePublicationRequestReqBody:
+  given Encoder[UpdatePublicationRequestReqBody] = Encoder { req => req.status match
+    case _ => ???
+
+  }
+
 
 private type UpdateReqEnv
   = RecipePublicationRequestsRepo
@@ -36,12 +49,11 @@ private val updatePublicationRequest: ZServerEndpoint[UpdateReqEnv, Any] =
 
 private def updatePublicationRequestHandler(id: UUID, reqBody: UpdatePublicationRequestReqBody):
   ZIO[AuthenticatedUser & UpdateReqEnv, InternalServerError | PublicationRequestNotFound, Unit] =
-  val UpdatePublicationRequestReqBody(comment, status) = reqBody
-  val (_, dbStatus) = DbPublicationRequestStatus.fromDomain(status)
-  ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.update(id, comment, dbStatus))
+  val status = reqBody.status.toDomain
+  ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.update(id, status))
     .catchSome {
       case _: PublicationRequestNotFound =>
-        ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.update(id, comment, dbStatus))
+        ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.update(id, status))
     }.mapError {
       case x: PublicationRequestNotFound => x
       case _: DbError                    => InternalServerError()

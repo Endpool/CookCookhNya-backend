@@ -60,10 +60,12 @@ private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
     .zSecuredServerLogic(requestPublicationHandler)
 
 private def requestPublicationHandler(recipeId: RecipeId):
-  ZIO[AuthenticatedUser & PublishEnv,
-      InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending |
-      CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
-      Unit] =
+  ZIO[
+    AuthenticatedUser & PublishEnv,
+    InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending
+    | CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
+    Unit
+  ] =
   for
     recipe <- ZIO.serviceWithZIO[RecipesRepo](_
       .getRecipe(recipeId)
@@ -75,9 +77,8 @@ private def requestPublicationHandler(recipeId: RecipeId):
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(
       RecipePublicationRequestsQueries
-        .pendingRequestsByIdQ(lift(recipeId)).nonEmpty
-    )
-      .provideDS(using dataSource)
+        .pendingRequestsOfRecipeQ(lift(recipeId)).nonEmpty
+    ).provideDS(using dataSource)
       .orElseFail(InternalServerError())
     _ <- ZIO.fail(RecipeAlreadyPending(recipeId))
       .when(alreadyPending)
@@ -94,7 +95,7 @@ private def requestPublicationHandler(recipeId: RecipeId):
       .when(customIngredientIdsInRecipe.nonEmpty)
 
     _ <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
-      .requestPublication(recipeId)
+      .createPublicationRequest(recipeId)
       .orElseFail(InternalServerError())
     )
   yield ()

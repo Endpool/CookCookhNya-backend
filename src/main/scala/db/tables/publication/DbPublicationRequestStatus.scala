@@ -15,10 +15,10 @@ enum DbPublicationRequestStatus:
     case Rejected => PublicationRequestStatus.Rejected(reason.get) // <- unsafe code here
 
 object DbPublicationRequestStatus:
-  val fromDomain: PublicationRequestStatus => (Option[String], DbPublicationRequestStatus) =
-    case PublicationRequestStatus.Pending          => (None, Pending)
-    case PublicationRequestStatus.Accepted         => (None, Accepted)
-    case PublicationRequestStatus.Rejected(reason) => (Some(reason), Rejected)
+  val fromDomain: PublicationRequestStatus => (DbPublicationRequestStatus, Option[String]) =
+    case PublicationRequestStatus.Pending          => (Pending,  None)
+    case PublicationRequestStatus.Accepted         => (Accepted, None)
+    case PublicationRequestStatus.Rejected(reason) => (Rejected, Some(reason))
 
   val createType: String = """
     DO $$
@@ -44,9 +44,9 @@ object DbPublicationRequestStatus:
 
   given JdbcEncoder[DbPublicationRequestStatus] = encoder(
     Types.OTHER,
-    (index: Int, value: DbPublicationRequestStatus, row: PreparedStatement) =>
+    (index, value, row) =>
       val statusString = value match
-        case DbPublicationRequestStatus.Pending => "pending"
+        case DbPublicationRequestStatus.Pending  => "pending"
         case DbPublicationRequestStatus.Accepted => "accepted"
         case DbPublicationRequestStatus.Rejected => "rejected"
       row.setString(index, statusString)
