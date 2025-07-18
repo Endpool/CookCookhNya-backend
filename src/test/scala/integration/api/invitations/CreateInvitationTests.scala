@@ -1,6 +1,5 @@
 package integration.api.invitations
 
-
 import api.Authentication.AuthenticatedUser
 import db.repositories.StorageMembersRepo
 import db.tables.storageInvitationTable
