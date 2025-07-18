@@ -8,9 +8,10 @@ import domain.{PublicationRequestId, IngredientId, PublicationRequestStatus}
 import io.getquill.*
 import javax.sql.DataSource
 import zio.{IO, RLayer, ZLayer, ZIO}
+import java.util.UUID
 
 trait IngredientPublicationRequestsRepo:
-  def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
+  def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId]
   def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
@@ -23,8 +24,8 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
 
   private given DataSource = dataSource
 
-  override def requestPublication(ingredientId: IngredientId): IO[DbError, Unit] =
-    run(requestPublicationQ(lift(ingredientId))).unit.provideDS
+  override def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId] =
+    run(requestPublicationQ(lift(ingredientId))).provideDS
 
   override def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]] =
     run(allPendingQ).provideDS
@@ -42,9 +43,11 @@ object IngredientPublicationRequestsQueries:
 
   inline def ingredientPublicationRequestsQ = query[DbIngredientPublicationRequest]
 
-  inline def requestPublicationQ(inline ingredientId: IngredientId): Insert[DbIngredientPublicationRequest] =
+  inline def requestPublicationQ(inline ingredientId: IngredientId):
+    ActionReturning[DbIngredientPublicationRequest, UUID] =
     ingredientPublicationRequestsQ
       .insert(_.ingredientId -> ingredientId)
+      .returningGenerated(_.id)
 
   inline def allPendingQ = ingredientPublicationRequestsQ.filter(_.status == lift(Pending))
   inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId)

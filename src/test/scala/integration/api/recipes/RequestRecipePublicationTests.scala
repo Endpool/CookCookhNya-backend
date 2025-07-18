@@ -31,14 +31,14 @@ object RequestRecipePublicationTests extends ZIOIntegrationTestSpec:
         )
       yield assertTrue(resp.status == Status.Unauthorized)
     },
-    test("When authorized should get 200") {
+    test("When authorized should get 201") {
       for
         user <- registerUser
 
         recipeId <- createCustomRecipe(user, Vector.empty)
 
         resp <- requestRecipePublication(user, recipeId)
-      yield assertTrue(resp.status == Status.Ok)
+      yield assertTrue(resp.status == Status.Created)
     },
   ).provideLayer(testLayer)
 
