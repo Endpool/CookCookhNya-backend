@@ -33,7 +33,6 @@ final case class PublicationRequestResp(
   entityName: String,
   createdAt: OffsetDateTime,
   updatedAt: OffsetDateTime,
-  comment: String,
   status: PublicationRequestStatus
 )
 
@@ -61,7 +60,7 @@ private def getRequestHandler(reqId: UUID):
     ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.get(reqId))
       .flatMap {
         _.map { dbEntity =>
-          val IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
+          val IngredientPublicationRequest(id, ingredientId, createdAt, updatedAt, status) = dbEntity.toDomain
           ZIO.serviceWithZIO[IngredientsRepo] {
             _.get(ingredientId).some.map { ingredient =>
               PublicationRequestResp(
@@ -71,8 +70,7 @@ private def getRequestHandler(reqId: UUID):
                 ingredient.name,
                 createdAt,
                 updatedAt,
-                comment,
-                status
+                status,
               )
             }
           }
@@ -82,7 +80,7 @@ private def getRequestHandler(reqId: UUID):
   ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.get(reqId))
     .flatMap {
       _.map { dbEntity =>
-        val RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status, comment) = dbEntity.toDomain
+        val RecipePublicationRequest(id, recipeId, createdAt, updatedAt, status) = dbEntity.toDomain
         ZIO.serviceWithZIO[RecipesRepo] {
           _.getRecipe(recipeId).some.map { recipe =>
             PublicationRequestResp(
@@ -92,8 +90,7 @@ private def getRequestHandler(reqId: UUID):
               recipe.name,
               createdAt,
               updatedAt,
-              comment,
-              status
+              status,
             )
           }
         }

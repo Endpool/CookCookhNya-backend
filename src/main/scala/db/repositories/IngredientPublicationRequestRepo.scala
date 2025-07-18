@@ -3,7 +3,7 @@ package db.repositories
 import db.DbError
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.{PublicationRequestId, IngredientId, PublicationRequestNotFound}
+import domain.{PublicationRequestId, IngredientId, PublicationRequestStatus}
 
 import io.getquill.*
 import javax.sql.DataSource
@@ -13,8 +13,7 @@ trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
   def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
-  def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
-    IO[DbError | PublicationRequestNotFound, Unit]
+  def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -33,12 +32,10 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
 
-  override def update(id: PublicationRequestId, comment: String, status: DbPublicationRequestStatus):
-    IO[DbError | PublicationRequestNotFound, Unit] =
-    run(updateQ(id, comment, status)).provideDS.flatMap {
-      case 0 => ZIO.fail(PublicationRequestNotFound(id))
-      case _ => ZIO.unit
-    }
+  override def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
+    IO[DbError, Boolean] =
+    val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
+    run(updateQ(id, dbStatus, reason)).map(_ > 0).provideDS
 
 object IngredientPublicationRequestsQueries:
   import db.QuillConfig.ctx.*
@@ -56,12 +53,16 @@ object IngredientPublicationRequestsQueries:
     ingredientPublicationRequestsQ
       .filter(_.id == lift(id))
 
-  inline def updateQ(inline id: PublicationRequestId, inline comment: String, inline status: DbPublicationRequestStatus) =
+  inline def updateQ(
+    inline id: PublicationRequestId,
+    inline status: DbPublicationRequestStatus,
+    inline reason: Option[String],
+  ) =
     ingredientPublicationRequestsQ
       .filter(_.id == lift(id))
       .update(
-        _.comment -> lift(comment),
-        _.status -> lift(status)
+        _.status -> lift(status),
+        _.reason -> lift(reason),
       )
 
 object IngredientPublicationRequestsRepo:

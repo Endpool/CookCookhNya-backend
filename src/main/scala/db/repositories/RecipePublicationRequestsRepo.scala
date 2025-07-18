@@ -18,7 +18,8 @@ trait RecipePublicationRequestsRepo:
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
   def getWithRecipe(id: PublicationRequestId):
     IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
-  def update(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Long]
+  def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
+    IO[DbError, Boolean]
 
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
@@ -47,10 +48,9 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
         .value
     ).provideDS
 
-  override def update(id: RecipeId, status: PublicationRequestStatus):
-    IO[DbError, Long] =
+  override def updateStatus(id: RecipeId, status: PublicationRequestStatus): IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
-    run(updateQ(id, dbStatus, reason)).provideDS
+    run(updateQ(id, dbStatus, reason)).map(_ > 0).provideDS
 
 object RecipePublicationRequestsQueries:
   import db.QuillConfig.ctx.*
