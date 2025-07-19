@@ -61,7 +61,10 @@ object RecipePublicationRequestsQueries:
 
   inline def pendingRequestsQ: EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequestsQ
-      .filter(r => infix"${r.status} = 'pending'::publication_request_status".as[Boolean])
+      .filter(r =>
+        infix"${r.status} = 'pending'::${DbPublicationRequestStatus.postgresTypeName}"
+          .asCondition
+      )
 
   inline def pendingRequestsOfRecipeQ(inline recipeId: RecipeId):
     EntityQuery[DbRecipePublicationRequest] =

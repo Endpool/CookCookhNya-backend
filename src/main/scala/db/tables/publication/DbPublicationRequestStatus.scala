@@ -26,7 +26,8 @@ object DbPublicationRequestStatus:
     case PublicationRequestStatus.Accepted         => (Accepted, None)
     case PublicationRequestStatus.Rejected(reason) => (Rejected, reason)
 
-  val postgresTypeName: String = "publication_request_status"
+  inline val postgresTypeName: "publication_request_status" =
+    "publication_request_status"
 
   val createType: String = s"""
     DO $$$$
