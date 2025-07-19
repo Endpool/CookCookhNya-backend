@@ -16,10 +16,10 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 final case class PublicationRequestSummary(
-                                            id: PublicationRequestId,
-                                            requestType: PublicationRequestTypeResp,
-                                            entityName: String,
-                                            createdAt: OffsetDateTime
+  id: PublicationRequestId,
+  requestType: PublicationRequestTypeResp,
+  entityName: String,
+  createdAt: OffsetDateTime
 )
 
 private type GetSomePendingEnv
