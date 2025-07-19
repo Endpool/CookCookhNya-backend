@@ -45,7 +45,7 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
         n <- Gen.int(2, 10).runHead.some
         recipeIds <- ZIO.collectAll(
           (1 to n).map(i =>
-            createNIngredients(i).flatMap(
+            createNPublicIngredients(i).flatMap(
               createCustomRecipe(user, _)
             )
           )
@@ -70,13 +70,13 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
 
         tmp <- ZIO.foreach(Seq(storage1Id, storage2Id))(storageId => for
           n <- Gen.int(3, 10).runHead.some
-          ingredientIds <- createNIngredients(n)
+          ingredientIds <- createNPublicIngredients(n)
           _ <- addIngredientsToStorage(storage1Id, ingredientIds)
         yield ingredientIds)
         Seq(storage1IngredientIds, storage2IngredientIds) = tmp
 
         n <- Gen.int(2, 10).runHead.some
-        otherIngredientIds <- createNIngredients(n)
+        otherIngredientIds <- createNPublicIngredients(n)
 
         recipe1Storage1Availability = minStorageIngredientsAmount
         recipe1Storage2Availability = minStorageIngredientsAmount - 1
@@ -127,13 +127,13 @@ object GetSuggestedRecipesTests extends ZIOIntegrationTestSpec:
 
         tmp <- ZIO.foreach(Seq(memberedStorageId, storage1Id, storage2Id))(storageId => for
           n <- Gen.int(3, 10).runHead.some
-          ingredientIds <- createNIngredients(n)
+          ingredientIds <- createNPublicIngredients(n)
           _ <- addIngredientsToStorage(storage1Id, ingredientIds)
         yield ingredientIds)
         Seq(memberedStorageIngredientIds, storage1IngredientIds, storage2IngredientIds) = tmp
 
         n <- Gen.int(2, 10).runHead.some
-        otherIngredientIds <- createNIngredients(n)
+        otherIngredientIds <- createNPublicIngredients(n)
 
         recipe1MemberedStorageAvailability = minStorageIngredientsAmount - 2
         recipe1Storage1Availability = minStorageIngredientsAmount
