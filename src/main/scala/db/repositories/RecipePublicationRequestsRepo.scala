@@ -4,20 +4,17 @@ import db.DbError
 import db.QuillConfig.ctx
 import db.tables.DbRecipe
 import db.tables.publication.{DbPublicationRequestStatus, DbRecipePublicationRequest}
-import db.tables.publication.DbPublicationRequestStatus.Pending
 import domain.{PublicationRequestStatus, PublicationRequestId, RecipeId}
 
 import io.getquill.*
+import java.util.UUID
 import javax.sql.DataSource
 import zio.{IO, RLayer, ZLayer, ZIO}
-import java.util.UUID
 
 trait RecipePublicationRequestsRepo:
   def createPublicationRequest(recipeId: RecipeId): IO[DbError, PublicationRequestId]
-  def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]]
+  def getPendingRequestsWithRecipes: IO[DbError, Seq[(DbRecipePublicationRequest, DbRecipe)]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
-  def getWithRecipe(id: PublicationRequestId):
-    IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
 
@@ -34,19 +31,16 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
       createPublicationRequestQ(lift(recipeId))
     ).provideDS
 
-  override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] =
-    run(pendingRequestsQ.map(_.id)).provideDS.map(Vector.from)
+  override def getPendingRequestsWithRecipes:
+    IO[DbError, List[(DbRecipePublicationRequest, DbRecipe)]] =
+    run(
+      pendingRequestsQ
+        .join(RecipesQueries.recipesQ)
+        .on(_.recipeId == _.id)
+    ).provideDS
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id).value).provideDS
-
-  override def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
-    run(
-      getQ(id)
-        .join(RecipesQueries.recipesQ)
-        .on((rpq, r) => rpq.recipeId == r.id)
-        .value
-    ).provideDS
 
   override def updateStatus(id: RecipeId, status: PublicationRequestStatus): IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
@@ -66,7 +60,7 @@ object RecipePublicationRequestsQueries:
 
   inline def pendingRequestsQ: EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequestsQ
-      .filter(_.status == lift(Pending))
+      .filter(_.status == lift(DbPublicationRequestStatus.Pending))
 
   inline def pendingRequestsOfRecipeQ(inline recipeId: RecipeId):
     EntityQuery[DbRecipePublicationRequest] =
