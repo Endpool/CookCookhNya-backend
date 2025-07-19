@@ -40,7 +40,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     for
       recipeId <- run(
         recipesQ
-          .insertValue(lift(DbRecipe(id=null, name, None, isPublished=false, sourceLink)))
+          .insertValue(lift(DbRecipe(id=null, name, None, isPublished=true, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
       _ <- run(

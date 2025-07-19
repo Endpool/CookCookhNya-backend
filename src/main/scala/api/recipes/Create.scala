@@ -18,12 +18,6 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 import db.repositories.IngredientsQueries
 
-final case class CreateRecipeReqBody(
-  name: String,
-  sourceLink: Option[String],
-  ingredients: List[IngredientId]
-)
-
 private type CreateEnv = RecipesRepo & RecipeIngredientsRepo & DataSource
 
 private val create: ZServerEndpoint[CreateEnv, Any] =
