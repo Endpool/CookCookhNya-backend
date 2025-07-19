@@ -4,10 +4,10 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
-import domain.{PublicationRequestStatus, InternalServerError, PublicationRequestNotFound}
-
+import domain.{InternalServerError, PublicationRequestId, PublicationRequestNotFound, PublicationRequestStatus}
 import io.circe.Encoder
 import io.circe.generic.auto.*
+
 import java.util.UUID
 import sttp.model.StatusCode.NoContent
 import sttp.tapir.generic.auto.*
@@ -42,7 +42,7 @@ private val updatePublicationRequest: ZServerEndpoint[UpdateReqEnv, Any] =
     .errorOut(oneOf(publicationRequestNotFound, serverErrorVariant))
     .zSecuredServerLogic(updatePublicationRequestHandler)
 
-private def updatePublicationRequestHandler(id: UUID, reqBody: UpdatePublicationRequestReqBody):
+private def updatePublicationRequestHandler(id: PublicationRequestId, reqBody: UpdatePublicationRequestReqBody):
   ZIO[AuthenticatedUser & UpdateReqEnv, InternalServerError | PublicationRequestNotFound, Unit] =
   val status = reqBody.getDomainStatus
   for
@@ -53,6 +53,6 @@ private def updatePublicationRequestHandler(id: UUID, reqBody: UpdatePublication
     rowsUpdated <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
       .updateStatus(id, status)
       .orElseFail(InternalServerError())
-    )
+    ).unless(rowsUpdated).someOrElse(false)
     _ <- ZIO.fail(PublicationRequestNotFound(id)).unless(rowsUpdated)
   yield ()
