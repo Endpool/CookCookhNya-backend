@@ -1,6 +1,8 @@
 package integration.api.recipes
 
 import api.Authentication.AuthenticatedUser
+import db.repositories.RecipePublicationRequestsRepo
+import db.tables.publication.DbPublicationRequestStatus
 import domain.RecipeId
 import integration.common.Utils.*
 import integration.common.ZIOIntegrationTestSpec
@@ -40,5 +42,22 @@ object RequestRecipePublicationTests extends ZIOIntegrationTestSpec:
         resp <- requestRecipePublication(user, recipeId)
       yield assertTrue(resp.status == Status.Created)
     },
+    test("When requesting publication of recipe with public ingredients, pending request should be created") {
+      for
+        user <- registerUser
+
+        n <- Gen.int(2, 8).runHead.some
+        ingredientIds <- createNPublicIngredients(n)
+        recipeId <- createCustomRecipe(user, ingredientIds)
+
+        resp <- requestRecipePublication(user, recipeId)
+
+        bodyStr <- resp.body.asString
+        requestId <- ZIO.fromOption(bodyStr.toUUID)
+        request <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.get(requestId))
+      yield assertTrue(resp.status == Status.Created)
+         && assertTrue(request.is(_.some).recipeId == recipeId)
+         && assertTrue(request.is(_.some).status == DbPublicationRequestStatus.Pending)
+    }
   ).provideLayer(testLayer)
 
