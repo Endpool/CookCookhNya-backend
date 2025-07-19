@@ -36,16 +36,14 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     ).provideDS
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
-    run(getQ(id)).map(_.headOption).provideDS
+    run(getQ(lift(id))).map(_.headOption).provideDS
 
   override def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
-    run(updateQ(id, dbStatus, reason)).map(_ > 0).provideDS
+    run(updateQ(lift(id), lift(dbStatus), lift(reason))).map(_ > 0).provideDS
 
 object IngredientPublicationRequestsQueries:
-  import db.QuillConfig.ctx.*
-
   inline def requestsQ = query[DbIngredientPublicationRequest]
 
   inline def requestPublicationQ(inline ingredientId: IngredientId):
@@ -65,7 +63,7 @@ object IngredientPublicationRequestsQueries:
 
   inline def getQ(inline id: PublicationRequestId): EntityQuery[DbIngredientPublicationRequest] =
     requestsQ
-      .filter(_.id == lift(id))
+      .filter(_.id == id)
 
   inline def updateQ(
     inline id: PublicationRequestId,
@@ -73,10 +71,10 @@ object IngredientPublicationRequestsQueries:
     inline reason: Option[String],
   ): Update[DbIngredientPublicationRequest] =
     requestsQ
-      .filter(_.id == lift(id))
+      .filter(_.id == id)
       .update(
-        _.status -> lift(status),
-        _.reason -> lift(reason),
+        _.status -> status,
+        _.reason -> reason,
       )
 
 object IngredientPublicationRequestsRepo:

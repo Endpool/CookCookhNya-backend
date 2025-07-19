@@ -40,15 +40,16 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     ).provideDS
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
-    run(getQ(id).value).provideDS
+    run(getQ(lift(id)).value).provideDS
 
-  override def updateStatus(id: RecipeId, status: PublicationRequestStatus): IO[DbError, Boolean] =
+  override def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
+    IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
-    run(updateQ(id, dbStatus, reason)).map(_ > 0).provideDS
+    run(
+      updateQ(lift(id), lift(dbStatus), lift(reason))
+    ).map(_ > 0).provideDS
 
 object RecipePublicationRequestsQueries:
-  import db.QuillConfig.ctx.*
-
   inline def recipePublicationRequestsQ: EntityQuery[DbRecipePublicationRequest] =
     query[DbRecipePublicationRequest]
 
@@ -60,7 +61,7 @@ object RecipePublicationRequestsQueries:
 
   inline def pendingRequestsQ: EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequestsQ
-      .filter(_.status == lift(DbPublicationRequestStatus.Pending))
+      .filter(r => infix"${r.status} = 'pending'::publication_request_status".as[Boolean])
 
   inline def pendingRequestsOfRecipeQ(inline recipeId: RecipeId):
     EntityQuery[DbRecipePublicationRequest] =
@@ -69,7 +70,7 @@ object RecipePublicationRequestsQueries:
 
   inline def getQ(inline id: PublicationRequestId): EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequestsQ
-      .filter(_.id == lift(id))
+      .filter(_.id == id)
 
   inline def updateQ(
     inline id: PublicationRequestId,
@@ -77,10 +78,10 @@ object RecipePublicationRequestsQueries:
     inline reason: Option[String],
   ): Update[DbRecipePublicationRequest] =
     recipePublicationRequestsQ
-      .filter(_.id == lift(id))
+      .filter(_.id == id)
       .update(
-        _.status -> lift(status),
-        _.reason -> lift(reason),
+        _.status -> status,
+        _.reason -> reason,
       )
 
 object RecipePublicationRequestsRepo:
