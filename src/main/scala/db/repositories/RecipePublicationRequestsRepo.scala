@@ -105,7 +105,7 @@ object RecipePublicationRequestsQueries:
 
   inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequests.filter(_.recipeId == recipeId)
-
+  
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
     ZLayer.fromFunction(RecipePublicationRequestsRepoLive.apply)
