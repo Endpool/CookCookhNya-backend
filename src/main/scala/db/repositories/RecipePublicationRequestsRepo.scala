@@ -11,6 +11,7 @@ import javax.sql.DataSource
 
 trait RecipePublicationRequestsRepo:
   def requestPublication(recipeId: RecipeId): IO[DbError, Unit]
+  def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
 
 private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
@@ -25,6 +26,9 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def requestPublication(recipeId: RecipeId): IO[DbError, Unit] =
     run(requestPublicationQ(lift(recipeId))).unit.provideDS
 
+  override def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
+    run(getAllByRecipeIdQ(lift(recipeId))).provideDS
+    
 object RecipePublicationRequestsQueries:
   import db.QuillConfig.ctx.*
   
@@ -33,6 +37,9 @@ object RecipePublicationRequestsQueries:
 
   inline def allPendingQ = recipePublicationRequests.filter(_.status == lift(Pending))
   inline def pendingRequestsByIdQ(inline recipeId: RecipeId) = allPendingQ.filter(_.recipeId == recipeId)
+  
+  inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
+    recipePublicationRequests.filter(_.recipeId == recipeId)
   
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
