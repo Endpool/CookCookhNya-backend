@@ -1,22 +1,15 @@
 package api.recipes
 
 import api.{handleFailedSqlQuery, toUserNotFound}
-import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
+import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant, userNotFoundVariant}
+import api.moderation.pubrequests.PublicationRequestStatusResp
 import db.{DbError, handleDbError}
-import db.tables.{usersTable, ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable}
-import domain.{
-  IngredientId,
-  InternalServerError,
-  RecipeId,
-  RecipeNotFound,
-  StorageId,
-  UserId,
-  UserNotFound,
-}
-
+import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable, usersTable}
+import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, StorageId, UserId, UserNotFound}
 import com.augustnagro.magnum.magzio.*
 import com.augustnagro.magnum.Query
+import db.repositories.RecipePublicationRequestsRepo
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
@@ -45,9 +38,10 @@ final case class RecipeResp(
   name: String,
   sourceLink: Option[String],
   creator: Option[RecipeCreatorResp],
+  moderationStatus: Option[PublicationRequestStatusResp]
 )
 
-private type GetEnv = Transactor
+private type GetEnv = Transactor & RecipePublicationRequestsRepo
 
 private val get: ZServerEndpoint[GetEnv, Any] =
   recipesEndpoint
@@ -69,29 +63,42 @@ private case class RawRecipeResult(
 private def getHandler(recipeId: RecipeId):
   ZIO[AuthenticatedUser & GetEnv,
       InternalServerError | RecipeNotFound | UserNotFound,
-      RecipeResp] =
-  ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
-    val userId = authenticatedUser.userId
-    ZIO.serviceWithZIO[Transactor](_
-      .transact(rawRecipeQuery(userId, recipeId).run().headOption)
-      .mapError(handleDbError)
-    )
-  }.someOrFail(RecipeNotFound(recipeId)).flatMap { rawResult =>
-    // Parse the JSON ingredients string
-    ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
-      .map { ingredients =>
-        val recipeCreatorResp = for
-          creatorId       <- rawResult.creatorId
-          creatorFullName <- rawResult.creatorFullName
-        yield RecipeCreatorResp(creatorId, creatorFullName)
-        RecipeResp(
-          ingredients,
-          rawResult.name,
-          rawResult.sourceLink,
-          recipeCreatorResp,
+      RecipeResp] = {
+
+  def getLastPublicationRequestStatus =
+    ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllRequestsForRecipe(recipeId))
+      .map(
+        _.sortBy(_.updatedAt).lastOption.map(
+          req => PublicationRequestStatusResp.fromDomain(req.status.toDomain(req.reason))
         )
-      }
-      .orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
+      )
+
+  {
+    for
+      rawResult <- ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
+        val userId = authenticatedUser.userId
+        ZIO.serviceWithZIO[Transactor](_
+          .transact(rawRecipeQuery(userId, recipeId).run().headOption)
+          .mapError(handleDbError)
+        )
+      }.someOrFail(RecipeNotFound(recipeId))
+      status <- getLastPublicationRequestStatus
+      result <- ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
+        // Parse the JSON ingredients string
+        .map { ingredients =>
+          val recipeCreatorResp = for
+            creatorId <- rawResult.creatorId
+            creatorFullName <- rawResult.creatorFullName
+          yield RecipeCreatorResp(creatorId, creatorFullName)
+          RecipeResp(
+            ingredients,
+            rawResult.name,
+            rawResult.sourceLink,
+            recipeCreatorResp,
+            status
+          )
+        }.orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
+    yield result
   }.mapError {
     case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)
       .flatMap(toUserNotFound)
@@ -99,6 +106,7 @@ private def getHandler(recipeId: RecipeId):
     case _: DbError => InternalServerError()
     case e: (InternalServerError | RecipeNotFound | UserNotFound) => e
   }
+}
 
 private inline def rawRecipeQuery(
   inline userId: UserId,
