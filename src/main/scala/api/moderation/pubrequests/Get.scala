@@ -4,12 +4,8 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.DbError
-import domain.{IngredientPublicationRequest, RecipePublicationRequest}
-import db.repositories.{
-  IngredientPublicationRequestsRepo,
-  RecipePublicationRequestsRepo
-}
-import domain.{InternalServerError, PublicationRequestNotFound}
+import domain.{IngredientPublicationRequest, InternalServerError, PublicationRequestId, PublicationRequestNotFound, RecipePublicationRequest}
+import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
 import io.circe.generic.auto.*
 
 import java.time.OffsetDateTime
@@ -41,7 +37,7 @@ private val getRequest: ZServerEndpoint[GetReqEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, publicationRequestNotFound))
     .zSecuredServerLogic(getRequestHandler)
 
-private def getRequestHandler(reqId: UUID):
+private def getRequestHandler(reqId: PublicationRequestId):
   ZIO[AuthenticatedUser & GetReqEnv,
       InternalServerError | PublicationRequestNotFound,
       PublicationRequestResp] =
@@ -63,9 +59,9 @@ private def getRequestHandler(reqId: UUID):
             )
       }
 
-  def getRecipeRequestOrIngredientRequest =
+  def getRecipeRequest =
     ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getWithRecipe(reqId))
-      .someOrElseZIO(getIngredientRequest)
+      .someOrFail(PublicationRequestNotFound(reqId))
       .map {
         case (dbReq, dbRecipe) => dbReq.toDomain match
           case RecipePublicationRequest(id, ingredientId, createdAt, updatedAt, status) =>
@@ -78,10 +74,9 @@ private def getRequestHandler(reqId: UUID):
               updatedAt,
               PublicationRequestStatusResp.fromDomain(status)
             )
-        case response: PublicationRequestResp => response
       }
 
-  getRecipeRequestOrIngredientRequest.mapError {
+  getIngredientRequest.orElse(getRecipeRequest).mapError {
     case _: DbError => InternalServerError()
     case x: PublicationRequestNotFound => x
   }
