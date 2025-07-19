@@ -20,4 +20,5 @@ val recipeEndpoints = List(
   searchAll.widen,
   delete.widen,
   requestPublication.widen,
+  moderationHistory.widen
 ) ++ recipesIngredientsEndpoints.map(_.widen)
