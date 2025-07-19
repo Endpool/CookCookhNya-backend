@@ -79,23 +79,17 @@ private def getHandler(recipeId: RecipeId):
   }.someOrFail(RecipeNotFound(recipeId)).flatMap { rawResult =>
     // Parse the JSON ingredients string
     ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
-      .map {
-        (rawResult.creatorId, rawResult.creatorFullName) match
-          case (Some(creatorId), Some(creatorFullName)) => RecipeResp(
-            _,
-            rawResult.name,
-            rawResult.sourceLink,
-            Some(RecipeCreatorResp(
-              creatorId,
-              creatorFullName,
-            )),
-          )
-          case _ => RecipeResp(
-            _,
-            rawResult.name,
-            rawResult.sourceLink,
-            None
-          )
+      .map { ingredients =>
+        val recipeCreatorResp = for
+          creatorId       <- rawResult.creatorId
+          creatorFullName <- rawResult.creatorFullName
+        yield RecipeCreatorResp(creatorId, creatorFullName)
+        RecipeResp(
+          ingredients,
+          rawResult.name,
+          rawResult.sourceLink,
+          recipeCreatorResp,
+        )
       }
       .orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
   }.mapError {
