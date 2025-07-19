@@ -47,7 +47,7 @@ private def searchHandler(
   def getLastPublicationRequestStatus(ingredientId: IngredientId) =
     ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](
       _.getAllRequestsForIngredient(ingredientId).map(
-        _.sortBy(_.updatedAt).reverse.headOption.map(
+        _.sortBy(_.updatedAt).lastOption.map(
           req => PublicationRequestStatusResp.fromDomain(req.status.toDomain(req.reason))
         )
       )

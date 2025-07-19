@@ -68,7 +68,7 @@ private def getHandler(recipeId: RecipeId):
   def getLastPublicationRequestStatus =
     ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllRequestsForRecipe(recipeId))
       .map(
-        _.sortBy(_.updatedAt).reverse.headOption.map(
+        _.sortBy(_.updatedAt).lastOption.map(
           req => PublicationRequestStatusResp.fromDomain(req.status.toDomain(req.reason))
         )
       )
