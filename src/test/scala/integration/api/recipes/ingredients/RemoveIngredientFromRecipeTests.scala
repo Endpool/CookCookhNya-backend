@@ -47,7 +47,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createPublicIngredient
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(user, otherIngredientIds :+ ingredientId)
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
       yield assertTrue(resp.status == Status.NoContent)
@@ -60,7 +60,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createPublicIngredient
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(user, otherIngredientIds :+ ingredientId)
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
 
@@ -79,7 +79,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createCustomIngredient(user)
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(user, otherIngredientIds :+ ingredientId)
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
 
@@ -97,7 +97,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         otherUser <- registerUser
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(otherUser, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(otherUser, otherIngredientIds :+ ingredientId)
 
         user <- registerUser
 
@@ -119,7 +119,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createCustomIngredient(otherUser)
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(otherUser, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(otherUser, otherIngredientIds :+ ingredientId)
 
         user <- registerUser
 
@@ -141,7 +141,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
 
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- registerUser.flatMap(createRecipe(_, otherIngredientIds :+ ingredientId))
+        recipeId <- registerUser.flatMap(createCustomRecipe(_, otherIngredientIds :+ ingredientId))
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         user <- registerUser
@@ -164,7 +164,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(user, otherIngredientIds :+ ingredientId)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
@@ -185,7 +185,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         ingredientId <- createCustomIngredient(user)
         otherIngredientIds <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, otherIngredientIds :+ ingredientId)
+        recipeId <- createCustomRecipe(user, otherIngredientIds :+ ingredientId)
         _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
@@ -205,7 +205,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialRecipeIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialRecipeIngredients)
+        recipeId <- createCustomRecipe(user, initialRecipeIngredients)
 
         ingredientId <- getRandomUUID
 
@@ -227,7 +227,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialRecipeIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialRecipeIngredients)
+        recipeId <- createCustomRecipe(user, initialRecipeIngredients)
 
         resp <- removeIngredientFromRecipe(user, recipeId, ingredientId)
 
@@ -244,7 +244,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialRecipeIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialRecipeIngredients)
+        recipeId <- createCustomRecipe(user, initialRecipeIngredients)
 
         ingredientId <- createPublicIngredient
 
@@ -263,7 +263,7 @@ object RemoveIngredientFromRecipeTests extends ZIOIntegrationTestSpec:
         user <- registerUser
         initialRecipeIngredients <- Gen.int(0, 5).runHead.some
           .flatMap(createNIngredients)
-        recipeId <- createRecipe(user, initialRecipeIngredients)
+        recipeId <- createCustomRecipe(user, initialRecipeIngredients)
 
         ingredientId <- createCustomIngredient(user)
 

@@ -1,9 +1,8 @@
 package api.moderation.pubrequests
 
-import api.common.search.paginate
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
+import api.common.search.{PaginationParams, paginate}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
-import api.common.search.PaginationParams
 import api.moderation.pubrequests.PublicationRequestType.*
 import db.DbError
 import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
@@ -29,8 +28,6 @@ private type GetSomePendingEnv
   = RecipePublicationRequestsRepo
   & IngredientPublicationRequestsRepo
 
-private type PublicationRequest = RecipePublicationRequest | IngredientPublicationRequest
-
 private val getSomePending: ZServerEndpoint[GetSomePendingEnv, Any] =
   publicationRequestEndpoint
     .get
@@ -42,7 +39,6 @@ private val getSomePending: ZServerEndpoint[GetSomePendingEnv, Any] =
 
 private def getSomePendingHandler(paginationParams: PaginationParams):
   ZIO[AuthenticatedUser & GetSomePendingEnv, InternalServerError | PublicationRequestNotFound, Vector[PublicationRequestSummary]] =
-  
   {
     for
       pendingIngredientReqs <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllPendingIds)
@@ -72,7 +68,7 @@ private def getSomePendingHandler(paginationParams: PaginationParams):
           }
         }
     yield (pendingRecipeReqs ++ pendingIngredientReqs)
-      .sortWith(_.createdAt.toEpochSecond < _.createdAt.toEpochSecond)
+      .sortBy(_.createdAt.toEpochSecond)
       .paginate(paginationParams)
   }.mapError {
     case _: DbError                    => InternalServerError()

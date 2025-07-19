@@ -1,6 +1,6 @@
 package api.common.search
 
-import scala.collection.immutable.IndexedSeqOps
+import scala.collection.IterableOps
 import sttp.tapir
 
 case class PaginationParams(
@@ -15,7 +15,7 @@ object PaginationParams:
         (PaginationParams.apply.tupled)
         {case PaginationParams(size, offset) => (size, offset)}
 
-extension[A, CC[_], C](seq: IndexedSeqOps[A, CC, C])
+extension[A, CC[_], C](seq: IterableOps[A, CC, C])
   def paginate(paginationParams: PaginationParams): C =
     seq.slice(paginationParams.offset, paginationParams.offset + paginationParams.size)
 

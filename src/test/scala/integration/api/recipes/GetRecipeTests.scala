@@ -50,7 +50,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           _extraIngredientIds <- createNIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(storageId, ingredientIds)
 
-          recipeId <- createRecipe(user, ingredientIds)
+          recipeId <- createCustomRecipe(user, ingredientIds)
 
           resp <- getRecipe(user, recipeId)
 
@@ -58,7 +58,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeResp <- ZIO.fromEither(decode[RecipeResp](strBody))
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(recipeResp.ingredients.map(_.id) hasSameElementsAs ingredientIds)
-           && assertTrue(recipeResp.ingredients.forall(_.inStorages == Vector(storageId)))
+           && assertTrue(recipeResp.ingredients.forall(_.inStorages.map(_.id) == Vector(storageId)))
       },
       test("1 user with 2 storages") {
         for
@@ -72,7 +72,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           recipeIngredientsIds = storage1UsedIngredientIds
                               ++ storage2UsedIngredientIds
 
-          recipeId <- createRecipe(user, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user, recipeIngredientsIds)
 
           _ <- addIngredientsToStorage(storage1Id, storage1UsedIngredientIds)
           _ <- addIngredientsToStorage(storage2Id, storage2UsedIngredientIds)
@@ -91,7 +91,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         yield assertTrue(resp.status == Status.Ok)
            && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
            && assertTrue(recipeResp.ingredients.forall(ingredient =>
-                ingredient.inStorages == (
+                ingredient.inStorages.map(_.id) == (
                   if storage1UsedIngredientIds.contains(ingredient.id)
                     then Vector(storage1Id)
                   else if storage2UsedIngredientIds.contains(ingredient.id)
@@ -130,7 +130,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
           _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
           // create some extra ingredients that are not used in the recipe
@@ -152,7 +152,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             yield assertTrue(resp.status == Status.Ok)
                && assertTrue(recipeRespIngredientsIds hasSameElementsAs recipeIngredientsIds)
                && assertTrue(recipeResp.ingredients.forall( ingredient =>
-                   ingredient.inStorages == (
+                   ingredient.inStorages.map(_.id) == (
                      if (user1StorageIngredientIds.contains(ingredient.id))
                        Vector(user1StorageId)
                      else if (sharedStorageIngredientIds.contains(ingredient.id))
@@ -174,7 +174,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
            yield assertTrue(resp.status == Status.Ok)
               && assertTrue(recipeRespIngredientsIds.hasSameElementsAs(recipeIngredientsIds))
               && assertTrue(recipeResp.ingredients.forall( ingredient =>
-                  ingredient.inStorages == (
+                  ingredient.inStorages.map(_.id) == (
                     if (user2StorageIngredientIds.contains(ingredient.id))
                       Vector(user2StorageId)
                     else if (sharedStorageIngredientIds.contains(ingredient.id))
@@ -216,7 +216,7 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
 
           // create some extra ingredients that are not used in the recipe
           _ <- createNIngredients(defaultIngredientAmount)
