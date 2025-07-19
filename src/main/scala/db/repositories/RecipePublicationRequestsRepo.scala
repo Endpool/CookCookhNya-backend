@@ -18,6 +18,7 @@ trait RecipePublicationRequestsRepo:
   def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
+  def getAllRequestsForRecipe(id: RecipeId): IO[DbError, Seq[DbRecipePublicationRequest]]
 
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
@@ -58,6 +59,11 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     run(
       updateQ(lift(id), lift(dbStatus), lift(reason))
     ).map(_ > 0).provideDS
+
+  override def getAllRequestsForRecipe(id: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
+    run(
+      requestsQ.filter(_.recipeId == lift(id))
+    ).provideDS
 
 object RecipePublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbRecipePublicationRequest] =
