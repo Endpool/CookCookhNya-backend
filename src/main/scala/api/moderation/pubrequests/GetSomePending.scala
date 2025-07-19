@@ -3,7 +3,7 @@ package api.moderation.pubrequests
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.common.search.{PaginationParams, paginate}
 import api.EndpointErrorVariants.serverErrorVariant
-import api.moderation.pubrequests.PublicationRequestType.*
+import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
 import domain.{InternalServerError, PublicationRequestId}
 
@@ -16,10 +16,10 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 final case class PublicationRequestSummary(
-  id: PublicationRequestId,
-  requestType: PublicationRequestType,
-  entityName: String,
-  createdAt: OffsetDateTime
+                                            id: PublicationRequestId,
+                                            requestType: PublicationRequestTypeResp,
+                                            entityName: String,
+                                            createdAt: OffsetDateTime
 )
 
 private type GetSomePendingEnv
@@ -30,7 +30,6 @@ private val getSomePending: ZServerEndpoint[GetSomePendingEnv, Any] =
   publicationRequestEndpoint
     .get
     .in(PaginationParams.query)
-    .out(statusCode(NoContent))
     .out(jsonBody[Seq[PublicationRequestSummary]])
     .errorOut(oneOf(serverErrorVariant))
     .zSecuredServerLogic(getSomePendingHandler)

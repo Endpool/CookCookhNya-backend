@@ -1,4 +1,4 @@
 package api.moderation.pubrequests
 
-enum PublicationRequestType:
+enum PublicationRequestTypeResp:
   case Ingredient, Recipe

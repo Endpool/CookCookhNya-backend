@@ -15,6 +15,7 @@ trait RecipePublicationRequestsRepo:
   def createPublicationRequest(recipeId: RecipeId): IO[DbError, PublicationRequestId]
   def getPendingRequestsWithRecipes: IO[DbError, Seq[(DbRecipePublicationRequest, DbRecipe)]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
+  def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
 
@@ -28,7 +29,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
 
   override def createPublicationRequest(recipeId: RecipeId): IO[DbError, PublicationRequestId] =
     run(
-      createPublicationRequestQ(lift(recipeId))
+      requestPublicationQ(lift(recipeId))
     ).provideDS
 
   override def getPendingRequestsWithRecipes:
@@ -42,6 +43,15 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(lift(id)).value).provideDS
 
+  override def getWithRecipe(id: PublicationRequestId):
+    IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
+
+    run(
+      requestsQ
+        .join(RecipesQueries.recipesQ)
+        .on(_.recipeId == _.id)
+    ).map(_.headOption).provideDS
+
   override def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
@@ -50,29 +60,29 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     ).map(_ > 0).provideDS
 
 object RecipePublicationRequestsQueries:
-  inline def recipePublicationRequestsQ: EntityQuery[DbRecipePublicationRequest] =
+  inline def requestsQ: EntityQuery[DbRecipePublicationRequest] =
     query[DbRecipePublicationRequest]
 
-  inline def createPublicationRequestQ(inline recipeId: RecipeId):
+  inline def requestPublicationQ(inline recipeId: RecipeId):
     ActionReturning[DbRecipePublicationRequest, UUID] =
-    recipePublicationRequestsQ
+    requestsQ
       .insert(_.recipeId -> recipeId)
       .returningGenerated(_.id)
 
   inline def pendingRequestsQ: EntityQuery[DbRecipePublicationRequest] =
-    recipePublicationRequestsQ
+    requestsQ
       .filter(r =>
         infix"${r.status} = 'pending'::publication_request_status"
           .asCondition
       )
 
-  inline def pendingRequestsOfRecipeQ(inline recipeId: RecipeId):
+  inline def pendingRequestsByRecipeIdQ(inline recipeId: RecipeId):
     EntityQuery[DbRecipePublicationRequest] =
     pendingRequestsQ
       .filter(_.recipeId == recipeId)
 
   inline def getQ(inline id: PublicationRequestId): EntityQuery[DbRecipePublicationRequest] =
-    recipePublicationRequestsQ
+    requestsQ
       .filter(_.id == id)
 
   inline def updateQ(
@@ -80,7 +90,7 @@ object RecipePublicationRequestsQueries:
     inline status: DbPublicationRequestStatus,
     inline reason: Option[String],
   ): Update[DbRecipePublicationRequest] =
-    recipePublicationRequestsQ
+    requestsQ
       .filter(_.id == id)
       .update(
         _.status -> status,
