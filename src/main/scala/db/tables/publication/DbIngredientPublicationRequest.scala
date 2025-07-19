@@ -29,7 +29,7 @@ object DbIngredientPublicationRequest:
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       status publication_request_status NOT NULL DEFAULT 'pending',
       reason TEXT,
-      FOREIGN KEY (ingredient_id) REFERENCES recipes(id) ON DELETE CASCADE
+      FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE
     );
 
     CREATE OR REPLACE TRIGGER update_timestamp
