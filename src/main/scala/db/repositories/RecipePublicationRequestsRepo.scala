@@ -48,7 +48,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(RecipesQueries.recipesQ)
         .on(_.recipeId == _.id)
     ).map(_.headOption).provideDS

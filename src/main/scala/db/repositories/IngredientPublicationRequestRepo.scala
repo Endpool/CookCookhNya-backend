@@ -49,7 +49,7 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(IngredientsQueries.ingredientsQ)
         .on(_.ingredientId == _.id)
     ).map(_.headOption).provideDS

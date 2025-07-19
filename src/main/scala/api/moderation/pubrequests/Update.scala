@@ -2,7 +2,6 @@ package api.moderation.pubrequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
-import api.moderation.pubrequests.PublicationRequestStatusReq.Accepted
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.repositories.{IngredientPublicationRequestsRepo, IngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
 import domain.{InternalServerError, PublicationRequestId, PublicationRequestNotFound, PublicationRequestStatus}
@@ -77,7 +76,7 @@ private def updatePublicationRequestHandler(id: PublicationRequestId, reqBody: U
       .orElseFail(InternalServerError())
     ).unless(rowsUpdated).someOrElse(false)
     _ <- ZIO.fail(PublicationRequestNotFound(id)).unless(rowsUpdated)
-    _ <- ZIO.when(reqBody.status == Accepted) {
+    _ <- ZIO.when(status == PublicationRequestStatus.Accepted) {
       publishRecipe.orElse(publishIngredient)
     }
   yield ()
