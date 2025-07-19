@@ -49,7 +49,10 @@ object IngredientPublicationRequestsQueries:
       .insert(_.ingredientId -> ingredientId)
       .returningGenerated(_.id)
 
-  inline def allPendingQ = ingredientPublicationRequestsQ.filter(_.status == lift(Pending))
+  inline def allPendingQ: EntityQuery[DbIngredientPublicationRequest] =
+    ingredientPublicationRequestsQ
+      .filter(r => infix"${r.status} = 'pending'::publication_request_status".as[Boolean])
+
   inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId)
 
   inline def getQ(inline id: PublicationRequestId) =
