@@ -44,7 +44,7 @@ final case class RecipeResp(
   ingredients: Vector[IngredientResp],
   name: String,
   sourceLink: Option[String],
-  creator: RecipeCreatorResp,
+  creator: Option[RecipeCreatorResp],
 )
 
 private type GetEnv = Transactor
@@ -61,8 +61,8 @@ private val get: ZServerEndpoint[GetEnv, Any] =
 private case class RawRecipeResult(
   name: String,
   sourceLink: Option[String],
-  creatorId: UserId,
-  creatorFullName: String,
+  creatorId: Option[UserId],
+  creatorFullName: Option[String],
   ingredients: String, // JSON string from PostgreSQL
 )
 
@@ -79,15 +79,18 @@ private def getHandler(recipeId: RecipeId):
   }.someOrFail(RecipeNotFound(recipeId)).flatMap { rawResult =>
     // Parse the JSON ingredients string
     ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
-      .map(RecipeResp(
-        _,
-        rawResult.name,
-        rawResult.sourceLink,
-        RecipeCreatorResp(
-          rawResult.creatorId,
-          rawResult.creatorFullName,
-        ),
-      ))
+      .map { ingredients =>
+        val recipeCreatorResp = for
+          creatorId       <- rawResult.creatorId
+          creatorFullName <- rawResult.creatorFullName
+        yield RecipeCreatorResp(creatorId, creatorFullName)
+        RecipeResp(
+          ingredients,
+          rawResult.name,
+          rawResult.sourceLink,
+          recipeCreatorResp,
+        )
+      }
       .orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
   }.mapError {
     case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)

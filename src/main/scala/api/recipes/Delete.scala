@@ -30,7 +30,7 @@ private def deleteHandler(recipeId: RecipeId):
   _ <- mRecipe match
     case None => ZIO.unit
     case Some(recipe) =>
-      if recipe.creatorId == userId then
+      if recipe.creatorId.contains(userId) then
         ZIO.serviceWithZIO[RecipesRepo](_
           .deleteRecipe(recipeId)
           .orElseFail(InternalServerError())
