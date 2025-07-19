@@ -3,13 +3,13 @@ package api.recipes
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
 import api.variantJson
-import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, PublicationRequestId}
-import db.repositories.{RecipePublicationRequestsQueries, IngredientsQueries, RecipeIngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
-import db.QuillConfig.provideDS
 import db.QuillConfig.ctx.*
+import db.QuillConfig.provideDS
+import db.repositories.{RecipePublicationRequestsQueries, IngredientsQueries, RecipeIngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
+import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, PublicationRequestId}
+
 import io.circe.generic.auto.*
 import io.getquill.*
-
 import javax.sql.DataSource
 import sttp.model.StatusCode.{BadRequest, Created}
 import sttp.tapir.generic.auto.*
@@ -30,12 +30,10 @@ final case class RecipeAlreadyPublished(
 object RecipeAlreadyPublished:
   val variant = BadRequest.variantJson[RecipeAlreadyPublished]
 
-
-private final case class RecipeAlreadyPending(
+final case class RecipeAlreadyPending(
   recipeId: RecipeId,
   message: String = "Recipe already pending"
 )
-
 object RecipeAlreadyPending:
   val variant = BadRequest.variantJson[RecipeAlreadyPending]
 

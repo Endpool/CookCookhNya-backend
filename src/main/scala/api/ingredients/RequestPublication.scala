@@ -19,14 +19,14 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private final case class IngredientAlreadyPublished(
+final case class IngredientAlreadyPublished(
   ingredientId: IngredientId,
   message: String = "Ingredient already published",
 )
 object IngredientAlreadyPublished:
   val variant = BadRequest.variantJson[IngredientAlreadyPublished]
 
-private final case class IngredientAlreadyPending(
+final case class IngredientAlreadyPending(
   ingredientId: IngredientId,
   message: String = "Ingredient already pending"
 )
@@ -46,10 +46,11 @@ private val requestPublication: ZServerEndpoint[RequestPublicationEnv, Any] =
     ))
     .zSecuredServerLogic(requestPublicationHandler)
 
-def requestPublicationHandler(ingredientId: IngredientId):
+private def requestPublicationHandler(ingredientId: IngredientId):
   ZIO[
     AuthenticatedUser & RequestPublicationEnv,
-    InternalServerError | IngredientAlreadyPublished | IngredientAlreadyPending | IngredientNotFound,
+    InternalServerError | IngredientAlreadyPublished
+    | IngredientAlreadyPending | IngredientNotFound,
     PublicationRequestId
   ] =
   for
@@ -59,7 +60,7 @@ def requestPublicationHandler(ingredientId: IngredientId):
     )
 
     _ <- ZIO.fail(IngredientAlreadyPublished(ingredientId))
-    .when(ingredient.isPublished)
+      .when(ingredient.isPublished)
 
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(

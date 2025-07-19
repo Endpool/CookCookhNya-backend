@@ -44,7 +44,8 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     run(updateQ(lift(id), lift(dbStatus), lift(reason))).map(_ > 0).provideDS
 
 object IngredientPublicationRequestsQueries:
-  inline def requestsQ = query[DbIngredientPublicationRequest]
+  inline def requestsQ: EntityQuery[DbIngredientPublicationRequest] =
+    query[DbIngredientPublicationRequest]
 
   inline def requestPublicationQ(inline ingredientId: IngredientId):
     ActionReturning[DbIngredientPublicationRequest, UUID] =
@@ -55,7 +56,7 @@ object IngredientPublicationRequestsQueries:
   inline def pendingRequestsQ: EntityQuery[DbIngredientPublicationRequest] =
     requestsQ
       .filter(r =>
-        infix"${r.status} = 'pending'::${DbPublicationRequestStatus.postgresTypeName}"
+        infix"${r.status} = 'pending'::publication_request_status"
           .asCondition
       )
 

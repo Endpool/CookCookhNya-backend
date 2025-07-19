@@ -21,18 +21,18 @@ object DbRecipePublicationRequest:
     val (status, reason) = DbPublicationRequestStatus.fromDomain(req.status)
     DbRecipePublicationRequest(req.id, req.recipeId, req.createdAt, req.updatedAt, status, reason)
 
-  val createTable: String = """
+  val createTable: String = s"""
     CREATE TABLE IF NOT EXISTS recipe_publication_requests(
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       recipe_id UUID NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      status publication_request_status NOT NULL DEFAULT 'pending',
+      status ${DbPublicationRequestStatus.postgresTypeName} NOT NULL DEFAULT 'pending',
       reason TEXT,
       FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
     );
 
-    CREATE OR REPLACE TRIGGER update_timestamp
+    CREATE OR REPLACE TRIGGER recipe_publication_requests_update_timestamp
     BEFORE UPDATE ON recipe_publication_requests
     FOR EACH ROW
     EXECUTE FUNCTION trigger_set_updated_at();
