@@ -39,7 +39,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
       creatorId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       recipeId <- run(
         recipesQ
-          .insertValue(lift(DbRecipe(id=null, name, creatorId, isPublished=false, sourceLink)))
+          .insertValue(lift(DbRecipe(id=null, name, Some(creatorId), isPublished=false, sourceLink)))
           .returningGenerated(r => r.id) // null is safe here because of returningGenerated
       )
       _ <- run(
@@ -113,10 +113,10 @@ object RecipesQueries:
     recipesQ.filter(_.isPublished)
 
   inline def visibleRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
-    recipesQ.filter(r => r.isPublished || r.creatorId == userId)
+    recipesQ.filter(r => r.isPublished || r.creatorId.contains(userId))
 
   inline def customRecipesQ(inline userId: UserId): EntityQuery[DbRecipe] =
-    recipesQ.filter(r => r.creatorId == userId)
+    recipesQ.filter(r => r.creatorId.contains(userId))
 
   inline def getRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     recipesQ.filter(r => r.id == recipeId)
