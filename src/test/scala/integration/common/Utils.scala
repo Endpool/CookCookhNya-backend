@@ -100,12 +100,13 @@ object Utils:
       )
     )
 
-  def createNIngredients(n: Int): ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
+  def createNPublicIngredients(n: Int):
+    ZIO[IngredientsRepo, InternalServerError, Vector[IngredientId]] =
     ZIO.collectAll(
       (1 to n).map(_ => createPublicIngredient).toVector
     )
 
-  def createRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
+  def createCustomRecipe(user: AuthenticatedUser, ingredientIds: Vector[IngredientId]): ZIO[
     RecipesRepo,
     InternalServerError | DbError,
     RecipeId

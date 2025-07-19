@@ -1,18 +1,21 @@
 package db.repositories
 
 import db.DbError
-import db.tables.publication.DbIngredientPublicationRequest
-import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.IngredientId
-import io.getquill.*
-import zio.{IO, RLayer, ZLayer}
+import db.tables.DbIngredient
+import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
+import domain.{IngredientId, PublicationRequestId, PublicationRequestStatus}
 
+import io.getquill.*
 import javax.sql.DataSource
+import java.util.UUID
+import zio.{IO, RLayer, ZLayer, ZIO}
 
 trait IngredientPublicationRequestsRepo:
-  def requestPublication(ingredientId: IngredientId): IO[DbError, Unit]
-
-private inline def ingredientPublicationRequests = query[DbIngredientPublicationRequest]
+  def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId]
+  def getPendingRequestsWithIngredients: IO[DbError, Seq[(DbIngredientPublicationRequest, DbIngredient)]]
+  def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
+  def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
+  def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -22,16 +25,71 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
 
   private given DataSource = dataSource
 
-  override def requestPublication(ingredientId: IngredientId): IO[DbError, Unit] =
-    run(requestPublicationQ(lift(ingredientId))).unit.provideDS
+  override def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId] =
+    run(requestPublicationQ(lift(ingredientId))).provideDS
+
+  override def getPendingRequestsWithIngredients:
+    IO[DbError, Seq[(DbIngredientPublicationRequest, DbIngredient)]] =
+    run(
+      pendingRequestsQ
+        .join(IngredientsQueries.ingredientsQ)
+        .on(_.ingredientId == _.id)
+    ).provideDS
+
+  override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
+    run(getQ(lift(id))).map(_.headOption).provideDS
+
+  override def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
+    IO[DbError, Boolean] =
+    val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
+    run(updateQ(lift(id), lift(dbStatus), lift(reason))).map(_ > 0).provideDS
+
+  override def getWithIngredient(id: PublicationRequestId):
+    IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
+
+    run(
+      requestsQ
+        .join(IngredientsQueries.ingredientsQ)
+        .on(_.ingredientId == _.id)
+    ).map(_.headOption).provideDS
 
 object IngredientPublicationRequestsQueries:
-  import db.QuillConfig.ctx.*
-  inline def requestPublicationQ(inline ingredientId: IngredientId): Insert[DbIngredientPublicationRequest] =
-    ingredientPublicationRequests.insert(_.ingredientId -> ingredientId)
-    
-  inline def allPendingQ = ingredientPublicationRequests.filter(_.status == lift(Pending))
-  inline def pendingRequestsByIdQ(inline ingredientId: IngredientId) = allPendingQ.filter(_.ingredientId == ingredientId) 
+  inline def requestsQ: EntityQuery[DbIngredientPublicationRequest] =
+    query[DbIngredientPublicationRequest]
+
+  inline def requestPublicationQ(inline ingredientId: IngredientId):
+    ActionReturning[DbIngredientPublicationRequest, UUID] =
+    requestsQ
+      .insert(_.ingredientId -> ingredientId)
+      .returningGenerated(_.id)
+
+  inline def pendingRequestsQ: EntityQuery[DbIngredientPublicationRequest] =
+    requestsQ
+      .filter(r =>
+        infix"${r.status} = 'pending'::publication_request_status"
+          .asCondition
+      )
+
+  inline def pendingRequestsByIngredientIdQ(inline ingredientId: IngredientId):
+    EntityQuery[DbIngredientPublicationRequest] =
+    pendingRequestsQ
+      .filter(_.ingredientId == ingredientId)
+
+  inline def getQ(inline id: PublicationRequestId): EntityQuery[DbIngredientPublicationRequest] =
+    requestsQ
+      .filter(_.id == id)
+
+  inline def updateQ(
+    inline id: PublicationRequestId,
+    inline status: DbPublicationRequestStatus,
+    inline reason: Option[String],
+  ): Update[DbIngredientPublicationRequest] =
+    requestsQ
+      .filter(_.id == id)
+      .update(
+        _.status -> status,
+        _.reason -> reason,
+      )
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =
