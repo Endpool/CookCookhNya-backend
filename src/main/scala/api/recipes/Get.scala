@@ -1,9 +1,8 @@
 package api.recipes
 
-import api.{handleFailedSqlQuery, toUserNotFound}
+import api.{PublicationRequestStatusResp, handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant, userNotFoundVariant}
-import api.moderation.pubrequests.PublicationRequestStatusResp
 import db.{DbError, handleDbError}
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable, usersTable}
 import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, StorageId, UserId, UserNotFound}

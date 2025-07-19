@@ -2,6 +2,7 @@ package api.moderation.pubrequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
+import api.PublicationRequestStatusResp
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.DbError
 import domain.{IngredientPublicationRequest, InternalServerError, PublicationRequestId, PublicationRequestNotFound, RecipePublicationRequest}

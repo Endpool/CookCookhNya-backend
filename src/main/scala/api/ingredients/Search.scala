@@ -3,8 +3,8 @@ package api.ingredients
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.common.search.{PaginationParams, SearchParams, Searchable, paginate}
 import api.EndpointErrorVariants.serverErrorVariant
+import api.PublicationRequestStatusResp
 import api.ingredients.SearchIngredientsFilter.Custom
-import api.moderation.pubrequests.PublicationRequestStatusResp
 import db.repositories.{IngredientPublicationRequestsRepo, IngredientsRepo, StorageIngredientsRepo}
 import domain.{IngredientId, InternalServerError}
 import io.circe.generic.auto.*

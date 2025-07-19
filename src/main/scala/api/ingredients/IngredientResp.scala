@@ -1,7 +1,7 @@
 package api.ingredients
 
+import api.PublicationRequestStatusResp
 import api.common.search.Searchable
-import api.moderation.pubrequests.PublicationRequestStatusResp
 import domain.IngredientId
 import db.tables.DbIngredient
 
