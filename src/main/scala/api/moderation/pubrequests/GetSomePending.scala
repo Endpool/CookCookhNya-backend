@@ -6,7 +6,7 @@ import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant
 import api.moderation.pubrequests.PublicationRequestType.*
 import db.DbError
 import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
-import domain.{IngredientPublicationRequest, InternalServerError, PublicationRequestNotFound, RecipePublicationRequest}
+import domain.{InternalServerError, PublicationRequestNotFound}
 import io.circe.generic.auto.*
 
 import java.time.OffsetDateTime

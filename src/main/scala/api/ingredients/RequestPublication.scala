@@ -8,7 +8,6 @@ import db.repositories.{
   IngredientsRepo, IngredientPublicationRequestsQueries
 }
 import domain.{IngredientId, IngredientNotFound, InternalServerError, PublicationRequestId}
-import db.tables.publication.DbPublicationRequestStatus.given
 import db.QuillConfig.provideDS
 import db.QuillConfig.ctx.*
 

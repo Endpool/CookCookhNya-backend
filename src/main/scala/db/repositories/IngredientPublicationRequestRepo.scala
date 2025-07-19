@@ -3,8 +3,7 @@ package db.repositories
 import db.DbError
 import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
-import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.{IngredientId, PublicationRequestId, PublicationRequestNotFound}
+import domain.{IngredientId, PublicationRequestId, PublicationRequestStatus}
 
 import io.getquill.*
 import javax.sql.DataSource
@@ -13,7 +12,7 @@ import zio.{IO, RLayer, ZLayer, ZIO}
 
 trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId]
-  def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
+  def getAllPendingIds: IO[DbError, Seq[PublicationRequestId]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
   def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]

@@ -38,9 +38,9 @@ final case class PublicationRequestResp(
 
 private type GetReqEnv
   = RecipePublicationRequestsRepo
+  & RecipesRepo
   & IngredientPublicationRequestsRepo
-
-private type PublicationRequest = RecipePublicationRequest | IngredientPublicationRequest
+  & IngredientsRepo
 
 private val getRequest: ZServerEndpoint[GetReqEnv, Any] =
   publicationRequestEndpoint
@@ -54,7 +54,7 @@ private def getRequestHandler(reqId: UUID):
   ZIO[AuthenticatedUser & GetReqEnv,
       InternalServerError | PublicationRequestNotFound,
       PublicationRequestResp] =
-  
+
   def getIngredientRequest =
     ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.get(reqId))
       .flatMap {

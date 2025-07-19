@@ -35,7 +35,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     ).provideDS
 
   override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] =
-    run(allPendingQ.map(_.id)).provideDS.map(Vector.from)
+    run(pendingRequestsQ.map(_.id)).provideDS.map(Vector.from)
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id).value).provideDS
