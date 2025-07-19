@@ -96,8 +96,9 @@ def createTables(xa: Transactor) =
           FOREIGN KEY (${storageInvitationTable.storageId}) REFERENCES $storagesTable(${storagesTable.id}) ON DELETE CASCADE
         )
       """,
+
       sql(DbRecipePublicationRequest.createTable),
-      sql(DbIngredientPublicationRequest.createTable)
+      sql(DbIngredientPublicationRequest.createTable),
     )
 
     tableList.map(_.update.run())

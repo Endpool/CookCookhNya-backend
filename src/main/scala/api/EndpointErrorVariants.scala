@@ -9,6 +9,7 @@ import domain.{
   StorageAccessForbidden,
   StorageNotFound,
   UserNotFound,
+  PublicationRequestNotFound
 }
 
 import io.circe.{Decoder, Encoder}
@@ -28,6 +29,7 @@ extension (sc: StatusCode)
 object EndpointErrorVariants:
   val ingredientNotFoundVariant = NotFound.variantJson[IngredientNotFound]
   val storageNotFoundVariant = NotFound.variantJson[StorageNotFound]
+  val publicationRequestNotFound = NotFound.variantJson[PublicationRequestNotFound]
   val storageAccessForbiddenVariant = Forbidden.variantJson[StorageAccessForbidden]
   val recipeAccessForbiddenVariant = NotFound.variantJson[RecipeAccessForbidden]
   val userNotFoundVariant = NotFound.variantJson[UserNotFound]

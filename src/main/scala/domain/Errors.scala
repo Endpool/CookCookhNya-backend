@@ -36,3 +36,8 @@ final case class InvalidInvitationHash(
   hash: String,
   message: String = "Invalid invitation hash",
 )
+
+final case class PublicationRequestNotFound(
+  requestId: PublicationRequestId,
+  message: String = "Publication request not found"
+)
