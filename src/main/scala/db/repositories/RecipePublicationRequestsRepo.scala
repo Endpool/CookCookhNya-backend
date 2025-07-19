@@ -14,7 +14,7 @@ import java.util.UUID
 
 trait RecipePublicationRequestsRepo:
   def createPublicationRequest(recipeId: RecipeId): IO[DbError, PublicationRequestId]
-  def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]]
+  def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]]
   def getWithRecipe(id: PublicationRequestId):
     IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
@@ -34,8 +34,8 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
       createPublicationRequestQ(lift(recipeId))
     ).provideDS
 
-  override def getAllPending: IO[DbError, Seq[DbRecipePublicationRequest]] =
-    run(pendingRequestsQ).provideDS
+  override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] =
+    run(allPendingQ.map(_.id)).provideDS.map(Vector.from)
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbRecipePublicationRequest]] =
     run(getQ(id).value).provideDS

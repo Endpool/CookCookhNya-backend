@@ -1,19 +1,21 @@
 package db.repositories
 
 import db.DbError
+import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import db.tables.publication.DbPublicationRequestStatus.Pending
-import domain.{PublicationRequestId, IngredientId, PublicationRequestStatus}
+import domain.{IngredientId, PublicationRequestId, PublicationRequestNotFound}
 
 import io.getquill.*
 import javax.sql.DataSource
-import zio.{IO, RLayer, ZLayer, ZIO}
 import java.util.UUID
+import zio.{IO, RLayer, ZLayer, ZIO}
 
 trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId]
   def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]]
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
+  def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
@@ -27,8 +29,9 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   override def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId] =
     run(requestPublicationQ(lift(ingredientId))).provideDS
 
-  override def getAllPending: IO[DbError, Seq[DbIngredientPublicationRequest]] =
-    run(allPendingQ).provideDS
+  override def getAllPendingIds: IO[DbError, Vector[PublicationRequestId]] = {
+    run(allPendingQ.map(_.id)).provideDS.map(Vector.from)
+  }
 
   override def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]] =
     run(getQ(id)).map(_.headOption).provideDS
@@ -37,6 +40,15 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Boolean] =
     val (dbStatus, reason) = DbPublicationRequestStatus.fromDomain(status)
     run(updateQ(id, dbStatus, reason)).map(_ > 0).provideDS
+
+  override def getWithIngredient(id: PublicationRequestId):
+    IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
+
+    run(
+      getQ(id)
+        .join(IngredientsQueries.ingredientsQ)
+        .on((rpq, r) => rpq.ingredientId == r.id)
+    ).map(_.headOption).provideDS
 
 object IngredientPublicationRequestsQueries:
   import db.QuillConfig.ctx.*
@@ -58,6 +70,7 @@ object IngredientPublicationRequestsQueries:
   inline def getQ(inline id: PublicationRequestId) =
     ingredientPublicationRequestsQ
       .filter(_.id == lift(id))
+      .take(1)
 
   inline def updateQ(
     inline id: PublicationRequestId,
