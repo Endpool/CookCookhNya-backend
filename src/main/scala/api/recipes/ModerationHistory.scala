@@ -1,22 +1,25 @@
 package api.recipes
 
-import domain.{InternalServerError, RecipeNotFound, RecipeId}
-import api.EndpointErrorVariants.{serverErrorVariant, recipeNotFoundVariant}
+import domain.{InternalServerError, RecipeId, RecipeNotFound}
+import api.PublicationRequestStatusResp
+import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
-import db.tables.publication.DbPublicationRequestStatus
 import db.repositories.{RecipePublicationRequestsRepo, RecipesRepo}
 
+import io.circe.derivation.Configuration
+import io.circe.Decoder
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
+
 import java.time.OffsetDateTime
 
 final case class ModerationHistoryResponse(
   createdAt: OffsetDateTime,
   updatedAt: OffsetDateTime,
-  status: DbPublicationRequestStatus,
+  status: PublicationRequestStatusResp,
   reason: Option[String]
 )
 
@@ -39,7 +42,13 @@ def moderationHistoryHandler(recipeId: RecipeId):
     dbRequests <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllByRecipeId(recipeId))
       .orElseFail(InternalServerError())
     res = dbRequests
-      .map(dbReq => ModerationHistoryResponse(dbReq.createdAt, dbReq.updatedAt, dbReq.status, dbReq.reason))
+      .map(
+        dbReq => ModerationHistoryResponse(
+          dbReq.createdAt, dbReq.updatedAt,
+          PublicationRequestStatusResp.fromDomain(dbReq.status.toDomain(dbReq.reason)),
+          dbReq.reason
+        )
+      )
       .sortBy(_.updatedAt)
 
   yield res
