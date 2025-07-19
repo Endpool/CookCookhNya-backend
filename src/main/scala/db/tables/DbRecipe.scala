@@ -9,7 +9,7 @@ import com.augustnagro.magnum.*
 final case class DbRecipe(
   @Id id: RecipeId,
   name: String,
-  creatorId: UserId,
+  creatorId: Option[UserId],
   isPublished: Boolean,
   sourceLink: Option[String],
 ) derives DbCodec
