@@ -27,26 +27,28 @@ private val createPublic: ZServerEndpoint[CreatePublicEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zServerLogic(createPublicHandler)
 
-private def createPublicHandler(recipe: CreateRecipeReqBody):
-  ZIO[CreatePublicEnv, InternalServerError | IngredientNotFound, RecipeId] = for
-  dataSource <- ZIO.service[DataSource]
-  existingIngredientIds <- run(
-    IngredientsQueries.publicIngredientsQ
-      .map(_.id)
-      .filter(id => liftQuery(recipe.ingredients).contains(id))
-  ).provideDS(using dataSource)
-    .orElseFail(InternalServerError())
-  unknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
-  _ <- ZIO.fail(IngredientNotFound(unknownIngredientIds.head.toString))
-    .when(unknownIngredientIds.nonEmpty)
+private def createPublicHandler(recipeReq: CreateRecipeReqBody):
+  ZIO[CreatePublicEnv, InternalServerError | IngredientNotFound, RecipeId] =
+  val recipe = recipeReq.copy(ingredients=recipeReq.ingredients.distinct)
+  for
+    dataSource <- ZIO.service[DataSource]
+    existingIngredientIds <- run(
+      IngredientsQueries.publicIngredientsQ
+        .map(_.id)
+        .filter(id => liftQuery(recipe.ingredients).contains(id))
+    ).provideDS(using dataSource)
+      .orElseFail(InternalServerError())
+    unknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
+    _ <- ZIO.fail(IngredientNotFound(unknownIngredientIds.head.toString))
+      .when(unknownIngredientIds.nonEmpty)
 
-  recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
-    .createPublic(recipe.name, recipe.sourceLink, recipe.ingredients)
-    .mapError {
-      case _: DbNotRespondingError => InternalServerError()
-      case e: FailedDbQuery => handleFailedSqlQuery(e)
-        .flatMap(toIngredientNotFound)
-        .getOrElse(InternalServerError())
-    }
-  )
-yield recipeId
+    recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
+      .createPublic(recipe.name, recipe.sourceLink, recipe.ingredients)
+      .mapError {
+        case _: DbNotRespondingError => InternalServerError()
+        case e: FailedDbQuery => handleFailedSqlQuery(e)
+          .flatMap(toIngredientNotFound)
+          .getOrElse(InternalServerError())
+      }
+    )
+  yield recipeId
