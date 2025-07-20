@@ -21,6 +21,7 @@ trait RecipesRepo:
   def getAllCustom: ZIO[AuthenticatedUser, DbError, List[DbRecipe]]
   def getAllPublic: IO[DbError, List[DbRecipe]]
 
+  def isUserOwner(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean]
   def isVisible(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean]
   def isPublic(recipeId: RecipeId): IO[DbError, Boolean]
 
@@ -94,6 +95,16 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
 
   override def getAllPublic: IO[DbError, List[DbRecipe]] =
     run(publicRecipesQ).provideDS
+
+  override def isUserOwner(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean] =
+    for
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      res <- run(
+        customRecipesQ(lift(userId))
+          .filter(_.id == lift(recipeId))
+          .nonEmpty
+      ).provideDS
+    yield res
 
   override def isVisible(recipeId: RecipeId): ZIO[AuthenticatedUser, DbError, Boolean] =
     ZIO.serviceWithZIO[AuthenticatedUser](user =>

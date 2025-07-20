@@ -86,11 +86,11 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
 
   def publish(ingredientId: IngredientId): IO[DbError, Unit] =
     run(getIngredientsQ(lift(ingredientId)).update(_.isPublished -> true)).unit.provideDS
-    
+
 object IngredientsQueries:
   inline def ingredientsQ: EntityQuery[DbIngredient] =
     query[DbIngredient]
-    
+
   inline def publishedIngredientsQ: EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.isPublished)
 
@@ -102,7 +102,7 @@ object IngredientsQueries:
 
   inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
     ingredientsQ.filter(i => i.ownerId.isEmpty || i.ownerId.contains(userId))
-    
+
   inline def getIngredientsQ(inline ingredientId: IngredientId): EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.id == ingredientId)
 

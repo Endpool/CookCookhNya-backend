@@ -9,7 +9,6 @@ import domain.{InternalServerError, PublicationRequestId}
 
 import io.circe.generic.auto.*
 import java.time.OffsetDateTime
-import sttp.model.StatusCode.NoContent
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.ztapir.*

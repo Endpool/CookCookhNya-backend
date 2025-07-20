@@ -1,15 +1,14 @@
 package api.recipes
 
-import api.{handleFailedSqlQuery, toUserNotFound}
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant, userNotFoundVariant}
-import api.moderation.pubrequests.PublicationRequestStatusResp
-import db.{DbError, handleDbError}
+import api.PublicationRequestStatusResp
+import db.repositories.RecipePublicationRequestsRepo
 import db.tables.{ingredientsTable, recipeIngredientsTable, recipesTable, storageIngredientsTable, storageMembersTable, storagesTable, usersTable}
 import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, StorageId, UserId, UserNotFound}
+
 import com.augustnagro.magnum.magzio.*
 import com.augustnagro.magnum.Query
-import db.repositories.RecipePublicationRequestsRepo
 import io.circe.generic.auto.*
 import io.circe.parser.decode
 import sttp.tapir.generic.auto.*
@@ -61,52 +60,44 @@ private case class RawRecipeResult(
 )
 
 private def getHandler(recipeId: RecipeId):
-  ZIO[AuthenticatedUser & GetEnv,
-      InternalServerError | RecipeNotFound | UserNotFound,
-      RecipeResp] = {
-
+  ZIO[
+    AuthenticatedUser & GetEnv,
+    InternalServerError | RecipeNotFound | UserNotFound,
+    RecipeResp
+  ] =
   def getLastPublicationRequestStatus =
-    ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllRequestsForRecipe(recipeId))
-      .map(
-        _.sortBy(_.updatedAt).lastOption.map(
-          req => PublicationRequestStatusResp.fromDomain(req.status.toDomain(req.reason))
-        )
-      )
+    ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
+      .getAllByRecipeId(recipeId)
+      .map(_
+        .maxByOption(_.updatedAt)
+        .map(req => PublicationRequestStatusResp.fromDomain(req.status.toDomain(req.reason)))
+      ).orElseFail(InternalServerError())
+    )
 
-  {
-    for
-      rawResult <- ZIO.serviceWithZIO[AuthenticatedUser] { authenticatedUser =>
-        val userId = authenticatedUser.userId
-        ZIO.serviceWithZIO[Transactor](_
-          .transact(rawRecipeQuery(userId, recipeId).run().headOption)
-          .mapError(handleDbError)
+  for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    rawResult <- ZIO.serviceWithZIO[Transactor](_
+      .transact(rawRecipeQuery(userId, recipeId).run().headOption)
+      .orElseFail(InternalServerError())
+      .someOrFail(RecipeNotFound(recipeId))
+    )
+    status <- getLastPublicationRequestStatus
+    result <- ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
+      // Parse the JSON ingredients string
+      .map { ingredients =>
+        val recipeCreatorResp = for
+          creatorId <- rawResult.creatorId
+          creatorFullName <- rawResult.creatorFullName
+        yield RecipeCreatorResp(creatorId, creatorFullName)
+        RecipeResp(
+          ingredients,
+          rawResult.name,
+          rawResult.sourceLink,
+          recipeCreatorResp,
+          status
         )
-      }.someOrFail(RecipeNotFound(recipeId))
-      status <- getLastPublicationRequestStatus
-      result <- ZIO.fromEither(decode[Vector[IngredientResp]](rawResult.ingredients))
-        // Parse the JSON ingredients string
-        .map { ingredients =>
-          val recipeCreatorResp = for
-            creatorId <- rawResult.creatorId
-            creatorFullName <- rawResult.creatorFullName
-          yield RecipeCreatorResp(creatorId, creatorFullName)
-          RecipeResp(
-            ingredients,
-            rawResult.name,
-            rawResult.sourceLink,
-            recipeCreatorResp,
-            status
-          )
-        }.orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
-    yield result
-  }.mapError {
-    case e: DbError.FailedDbQuery => handleFailedSqlQuery(e)
-      .flatMap(toUserNotFound)
-      .getOrElse(InternalServerError())
-    case _: DbError => InternalServerError()
-    case e: (InternalServerError | RecipeNotFound | UserNotFound) => e
-  }
-}
+      }.orElseFail(InternalServerError(s"Failed to parse ingredients JSON: ${rawResult.ingredients}"))
+  yield result
 
 private inline def rawRecipeQuery(
   inline userId: UserId,

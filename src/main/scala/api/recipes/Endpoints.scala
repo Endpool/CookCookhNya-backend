@@ -22,6 +22,7 @@ val recipeEndpoints = List(
   searchAll.widen,
   delete.widen,
   requestPublication.widen,
+  moderationHistory.widen
 ) ++ recipesIngredientsEndpoints.map(_.widen)
   ++ adminRecipesEndpoints.map(_.widen)
   ++ publicRecipesEndpoints.map(_.widen)

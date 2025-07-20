@@ -18,7 +18,7 @@ trait RecipePublicationRequestsRepo:
   def getWithRecipe(id: PublicationRequestId): IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
-  def getAllRequestsForRecipe(id: RecipeId): IO[DbError, Seq[DbRecipePublicationRequest]]
+  def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
 
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
@@ -60,10 +60,8 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
       updateQ(lift(id), lift(dbStatus), lift(reason))
     ).map(_ > 0).provideDS
 
-  override def getAllRequestsForRecipe(id: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
-    run(
-      requestsQ.filter(_.recipeId == lift(id))
-    ).provideDS
+  override def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
+    run(getAllByRecipeIdQ(lift(recipeId))).provideDS
 
 object RecipePublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbRecipePublicationRequest] =
@@ -102,6 +100,9 @@ object RecipePublicationRequestsQueries:
         _.status -> status,
         _.reason -> reason,
       )
+
+  inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
+    requestsQ.filter(_.recipeId == recipeId)
 
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
