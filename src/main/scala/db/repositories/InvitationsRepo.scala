@@ -43,8 +43,9 @@ private final case class InvitationsRepoLive(xa: Transactor, dataSource: DataSou
   override def activate(invitationHash: String):
     ZIO[AuthenticatedUser & StorageMembersRepo, DbError | InvalidInvitationHash, (StorageId, String)] =
     for
-      dbInvitationWithName <- run(getInvitationWithStorageNameByHashQ(lift(invitationHash)).value)
+      dbInvitationWithName <- run(getInvitationWithStorageNameByHashQ(lift(invitationHash)))
         .provideDS
+        .map(_.headOption)
         .someOrFail(InvalidInvitationHash(invitationHash))
       (dbInvitation, storageName) = dbInvitationWithName
       isMemberOrOwner <- ZIO.serviceWithZIO[StorageMembersRepo](_.checkForMembership(dbInvitation.storageId))
