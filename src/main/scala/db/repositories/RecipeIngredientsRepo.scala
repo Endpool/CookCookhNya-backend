@@ -14,8 +14,6 @@ trait RecipeIngredientsRepo:
   def addIngredients(recipeId: RecipeId, ingredientIds: List[IngredientId]): IO[DbError, Unit]
   def removeIngredient(recipeId: RecipeId, ingredientId: IngredientId): IO[DbError, Unit]
 
-private inline def recipeIngredients = query[DbRecipeIngredient]
-
 final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends RecipeIngredientsRepo:
   import db.QuillConfig.ctx.*
   import db.QuillConfig.provideDS
@@ -50,16 +48,19 @@ final case class RecipeIngredientsRepoLive(dataSource: DataSource) extends Recip
 object RecipeIngredientsQueries:
   import db.QuillConfig.ctx.*
 
+  inline def recipeIngredientsQ: EntityQuery[DbRecipeIngredient] =
+    query[DbRecipeIngredient]
+
   inline def getAllIngredientsQ(inline recipeId: RecipeId) =
-    recipeIngredients
+    recipeIngredientsQ
       .filter(_.recipeId == recipeId)
       .map(_.ingredientId)
 
   inline def addIngredientQ(inline recipeId: RecipeId, inline ingredientIds: IngredientId) =
-    recipeIngredients.insertValue((DbRecipeIngredient(recipeId, ingredientIds)))
+    recipeIngredientsQ.insertValue((DbRecipeIngredient(recipeId, ingredientIds)))
 
   inline def deleteIngredientQ(inline recipeId: RecipeId, inline ingredientId: IngredientId) =
-    recipeIngredients
+    recipeIngredientsQ
       .filter(ri => ri.recipeId     == recipeId
                  && ri.ingredientId == ingredientId)
       .delete

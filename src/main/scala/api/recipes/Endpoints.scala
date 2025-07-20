@@ -5,6 +5,7 @@ import sttp.tapir.ztapir.*
 
 import api.recipes.ingredients.recipesIngredientsEndpoints
 import api.recipes.admin.adminRecipesEndpoints
+import api.recipes.public.publicRecipesEndpoints
 
 val recipesEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
   recipesEndpoint()
@@ -23,3 +24,4 @@ val recipeEndpoints = List(
   requestPublication.widen,
 ) ++ recipesIngredientsEndpoints.map(_.widen)
   ++ adminRecipesEndpoints.map(_.widen)
+  ++ publicRecipesEndpoints.map(_.widen)

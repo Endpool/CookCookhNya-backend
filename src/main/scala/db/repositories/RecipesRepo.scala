@@ -72,7 +72,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     ZIO[AuthenticatedUser, DbError, Option[Recipe]] = transaction {
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId))).map(_.headOption)
+      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId)).value)
       mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
         val DbRecipe(id, name, creatorId, isPublished, sourceLink) = recipe
         run(
@@ -141,6 +141,9 @@ object RecipesQueries:
 
   inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     visibleRecipesQ(userId).filter(r => r.id == recipeId)
+
+  inline def getPublicRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    publicRecipesQ.filter(r => r.id == recipeId)
 
 object RecipesRepo:
   def layer: RLayer[DataSource, RecipesRepo] =
