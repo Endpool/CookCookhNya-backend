@@ -1,14 +1,15 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.DbError
 import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
-import domain.{IngredientId, PublicationRequestId, PublicationRequestStatus}
-
+import domain.{IngredientId, PublicationRequestId, PublicationRequestStatus, UserId}
 import io.getquill.*
+
 import javax.sql.DataSource
 import java.util.UUID
-import zio.{IO, RLayer, ZLayer, ZIO}
+import zio.{IO, RLayer, ZIO, ZLayer}
 
 trait IngredientPublicationRequestsRepo:
   def requestPublication(ingredientId: IngredientId): IO[DbError, PublicationRequestId]
@@ -16,6 +17,7 @@ trait IngredientPublicationRequestsRepo:
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
   def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
+  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbIngredientPublicationRequest]]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -53,6 +55,12 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
         .on(_.ingredientId == _.id)
     ).map(_.headOption).provideDS
 
+  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbIngredientPublicationRequest]] =
+    for
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      res <- run(getAllCreatedByQ(lift(userId))).provideDS
+    yield res
+    
 object IngredientPublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbIngredientPublicationRequest] =
     query[DbIngredientPublicationRequest]
@@ -90,6 +98,13 @@ object IngredientPublicationRequestsQueries:
         _.status -> status,
         _.reason -> reason,
       )
+
+  inline def getAllCreatedByQ(inline userId: UserId): Query[DbIngredientPublicationRequest] =
+    query[DbIngredientPublicationRequest]
+      .join(query[DbIngredientPublicationRequest])
+      .on(_.ingredientId == _.id)
+      .map(_._1)
+
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =

@@ -1,15 +1,16 @@
 package db.repositories
 
+import api.Authentication.AuthenticatedUser
 import db.DbError
 import db.QuillConfig.ctx
 import db.tables.DbRecipe
 import db.tables.publication.{DbPublicationRequestStatus, DbRecipePublicationRequest}
-import domain.{PublicationRequestStatus, PublicationRequestId, RecipeId}
-
+import domain.{PublicationRequestId, PublicationRequestStatus, RecipeId, UserId}
 import io.getquill.*
+
 import java.util.UUID
 import javax.sql.DataSource
-import zio.{IO, RLayer, ZLayer, ZIO}
+import zio.{IO, RLayer, ZIO, ZLayer}
 
 trait RecipePublicationRequestsRepo:
   def createPublicationRequest(recipeId: RecipeId): IO[DbError, PublicationRequestId]
@@ -19,6 +20,7 @@ trait RecipePublicationRequestsRepo:
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
   def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
+  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]]
 
 private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
 
@@ -65,6 +67,13 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
     run(getAllByRecipeIdQ(lift(recipeId))).provideDS
 
+  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]] = 
+    for 
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+      res <- run(getAllCreatedByQ(lift(userId))).provideDS
+    yield res
+  
+
 object RecipePublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbRecipePublicationRequest] =
     query[DbRecipePublicationRequest]
@@ -105,7 +114,13 @@ object RecipePublicationRequestsQueries:
 
   inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
     recipePublicationRequests.filter(_.recipeId == recipeId)
-  
+
+  inline def getAllCreatedByQ(inline userId: UserId): Query[DbRecipePublicationRequest] =
+    query[DbRecipePublicationRequest]
+      .join(query[DbRecipe])
+      .on(_.recipeId == _.id)
+      .map(_._1)
+
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
     ZLayer.fromFunction(RecipePublicationRequestsRepoLive.apply)
