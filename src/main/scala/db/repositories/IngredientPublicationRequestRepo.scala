@@ -18,6 +18,7 @@ trait IngredientPublicationRequestsRepo:
   def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
   def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbIngredientPublicationRequest]]
+  def getAllRequestsForIngredient(id: IngredientId): IO[DbError, Seq[DbIngredientPublicationRequest]]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -50,7 +51,7 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(IngredientsQueries.ingredientsQ)
         .on(_.ingredientId == _.id)
     ).map(_.headOption).provideDS
@@ -60,7 +61,13 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       res <- run(getAllCreatedByQ(lift(userId))).provideDS
     yield res
-    
+
+  override def getAllRequestsForIngredient(id: IngredientId):
+    IO[DbError, List[DbIngredientPublicationRequest]] =
+    run(
+      requestsQ.filter(_.ingredientId == lift(id))
+    ).provideDS
+
 object IngredientPublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbIngredientPublicationRequest] =
     query[DbIngredientPublicationRequest]

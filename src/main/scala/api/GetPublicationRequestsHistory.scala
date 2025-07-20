@@ -1,9 +1,9 @@
-package api.moderation
+package api
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
-import api.PublicationRequestStatusResp
 import api.common.search.PaginationParams
+import api.moderation.ModerationHistoryResponse
 import db.repositories.{RecipePublicationRequestsRepo, IngredientPublicationRequestsRepo}
 import domain.InternalServerError
 
@@ -15,27 +15,38 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
+private type GetPublicationRequestsHistoryEnv
+  = RecipePublicationRequestsRepo
+  & IngredientPublicationRequestsRepo
 
-private type FullHistoryEnv = RecipePublicationRequestsRepo & IngredientPublicationRequestsRepo
-val fullHistory: ZServerEndpoint[FullHistoryEnv, Any] =
+val getPublicationRequestsHistory: ZServerEndpoint[GetPublicationRequestsHistoryEnv, Any] =
   endpoint
     .get
     .in("publication-requests" / PaginationParams.query)
     .errorOut(oneOf(serverErrorVariant))
     .out(jsonBody[List[ModerationHistoryResponse]])
-    .zSecuredServerLogic(fullHistoryHandler)
+    .zSecuredServerLogic(getPublicationRequestsHistoryHandler)
 
-def fullHistoryHandler(paginationParams: PaginationParams):
-ZIO[AuthenticatedUser & FullHistoryEnv, InternalServerError, List[ModerationHistoryResponse]] =
+def getPublicationRequestsHistoryHandler(paginationParams: PaginationParams):
+  ZIO[
+    AuthenticatedUser & GetPublicationRequestsHistoryEnv,
+    InternalServerError,
+    List[ModerationHistoryResponse]
+  ] =
   for
-    dbRecipeRequests <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getAllCreatedBy)
+    dbRecipeRequests     <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
+      .getAllCreatedBy
       .orElseFail(InternalServerError())
-    dbIngredientRequests <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getAllCreatedBy)
+    )
+    dbIngredientRequests <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
+      .getAllCreatedBy
       .orElseFail(InternalServerError())
+    )
     recipeRequests = dbRecipeRequests
       .map(
         dbReq => ModerationHistoryResponse(
-          dbReq.createdAt, dbReq.updatedAt,
+          dbReq.createdAt,
+          dbReq.updatedAt,
           PublicationRequestStatusResp.fromDomain(dbReq.status.toDomain(dbReq.reason)),
           dbReq.reason
         )
@@ -43,10 +54,11 @@ ZIO[AuthenticatedUser & FullHistoryEnv, InternalServerError, List[ModerationHist
     ingredientRequests = dbIngredientRequests
       .map(
         dbReq => ModerationHistoryResponse(
-          dbReq.createdAt, dbReq.updatedAt,
+          dbReq.createdAt,
+          dbReq.updatedAt,
           PublicationRequestStatusResp.fromDomain(dbReq.status.toDomain(dbReq.reason)),
           dbReq.reason
         )
       )
-    res = (recipeRequests ++ ingredientRequests).sortBy(_.updatedAt)
-  yield res
+  yield (recipeRequests ++ ingredientRequests)
+    .sortBy(_.updatedAt)

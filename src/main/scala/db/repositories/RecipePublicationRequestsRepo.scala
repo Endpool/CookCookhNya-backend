@@ -22,8 +22,6 @@ trait RecipePublicationRequestsRepo:
   def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
   def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]]
 
-private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
-
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
   import db.QuillConfig.ctx.*
@@ -52,7 +50,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(RecipesQueries.recipesQ)
         .on(_.recipeId == _.id)
     ).map(_.headOption).provideDS
@@ -67,12 +65,12 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
     run(getAllByRecipeIdQ(lift(recipeId))).provideDS
 
-  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]] = 
-    for 
+  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]] =
+    for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       res <- run(getAllCreatedByQ(lift(userId))).provideDS
     yield res
-  
+
 
 object RecipePublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbRecipePublicationRequest] =
@@ -113,12 +111,13 @@ object RecipePublicationRequestsQueries:
       )
 
   inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
-    recipePublicationRequests.filter(_.recipeId == recipeId)
+    requestsQ.filter(_.recipeId == recipeId)
 
   inline def getAllCreatedByQ(inline userId: UserId): Query[DbRecipePublicationRequest] =
-    query[DbRecipePublicationRequest]
+    requestsQ
       .join(query[DbRecipe])
       .on(_.recipeId == _.id)
+      .filter(_._2.creatorId.contains(userId))
       .map(_._1)
 
 object RecipePublicationRequestsRepo:
