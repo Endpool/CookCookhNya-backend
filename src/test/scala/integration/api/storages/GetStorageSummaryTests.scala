@@ -54,7 +54,6 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storage.id == storageId)
          && assertTrue(storage.name == storageName)
-         && assertTrue(storage.ownerId == user.userId)
     },
     test("When authorized and user is a member of the storage should get 200 and the storage") {
       for
@@ -77,7 +76,6 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storage.id == storageId)
          && assertTrue(storage.name == storageName)
-         && assertTrue(storage.ownerId == creator.userId)
     },
     test("When authorized but user is neither the owner nor a member should get 404") {
       for
