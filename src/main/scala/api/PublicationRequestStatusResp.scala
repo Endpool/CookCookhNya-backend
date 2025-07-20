@@ -20,3 +20,10 @@ object PublicationRequestStatusResp:
     case Accepted => Json.fromString("accepted")
     case Rejected(reason) => Json.fromString("rejected")
   }
+
+  given Decoder[PublicationRequestStatusResp] = Decoder.decodeString.emap {
+    case "pending" => Right(Pending)
+    case "accepted" => Right(Accepted)
+    case "rejected" => Right(Rejected(None))
+    case other => Left(s"Unknown status: $other")
+  }
