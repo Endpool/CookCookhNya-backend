@@ -21,5 +21,6 @@ val ingredientsEndpoints = List(
   search.widen,
   searchForRecipe.widen,
   searchForStorage.widen,
+  searchForShoppingList.widen,
   requestPublication.widen
 ) ++ publicEndpoints.map(_.widen)
