@@ -10,4 +10,4 @@ val moderationEndpoint: Endpoint[Unit, Unit, Unit, Unit, Any] =
     .tag("Moderation")
     .in("moderation")
 
-val moderationEndpoints = publicationRequestEndpoints
+val moderationEndpoints = publicationRequestEndpoints :+ fullHistory
