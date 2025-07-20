@@ -3,7 +3,7 @@ package api.moderation.pubrequests
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
-import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
+import db.repositories.{IngredientPublicationRequestsRepo, IngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
 import domain.{InternalServerError, PublicationRequestId, PublicationRequestNotFound, PublicationRequestStatus}
 import io.circe.Encoder
 import io.circe.generic.auto.*
@@ -32,6 +32,8 @@ final case class UpdatePublicationRequestReqBody(
 private type UpdateReqEnv
   = RecipePublicationRequestsRepo
   & IngredientPublicationRequestsRepo
+  & IngredientsRepo
+  & RecipesRepo
 
 private val updatePublicationRequest: ZServerEndpoint[UpdateReqEnv, Any] =
   publicationRequestEndpoint
@@ -45,6 +47,25 @@ private val updatePublicationRequest: ZServerEndpoint[UpdateReqEnv, Any] =
 private def updatePublicationRequestHandler(id: PublicationRequestId, reqBody: UpdatePublicationRequestReqBody):
   ZIO[AuthenticatedUser & UpdateReqEnv, InternalServerError | PublicationRequestNotFound, Unit] =
   val status = reqBody.getDomainStatus
+
+  def publishIngredient =
+    ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_.getWithIngredient(id))
+      .some
+      .flatMap {
+        case (_, dbIngredient) =>
+          val ingredientId = dbIngredient.id
+          ZIO.serviceWithZIO[IngredientsRepo](_.publish(ingredientId))
+      }.orElseFail(InternalServerError())
+
+  def publishRecipe =
+    ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_.getWithRecipe(id))
+      .some
+      .flatMap {
+        case (_, dbRecipe) =>
+          val recipeId = dbRecipe.id
+          ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
+      }.orElseFail(InternalServerError())
+
   for
     rowsUpdated <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
       .updateStatus(id, status)
@@ -55,4 +76,7 @@ private def updatePublicationRequestHandler(id: PublicationRequestId, reqBody: U
       .orElseFail(InternalServerError())
     ).unless(rowsUpdated).someOrElse(false)
     _ <- ZIO.fail(PublicationRequestNotFound(id)).unless(rowsUpdated)
+    _ <- ZIO.when(status == PublicationRequestStatus.Accepted) {
+      publishRecipe.orElse(publishIngredient)
+    }
   yield ()

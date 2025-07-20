@@ -20,8 +20,6 @@ trait RecipePublicationRequestsRepo:
     IO[DbError, Boolean]
   def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
 
-private inline def recipePublicationRequests = query[DbRecipePublicationRequest]
-
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
   import db.QuillConfig.ctx.*
@@ -50,7 +48,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbRecipePublicationRequest, DbRecipe)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(RecipesQueries.recipesQ)
         .on(_.recipeId == _.id)
     ).map(_.headOption).provideDS
@@ -104,8 +102,8 @@ object RecipePublicationRequestsQueries:
       )
 
   inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
-    recipePublicationRequests.filter(_.recipeId == recipeId)
-  
+    requestsQ.filter(_.recipeId == recipeId)
+
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
     ZLayer.fromFunction(RecipePublicationRequestsRepoLive.apply)

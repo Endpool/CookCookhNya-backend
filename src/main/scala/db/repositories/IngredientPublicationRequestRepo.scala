@@ -16,6 +16,7 @@ trait IngredientPublicationRequestsRepo:
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
   def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
+  def getAllRequestsForIngredient(id: IngredientId): IO[DbError, Seq[DbIngredientPublicationRequest]]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
   extends IngredientPublicationRequestsRepo:
@@ -48,10 +49,17 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
     IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]] =
 
     run(
-      requestsQ
+      requestsQ.filter(_.id == lift(id))
         .join(IngredientsQueries.ingredientsQ)
         .on(_.ingredientId == _.id)
     ).map(_.headOption).provideDS
+
+  override def getAllRequestsForIngredient(id: IngredientId):
+    IO[DbError, List[DbIngredientPublicationRequest]] =
+
+    run(
+      requestsQ.filter(_.ingredientId == lift(id))
+    ).provideDS
 
 object IngredientPublicationRequestsQueries:
   inline def requestsQ: EntityQuery[DbIngredientPublicationRequest] =
