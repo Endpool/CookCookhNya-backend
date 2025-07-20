@@ -132,7 +132,6 @@ private inline def rawRecipeQuery(
                     FROM $storagesTable
                     WHERE ${storagesTable.ownerId} = $userId
                   )
-
               ),
               '[]'::json
             )
@@ -145,7 +144,7 @@ private inline def rawRecipeQuery(
       '[]'::json
     ) AS "ingredients"
   FROM $recipesTable r
-  RIGHT JOIN $usersTable u ON r.${recipesTable.creatorId} = u.${usersTable.id}
+  LEFT JOIN $usersTable u ON r.${recipesTable.creatorId} = u.${usersTable.id}
   WHERE r.${recipesTable.id} = $recipeId
-    AND (r.${recipesTable.isPublished} = true OR r.${recipesTable.creatorId} = $userId);
+    AND (r.${recipesTable.isPublished} OR r.${recipesTable.creatorId} = $userId);
 """.query[RawRecipeResult]
