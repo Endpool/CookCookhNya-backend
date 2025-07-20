@@ -11,6 +11,8 @@ import javax.sql.DataSource
 import zio.{ZIO, IO, RLayer, ZLayer}
 
 trait RecipesRepo:
+  def createPublic(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
+    IO[DbError, RecipeId]
   def addRecipe(name: String, sourceLink: Option[String], ingredients: List[IngredientId]):
     ZIO[AuthenticatedUser, DbError, RecipeId]
 
@@ -33,6 +35,22 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
 
   private given DataSource = dataSource
 
+  override def createPublic(name: String, sourceLink: Option[String], ingredientIds: List[IngredientId]):
+    IO[DbError, RecipeId] = transaction {
+    for
+      recipeId <- run(
+        recipesQ
+          .insertValue(lift(DbRecipe(id=null, name, None, isPublished=true, sourceLink)))
+          .returningGenerated(r => r.id) // null is safe here because of returningGenerated
+      )
+      _ <- run(
+        liftQuery(ingredientIds).foreach(
+          RecipeIngredientsQueries.addIngredientQ(lift(recipeId), _)
+        )
+      )
+    yield recipeId
+  }.provideDS
+
   override def addRecipe(name: String, sourceLink: Option[String], ingredientIds: List[IngredientId]):
     ZIO[AuthenticatedUser, DbError, RecipeId] = transaction {
     for
@@ -54,7 +72,7 @@ final case class RecipesRepoLive(dataSource: DataSource) extends RecipesRepo:
     ZIO[AuthenticatedUser, DbError, Option[Recipe]] = transaction {
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId))).map(_.headOption)
+      mRecipe <- run(getVisibleRecipeQ(lift(userId), lift(recipeId)).value)
       mRecipeWithIngredients <- ZIO.foreach(mRecipe) { recipe =>
         val DbRecipe(id, name, creatorId, isPublished, sourceLink) = recipe
         run(
@@ -123,6 +141,9 @@ object RecipesQueries:
 
   inline def getVisibleRecipeQ(inline userId: UserId, inline recipeId: RecipeId): EntityQuery[DbRecipe] =
     visibleRecipesQ(userId).filter(r => r.id == recipeId)
+
+  inline def getPublicRecipeQ(inline recipeId: RecipeId): EntityQuery[DbRecipe] =
+    publicRecipesQ.filter(r => r.id == recipeId)
 
 object RecipesRepo:
   def layer: RLayer[DataSource, RecipesRepo] =
