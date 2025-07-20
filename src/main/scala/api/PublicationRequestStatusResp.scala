@@ -1,7 +1,7 @@
 package api
 
 import domain.PublicationRequestStatus
-import io.circe.{Encoder, Json}
+import io.circe.{Decoder, Encoder, Json}
 
 enum PublicationRequestStatusResp:
   case Pending
@@ -18,8 +18,5 @@ object PublicationRequestStatusResp:
   given Encoder[PublicationRequestStatusResp] = Encoder.instance {
     case Pending => Json.fromString("pending")
     case Accepted => Json.fromString("accepted")
-    case Rejected(reason) =>
-     reason match
-       case Some(r) => Json.fromString(s"rejected: $r")
-       case None => Json.fromString("rejected")
+    case Rejected(reason) => Json.fromString("rejected")
   }
