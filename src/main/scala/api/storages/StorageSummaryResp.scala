@@ -1,7 +1,7 @@
 package api.storages
 
 import db.tables.DbStorage
-import domain.{StorageId, UserId}
+import domain.StorageId
 
 final case class StorageSummaryResp(id: StorageId, name: String)
 

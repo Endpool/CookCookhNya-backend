@@ -2,7 +2,7 @@ package db.repositories
 
 import api.Authentication.AuthenticatedUser
 import db.{DbError, handleDbError}
-import db.tables.{DbStorage, DbStorageInvitation, storageInvitationTable}
+import db.tables.{DbStorage, DbStorageInvitation}
 import domain.{InternalServerError, InvalidInvitationHash, StorageAccessForbidden, StorageId}
 
 import java.nio.charset.StandardCharsets
