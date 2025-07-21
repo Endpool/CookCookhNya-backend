@@ -30,7 +30,7 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
   override def addPublic(name: String): IO[DbError, DbIngredient] =
     run(
       ingredientsQ
-        .insert(_.name -> lift(name), _.isPublished -> false)
+        .insert(_.name -> lift(name), _.isPublished -> true)
         .returning(ingredient => ingredient)
     ).provideDS
 
