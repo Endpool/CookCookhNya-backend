@@ -12,6 +12,7 @@ import domain.{IngredientNotFound, IngredientId, InternalServerError, RecipeId}
 import io.circe.generic.auto.*
 import io.getquill.*
 import javax.sql.DataSource
+import sttp.model.StatusCode.Created
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
@@ -23,7 +24,7 @@ private val createPublic: ZServerEndpoint[CreatePublicEnv, Any] =
   adminRecipesEndpoint
     .post
     .in(jsonBody[CreateRecipeReqBody])
-    .out(plainBody[RecipeId])
+    .out(plainBody[RecipeId] and statusCode(Created))
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zServerLogic(createPublicHandler)
 
