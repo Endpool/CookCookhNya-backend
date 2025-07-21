@@ -101,7 +101,7 @@ object IngredientsQueries:
     ingredientsQ.filter(i => i.ownerId.contains(userId))
 
   inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
-    ingredientsQ.filter(i => i.ownerId.isEmpty || i.ownerId.contains(userId))
+    ingredientsQ.filter(i => i.ownerId.isEmpty || i.ownerId.contains(userId) || i.isPublished)
 
   inline def getIngredientsQ(inline ingredientId: IngredientId): EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.id == ingredientId)
