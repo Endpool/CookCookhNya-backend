@@ -2,7 +2,6 @@ package api.recipes
 
 import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
-
 import api.recipes.ingredients.recipesIngredientsEndpoints
 import api.recipes.admin.adminRecipesEndpoints
 import api.recipes.public.publicRecipesEndpoints

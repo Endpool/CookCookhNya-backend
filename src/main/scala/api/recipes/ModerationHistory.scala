@@ -1,27 +1,20 @@
 package api.recipes
 
-import domain.{InternalServerError, RecipeId, RecipeNotFound}
-import api.PublicationRequestStatusResp
-import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
+import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
+import api.PublicationRequestStatusResp
+import api.moderation.ModerationHistoryResponse
 import db.repositories.{RecipePublicationRequestsRepo, RecipesRepo}
+import domain.{InternalServerError, RecipeId, RecipeNotFound}
 
-import io.circe.derivation.Configuration
 import io.circe.Decoder
+import io.circe.derivation.Configuration
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-import java.time.OffsetDateTime
-
-final case class ModerationHistoryResponse(
-  createdAt: OffsetDateTime,
-  updatedAt: OffsetDateTime,
-  status: PublicationRequestStatusResp,
-  reason: Option[String]
-)
 
 private type ModerationHistoryEnv = RecipePublicationRequestsRepo & RecipesRepo
 val moderationHistory: ZServerEndpoint[ModerationHistoryEnv, Any] =
