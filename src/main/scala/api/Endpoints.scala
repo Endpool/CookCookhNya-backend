@@ -19,3 +19,4 @@ object AppEndpoints:
     ++ shoppingListEndpoints.map(_.widen)
     ++ invitationEndpoints.map(_.widen)
     ++ moderationEndpoints.map(_.widen)
+    :+ getPublicationRequestsHistory.widen
