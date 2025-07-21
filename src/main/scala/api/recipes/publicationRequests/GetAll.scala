@@ -1,4 +1,4 @@
-package api.recipes
+package api.recipes.publicationRequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
@@ -15,17 +15,21 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type ModerationHistoryEnv = RecipePublicationRequestsRepo & RecipesRepo
-val moderationHistory: ZServerEndpoint[ModerationHistoryEnv, Any] =
-  recipesEndpoint
+private type GetAllEnv = RecipePublicationRequestsRepo & RecipesRepo
+
+val getAll: ZServerEndpoint[GetAllEnv, Any] =
+  recipesPublicationRequestsEndpoint
     .get
-    .in(path[RecipeId]("recipe-id") / "publication-requests")
-    .errorOut(oneOf(serverErrorVariant, recipeNotFoundVariant))
     .out(jsonBody[List[ModerationHistoryResponse]])
+    .errorOut(oneOf(serverErrorVariant, recipeNotFoundVariant))
     .zSecuredServerLogic(moderationHistoryHandler)
 
 def moderationHistoryHandler(recipeId: RecipeId):
-  ZIO[AuthenticatedUser & ModerationHistoryEnv, InternalServerError | RecipeNotFound, List[ModerationHistoryResponse]] =
+  ZIO[
+    AuthenticatedUser & GetAllEnv,
+    InternalServerError | RecipeNotFound,
+    List[ModerationHistoryResponse]
+  ] =
   for
     isUserOwner <- ZIO.serviceWithZIO[RecipesRepo](_.isUserOwner(recipeId))
       .orElseFail(InternalServerError())

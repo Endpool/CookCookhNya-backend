@@ -1,4 +1,4 @@
-package api.recipes
+package api.recipes.publicationRequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
@@ -37,16 +37,15 @@ final case class RecipeAlreadyPending(
 object RecipeAlreadyPending:
   val variant = BadRequest.variantJson[RecipeAlreadyPending]
 
-private type PublishEnv
+private type CreateEnv
   = RecipesRepo
   & RecipeIngredientsRepo
   & RecipePublicationRequestsRepo
   & DataSource
 
-private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
-  recipesEndpoint
+private val create: ZServerEndpoint[CreateEnv, Any] =
+  recipesPublicationRequestsEndpoint
     .post
-    .in(path[RecipeId]("recipeId") / "publication-requests")
     .out(plainBody[PublicationRequestId] and statusCode(Created))
     .errorOut(oneOf(
       serverErrorVariant,
@@ -55,11 +54,11 @@ private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
       RecipeAlreadyPending.variant,
       RecipeAlreadyPublished.variant,
     ))
-    .zSecuredServerLogic(requestPublicationHandler)
+    .zSecuredServerLogic(createHandler)
 
-private def requestPublicationHandler(recipeId: RecipeId):
+private def createHandler(recipeId: RecipeId):
   ZIO[
-    AuthenticatedUser & PublishEnv,
+    AuthenticatedUser & CreateEnv,
     InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending
     | CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
     PublicationRequestId
