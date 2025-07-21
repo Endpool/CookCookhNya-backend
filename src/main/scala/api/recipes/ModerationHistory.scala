@@ -15,12 +15,11 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-
 private type ModerationHistoryEnv = RecipePublicationRequestsRepo & RecipesRepo
 val moderationHistory: ZServerEndpoint[ModerationHistoryEnv, Any] =
   recipesEndpoint
     .get
-    .in(path[RecipeId]("recipe-id") / "moderation-history")
+    .in(path[RecipeId]("recipe-id") / "publication-requests")
     .errorOut(oneOf(serverErrorVariant, recipeNotFoundVariant))
     .out(jsonBody[List[ModerationHistoryResponse]])
     .zSecuredServerLogic(moderationHistoryHandler)

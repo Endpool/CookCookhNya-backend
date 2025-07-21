@@ -46,7 +46,7 @@ private type PublishEnv
 private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
   recipesEndpoint
     .post
-    .in(path[RecipeId]("recipeId") / "request-publication")
+    .in(path[RecipeId]("recipeId") / "publication-requests")
     .out(plainBody[PublicationRequestId] and statusCode(Created))
     .errorOut(oneOf(
       serverErrorVariant,
