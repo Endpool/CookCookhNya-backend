@@ -1,6 +1,8 @@
 package db.repositories
 
 import api.Authentication.AuthenticatedUser
+import api.PublicationRequestStatusResp
+import api.moderation.ModerationHistoryResponse
 import db.DbError
 import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
@@ -17,7 +19,7 @@ trait IngredientPublicationRequestsRepo:
   def get(id: PublicationRequestId): IO[DbError, Option[DbIngredientPublicationRequest]]
   def getWithIngredient(id: PublicationRequestId): IO[DbError, Option[(DbIngredientPublicationRequest, DbIngredient)]]
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus): IO[DbError, Boolean]
-  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbIngredientPublicationRequest]]
+  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[(DbIngredientPublicationRequest, DbIngredient)]]
   def getAllRequestsForIngredient(id: IngredientId): IO[DbError, Seq[DbIngredientPublicationRequest]]
 
 final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
@@ -56,7 +58,7 @@ final case class IngredientPublicationRequestsRepoLive(dataSource: DataSource)
         .on(_.ingredientId == _.id)
     ).map(_.headOption).provideDS
 
-  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbIngredientPublicationRequest]] =
+  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[(DbIngredientPublicationRequest, DbIngredient)]] =
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       res <- run(getAllCreatedByQ(lift(userId))).provideDS
@@ -106,12 +108,11 @@ object IngredientPublicationRequestsQueries:
         _.reason -> reason,
       )
 
-  inline def getAllCreatedByQ(inline userId: UserId): Query[DbIngredientPublicationRequest] =
+  inline def getAllCreatedByQ(inline userId: UserId): Query[(DbIngredientPublicationRequest, DbIngredient)] =
     query[DbIngredientPublicationRequest]
-      .join(query[DbIngredientPublicationRequest])
+      .join(query[DbIngredient])
       .on(_.ingredientId == _.id)
-      .map(_._1)
-
+      .filter(_._2.ownerId.contains(userId))
 
 object IngredientPublicationRequestsRepo:
   def layer: RLayer[DataSource, IngredientPublicationRequestsRepo] =
