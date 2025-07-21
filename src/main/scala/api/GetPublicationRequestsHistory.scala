@@ -4,9 +4,10 @@ import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.serverErrorVariant
 import api.common.search.PaginationParams
 import api.moderation.ModerationHistoryResponse
-import db.repositories.{RecipePublicationRequestsRepo, IngredientPublicationRequestsRepo}
+import db.repositories.{IngredientPublicationRequestsRepo, RecipePublicationRequestsRepo}
+import db.tables.{DbIngredient, DbRecipe}
+import db.tables.publication.{DbIngredientPublicationRequest, DbRecipePublicationRequest}
 import domain.InternalServerError
-
 import io.circe.Decoder
 import io.circe.derivation.Configuration
 import io.circe.generic.auto.*
@@ -38,27 +39,30 @@ def getPublicationRequestsHistoryHandler(paginationParams: PaginationParams):
       .getAllCreatedBy
       .orElseFail(InternalServerError())
     )
+    recipeRequests = dbRecipeRequests.map {
+      case (dbRecipeReq: DbRecipePublicationRequest, recipe: DbRecipe) => ModerationHistoryResponse(
+        recipe.name,
+        "recipe",
+        dbRecipeReq.createdAt,
+        dbRecipeReq.updatedAt,
+        PublicationRequestStatusResp.fromDomain(dbRecipeReq.status.toDomain(dbRecipeReq.reason)),
+        dbRecipeReq.reason
+      )
+    }
+    
     dbIngredientRequests <- ZIO.serviceWithZIO[IngredientPublicationRequestsRepo](_
       .getAllCreatedBy
       .orElseFail(InternalServerError())
     )
-    recipeRequests = dbRecipeRequests
-      .map(
-        dbReq => ModerationHistoryResponse(
-          dbReq.createdAt,
-          dbReq.updatedAt,
-          PublicationRequestStatusResp.fromDomain(dbReq.status.toDomain(dbReq.reason)),
-          dbReq.reason
+    ingredientRequests = dbIngredientRequests.map {
+        case (dbRecipeReq: DbIngredientPublicationRequest, ingredient: DbIngredient) => ModerationHistoryResponse(
+          ingredient.name,
+          "ingredient",
+          dbRecipeReq.createdAt,
+          dbRecipeReq.updatedAt,
+          PublicationRequestStatusResp.fromDomain(dbRecipeReq.status.toDomain(dbRecipeReq.reason)),
+          dbRecipeReq.reason
         )
-      )
-    ingredientRequests = dbIngredientRequests
-      .map(
-        dbReq => ModerationHistoryResponse(
-          dbReq.createdAt,
-          dbReq.updatedAt,
-          PublicationRequestStatusResp.fromDomain(dbReq.status.toDomain(dbReq.reason)),
-          dbReq.reason
-        )
-      )
+      }
   yield (recipeRequests ++ ingredientRequests)
     .sortBy(_.updatedAt)
