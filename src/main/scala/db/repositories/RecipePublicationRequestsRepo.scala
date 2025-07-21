@@ -20,7 +20,7 @@ trait RecipePublicationRequestsRepo:
   def updateStatus(id: PublicationRequestId, status: PublicationRequestStatus):
     IO[DbError, Boolean]
   def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]]
-  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]]
+  def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[(DbRecipePublicationRequest, DbRecipe)]]
 
 final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   extends RecipePublicationRequestsRepo:
@@ -65,7 +65,7 @@ final case class RecipePublicationRequestsRepoLive(dataSource: DataSource)
   override def getAllByRecipeId(recipeId: RecipeId): IO[DbError, List[DbRecipePublicationRequest]] =
     run(getAllByRecipeIdQ(lift(recipeId))).provideDS
 
-  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[DbRecipePublicationRequest]] =
+  override def getAllCreatedBy: ZIO[AuthenticatedUser, DbError, List[(DbRecipePublicationRequest, DbRecipe)]] =
     for
       userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       res <- run(getAllCreatedByQ(lift(userId))).provideDS
@@ -113,12 +113,11 @@ object RecipePublicationRequestsQueries:
   inline def getAllByRecipeIdQ(inline recipeId: RecipeId): EntityQuery[DbRecipePublicationRequest] =
     requestsQ.filter(_.recipeId == recipeId)
 
-  inline def getAllCreatedByQ(inline userId: UserId): Query[DbRecipePublicationRequest] =
+  inline def getAllCreatedByQ(inline userId: UserId): Query[(DbRecipePublicationRequest, DbRecipe)] =
     requestsQ
       .join(query[DbRecipe])
       .on(_.recipeId == _.id)
       .filter(_._2.creatorId.contains(userId))
-      .map(_._1)
 
 object RecipePublicationRequestsRepo:
   def layer: RLayer[DataSource, RecipePublicationRequestsRepo] =
