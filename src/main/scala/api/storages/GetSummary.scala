@@ -13,26 +13,33 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-private type GetSummaryEnv = StoragesRepo & StorageMembersRepo
+final case class GetStorageResp(
+  ownerId: UserId,
+  name: String,
+)
+object GetStorageResp:
+  def fromDb(dbStorage: DbStorage): GetStorageResp =
+    GetStorageResp(dbStorage.ownerId, dbStorage.name)
 
-private val getSummary: ZServerEndpoint[GetSummaryEnv, Any] =
+private type GetEnv = StoragesRepo & StorageMembersRepo
+
+private val getSummary: ZServerEndpoint[GetEnv, Any] =
   storagesEndpoint
-  .get
-  .in(path[StorageId]("storageId"))
-  .out(jsonBody[StorageSummaryResp])
-  .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
-  .zSecuredServerLogic(getSummaryHandler)
+    .get
+    .in(path[StorageId]("storageId"))
+    .out(jsonBody[GetStorageResp])
+    .errorOut(oneOf(serverErrorVariant, storageNotFoundVariant))
+    .zSecuredServerLogic(getHandler)
 
-private def getSummaryHandler(storageId: StorageId):
-  ZIO[AuthenticatedUser & GetSummaryEnv,
-      InternalServerError | StorageNotFound,
-      StorageSummaryResp] =
+private def getHandler(storageId: StorageId):
+  ZIO[
+    AuthenticatedUser & GetEnv,
+    InternalServerError | StorageNotFound,
+    GetStorageResp
+  ] =
   ZIO.serviceWithZIO[StoragesRepo](_
     .getById(storageId)
+    .orElseFail(InternalServerError())
     .someOrFail(StorageNotFound(storageId.toString))
-    .map(StorageSummaryResp.fromDb)
-    .mapError {
-      case e: StorageNotFound => e
-      case _ => InternalServerError()
-    }
+    .map(GetStorageResp.fromDb)
   )

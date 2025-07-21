@@ -1,6 +1,6 @@
 package integration.api.storages
 
-import api.storages.StorageSummaryResp
+import api.storages.GetStorageResp
 import db.repositories.{StorageMembersRepo, StoragesRepo}
 import domain.StorageId
 import integration.common.Utils.*
@@ -13,7 +13,7 @@ import zio.http.{Client, Status, URL, Path}
 import zio.test.{Gen, TestEnvironment, assertTrue, Spec}
 import zio.{Scope, ZIO, ZLayer}
 
-object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
+object GetStorageTests extends ZIOIntegrationTestSpec:
   private def endpointPath(storageId: StorageId): URL =
     URL(Path.root / "storages" / storageId.toString)
 
@@ -50,9 +50,9 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
         )
 
         bodyStr <- resp.body.asString
-        storage <- ZIO.fromEither(decode[StorageSummaryResp](bodyStr))
+        storage <- ZIO.fromEither(decode[GetStorageResp](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
-         && assertTrue(storage.id == storageId)
+         && assertTrue(storage.ownerId == user.userId)
          && assertTrue(storage.name == storageName)
     },
     test("When authorized and user is a member of the storage should get 200 and the storage") {
@@ -72,9 +72,9 @@ object GetStorageSummaryTests extends ZIOIntegrationTestSpec:
         )
 
         bodyStr <- resp.body.asString
-        storage <- ZIO.fromEither(decode[StorageSummaryResp](bodyStr))
+        storage <- ZIO.fromEither(decode[GetStorageResp](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
-         && assertTrue(storage.id == storageId)
+         && assertTrue(storage.ownerId == creator.userId)
          && assertTrue(storage.name == storageName)
     },
     test("When authorized but user is neither the owner nor a member should get 404") {
