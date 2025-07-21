@@ -46,9 +46,9 @@ private def searchForShoppingListHandler(
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
     allIngredientsAvailability <- run(
       IngredientsQueries.visibleIngredientsQ(lift(userId))
-        .leftJoin(quillQuery[DbShoppingList])
-        .on((i, ri) => i.id == ri.ingredientId && ri.ownerId == lift(userId))
-        .map((i, ri) => IngredientsForShoppingListResp(i.id, i.name, ri.map(_.ownerId).isDefined))
+        .leftJoin(quillQuery[DbShoppingList].filter(_.ownerId == lift(userId)))
+        .on((i, si) => i.id == si.ingredientId)
+        .map((i, si) => IngredientsForShoppingListResp(i.id, i.name, si.map(_.ownerId).isDefined))
     ).provideDS(using dataSource)
       .map(Vector.from)
       .orElseFail(InternalServerError())
