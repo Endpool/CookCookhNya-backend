@@ -22,9 +22,9 @@ val getAll: ZServerEndpoint[GetAllEnv, Any] =
     .get
     .out(jsonBody[List[ModerationHistoryResponse]])
     .errorOut(oneOf(serverErrorVariant, recipeNotFoundVariant))
-    .zSecuredServerLogic(moderationHistoryHandler)
+    .zSecuredServerLogic(getAllHandler)
 
-def moderationHistoryHandler(recipeId: RecipeId):
+private def getAllHandler(recipeId: RecipeId):
   ZIO[
     AuthenticatedUser & GetAllEnv,
     InternalServerError | RecipeNotFound,

@@ -15,7 +15,7 @@ import zio.test.*
 
 object RequestRecipePublicationTests extends ZIOIntegrationTestSpec:
   private def endpointPath(recipeId: RecipeId): URL =
-    URL(Path.root / "recipes" / recipeId.toString / "request-publication")
+    URL(Path.root / "recipes" / recipeId.toString / "publication-requests")
 
   private def requestRecipePublication(user: AuthenticatedUser, recipeId: RecipeId):
     RIO[Client, Response] =
