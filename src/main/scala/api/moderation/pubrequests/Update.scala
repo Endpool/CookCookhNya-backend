@@ -2,6 +2,7 @@ package api.moderation.pubrequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{publicationRequestNotFound, serverErrorVariant}
+import api.PublicationRequestStatusResp
 import api.moderation.pubrequests.PublicationRequestTypeResp.*
 import db.repositories.{IngredientPublicationRequestsRepo, IngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
 import domain.{InternalServerError, PublicationRequestId, PublicationRequestNotFound, PublicationRequestStatus}
@@ -21,13 +22,12 @@ enum PublicationRequestStatusReq:
   case Rejected
 
 final case class UpdatePublicationRequestReqBody(
-  status: PublicationRequestStatusReq,
-  reason: Option[String],
+  status: PublicationRequestStatusResp,
 ):
   def getDomainStatus: PublicationRequestStatus = status match
-    case PublicationRequestStatusReq.Pending  => PublicationRequestStatus.Pending
-    case PublicationRequestStatusReq.Accepted => PublicationRequestStatus.Accepted
-    case PublicationRequestStatusReq.Rejected => PublicationRequestStatus.Rejected(reason)
+    case PublicationRequestStatusResp.Pending  => PublicationRequestStatus.Pending
+    case PublicationRequestStatusResp.Accepted => PublicationRequestStatus.Accepted
+    case PublicationRequestStatusResp.Rejected(reason) => PublicationRequestStatus.Rejected(reason)
 
 private type UpdateReqEnv
   = RecipePublicationRequestsRepo
