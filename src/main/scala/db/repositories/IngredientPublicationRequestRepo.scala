@@ -1,14 +1,12 @@
 package db.repositories
 
 import api.Authentication.AuthenticatedUser
-import api.PublicationRequestStatusResp
-import api.moderation.ModerationHistoryResponse
 import db.DbError
 import db.tables.DbIngredient
 import db.tables.publication.{DbIngredientPublicationRequest, DbPublicationRequestStatus}
 import domain.{IngredientId, PublicationRequestId, PublicationRequestStatus, UserId}
-import io.getquill.*
 
+import io.getquill.*
 import javax.sql.DataSource
 import java.util.UUID
 import zio.{IO, RLayer, ZIO, ZLayer}

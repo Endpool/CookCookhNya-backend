@@ -3,7 +3,7 @@ package api.storages
 import api.Authentication.{zSecuredServerLogic, AuthenticatedUser}
 import api.EndpointErrorVariants.serverErrorVariant
 import db.repositories.StoragesRepo
-import domain.{UserId, StorageId, InternalServerError}
+import domain.{StorageId, InternalServerError}
 
 import io.circe.generic.auto.*
 import sttp.tapir.generic.auto.*
