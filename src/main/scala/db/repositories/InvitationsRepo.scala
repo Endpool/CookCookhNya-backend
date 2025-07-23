@@ -32,7 +32,7 @@ private final case class InvitationsRepoLive(xa: Transactor, dataSource: DataSou
     for
       currentTime <- Clock.currentTime(TimeUnit.NANOSECONDS)
       input = s"$currentTime:$storageId:${secretKey.value}"
-      digest = MessageDigest.getInstance("SHA-256")
+      digest = MessageDigest.getInstance("MD5")
       hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8))
       invitationHash = hashBytes.map("%02x".format(_)).mkString
       _ <- xa.transact {

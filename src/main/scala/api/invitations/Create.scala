@@ -18,11 +18,16 @@ val create: ZServerEndpoint[CreateEnv, Any] = invitationEndpoint
 
 def createHandler(storageId: StorageId): ZIO[AuthenticatedUser & CreateEnv, InternalServerError | StorageNotFound, String] =
   for
-    storageExists <- ZIO.serviceWithZIO[StoragesRepo](_.getById(storageId))
+    storageExists <- ZIO.serviceWithZIO[StoragesRepo](_
+      .getById(storageId)
       .map(_.isDefined)
       .orElseFail(InternalServerError())
-    _ <- ZIO.fail(StorageNotFound(storageId.toString)).unless(storageExists)
+    )
+    _ <- ZIO.fail(StorageNotFound(storageId.toString))
+      .unless(storageExists)
 
-    inviteHash <- ZIO.serviceWithZIO[InvitationsRepo](_.create(storageId))
+    inviteHash <- ZIO.serviceWithZIO[InvitationsRepo](_
+      .create(storageId)
       .orElseFail(InternalServerError())
+    )
   yield inviteHash
