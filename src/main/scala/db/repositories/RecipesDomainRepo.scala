@@ -7,22 +7,24 @@ import domain.{RecipeId, StorageId}
 
 import com.augustnagro.magnum.magzio.*
 import zio.{ZIO, ZLayer}
+import api.Authentication.AuthenticatedUser
 
 trait RecipesDomainRepo:
   protected type RecipeSummary = (RecipeId, String, Int, Int, Int)
   def getSuggestedIngredients(
     paginationParams: PaginationParams,
     storageIds: Vector[StorageId]
-  ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
+  ): ZIO[AuthenticatedUser & StorageIngredientsRepo, DbError, Vector[RecipeSummary]]
 
 private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDomainRepo:
   override def getSuggestedIngredients(
     paginationParams: PaginationParams,
     storageIds: Vector[StorageId]
-  ): ZIO[StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
+  ): ZIO[AuthenticatedUser & StorageIngredientsRepo, DbError, Vector[RecipeSummary]] =
     val PaginationParams(size, offset) = paginationParams
     val table = recipeIngredientsTable
     for
+      userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
       allIngredients <- ZIO.collectAll(storageIds.map { storageId =>
         ZIO.serviceWithZIO[StorageIngredientsRepo](_.getAllIngredientsFromStorage(storageId))
       }).map(_.flatten)
@@ -34,6 +36,8 @@ private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDo
                 ${table.recipeId},
                 r.${recipesTable.name} AS recipe_name,
                 COUNT(*) AS total_ingredients,
+                r.${recipesTable.isPublished},
+                r.${recipesTable.creatorId},
                 SUM(
                   CASE WHEN ${table.ingredientId} = ANY(${allIngredients.toArray})
                     THEN 1
@@ -42,7 +46,11 @@ private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDo
                 ) AS available_ingredients
               FROM $table ri
               JOIN ${recipesTable} r ON r.${recipesTable.id} = ri.${table.recipeId}
-              GROUP BY ${table.recipeId}, recipe_name
+              GROUP BY 
+                ${table.recipeId},
+                recipe_name,
+                ${recipesTable.isPublished},
+                ${recipesTable.creatorId}
             )
             SELECT
               ${table.recipeId},
@@ -52,6 +60,7 @@ private final case class RecipesDomainRepoLive(xa: Transactor) extends RecipesDo
               COUNT(*) OVER() AS recipes_found
             FROM recipe_stats
             WHERE total_ingredients > 0  -- Avoid division by zero
+              AND (${recipesTable.isPublished} OR ${recipesTable.creatorId} = $userId)
             ORDER BY
               (available_ingredients::float / total_ingredients) DESC,
               total_ingredients DESC
