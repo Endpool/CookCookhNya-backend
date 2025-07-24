@@ -71,6 +71,7 @@ object ShoppingListsQueries:
   inline def addIngredientQ(inline userId: UserId, inline ingredientId: IngredientId) =
     query[DbShoppingList]
       .insertValue(DbShoppingList(userId, ingredientId))
+      .onConflictIgnore
 
   inline def deleteIngredientQ(inline userId: UserId, inline ingredientId: IngredientId): Delete[DbShoppingList] =
     query[DbShoppingList]

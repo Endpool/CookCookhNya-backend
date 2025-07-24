@@ -16,6 +16,7 @@ val circeVersion = "0.14.14"
 
 lazy val root = (project in file("."))
   .settings(
+    scalacOptions ++= Seq("-Xmax-inlines", "64"),
     name := "CookCookHnya-backend",
     scalacOptions ++= Seq(
       "-Wunused:imports"

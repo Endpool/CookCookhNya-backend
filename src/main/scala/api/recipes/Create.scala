@@ -18,12 +18,6 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 import db.repositories.IngredientsQueries
 
-final case class CreateRecipeReqBody(
-  name: String,
-  sourceLink: Option[String],
-  ingredients: List[IngredientId]
-)
-
 private type CreateEnv = RecipesRepo & RecipeIngredientsRepo & DataSource
 
 private val create: ZServerEndpoint[CreateEnv, Any] =
@@ -34,26 +28,28 @@ private val create: ZServerEndpoint[CreateEnv, Any] =
     .errorOut(oneOf(serverErrorVariant, ingredientNotFoundVariant))
     .zSecuredServerLogic(createHandler)
 
-private def createHandler(recipe: CreateRecipeReqBody):
-  ZIO[AuthenticatedUser & CreateEnv, InternalServerError | IngredientNotFound, RecipeId] = for
-  userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-  dataSource <- ZIO.service[DataSource]
-  existingIngredientIds <- run(
-    IngredientsQueries.visibleIngredientsQ(lift(userId))
-      .map(_.id)
-      .filter(id => liftQuery(recipe.ingredients).contains(id))
-  ).provideDS(using dataSource).orElseFail(InternalServerError())
-  unknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
-  _ <- ZIO.fail(IngredientNotFound(unknownIngredientIds.head.toString))
-    .when(unknownIngredientIds.nonEmpty)
+private def createHandler(recipeReq: CreateRecipeReqBody):
+  ZIO[AuthenticatedUser & CreateEnv, InternalServerError | IngredientNotFound, RecipeId] =
+  val recipe = recipeReq.copy(ingredients=recipeReq.ingredients.distinct)
+  for
+    userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
+    dataSource <- ZIO.service[DataSource]
+    existingIngredientIds <- run(
+      IngredientsQueries.visibleIngredientsQ(lift(userId))
+        .map(_.id)
+        .filter(id => liftQuery(recipe.ingredients).contains(id))
+    ).provideDS(using dataSource).orElseFail(InternalServerError())
+    unknownIngredientIds = recipe.ingredients.diff(existingIngredientIds)
+    _ <- ZIO.fail(IngredientNotFound(unknownIngredientIds.head.toString))
+      .when(unknownIngredientIds.nonEmpty)
 
-  recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
-    .addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
-    .mapError {
-      case DbNotRespondingError(_) => InternalServerError()
-      case e: FailedDbQuery => handleFailedSqlQuery(e)
-        .flatMap(toIngredientNotFound)
-        .getOrElse(InternalServerError())
-    }
-  )
-yield recipeId
+    recipeId <- ZIO.serviceWithZIO[RecipesRepo](_
+      .addRecipe(recipe.name, recipe.sourceLink, recipe.ingredients)
+      .mapError {
+        case DbNotRespondingError(_) => InternalServerError()
+        case e: FailedDbQuery => handleFailedSqlQuery(e)
+          .flatMap(toIngredientNotFound)
+          .getOrElse(InternalServerError())
+      }
+    )
+  yield recipeId

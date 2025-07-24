@@ -1,27 +1,27 @@
-package api.recipes
+package api.recipes.publicationRequests
 
 import api.Authentication.{AuthenticatedUser, zSecuredServerLogic}
 import api.EndpointErrorVariants.{recipeNotFoundVariant, serverErrorVariant}
 import api.variantJson
-import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound}
-import db.repositories.{RecipePublicationRequestsQueries, IngredientsQueries, RecipeIngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
-import db.QuillConfig.provideDS
 import db.QuillConfig.ctx.*
+import db.QuillConfig.provideDS
+import db.repositories.{RecipePublicationRequestsQueries, IngredientsQueries, RecipeIngredientsRepo, RecipePublicationRequestsRepo, RecipesRepo}
+import domain.{IngredientId, InternalServerError, RecipeId, RecipeNotFound, PublicationRequestId}
+
 import io.circe.generic.auto.*
 import io.getquill.*
-
 import javax.sql.DataSource
-import sttp.model.StatusCode.{BadRequest, NoContent}
+import sttp.model.StatusCode.{BadRequest, Created}
 import sttp.tapir.generic.auto.*
 import sttp.tapir.ztapir.*
 import zio.ZIO
 
-final case class CannotPublishRecipeWithCustomIngredients(
+final case class CannotPublishRecipeWithPrivateIngredients(
   ingredients: Seq[IngredientId],
-  message: String = "Cannot publish recipe with custom ingredients",
+  message: String = "Cannot publish recipe with private ingredients",
 )
-object CannotPublishRecipeWithCustomIngredients:
-  val variant = BadRequest.variantJson[CannotPublishRecipeWithCustomIngredients]
+object CannotPublishRecipeWithPrivateIngredients:
+  val variant = BadRequest.variantJson[CannotPublishRecipeWithPrivateIngredients]
 
 final case class RecipeAlreadyPublished(
   recipeId: RecipeId,
@@ -30,40 +30,39 @@ final case class RecipeAlreadyPublished(
 object RecipeAlreadyPublished:
   val variant = BadRequest.variantJson[RecipeAlreadyPublished]
 
-
-private final case class RecipeAlreadyPending(
+final case class RecipeAlreadyPending(
   recipeId: RecipeId,
   message: String = "Recipe already pending"
 )
-
 object RecipeAlreadyPending:
   val variant = BadRequest.variantJson[RecipeAlreadyPending]
 
-private type PublishEnv
+private type CreateEnv
   = RecipesRepo
   & RecipeIngredientsRepo
   & RecipePublicationRequestsRepo
   & DataSource
 
-private val requestPublication: ZServerEndpoint[PublishEnv, Any] =
-  recipesEndpoint
+private val create: ZServerEndpoint[CreateEnv, Any] =
+  recipesPublicationRequestsEndpoint
     .post
-    .in(path[RecipeId]("recipeId") / "request-publication")
+    .out(plainBody[PublicationRequestId] and statusCode(Created))
     .errorOut(oneOf(
       serverErrorVariant,
       recipeNotFoundVariant,
-      CannotPublishRecipeWithCustomIngredients.variant,
+      CannotPublishRecipeWithPrivateIngredients.variant,
       RecipeAlreadyPending.variant,
       RecipeAlreadyPublished.variant,
     ))
-    .out(statusCode(NoContent))
-    .zSecuredServerLogic(requestPublicationHandler)
+    .zSecuredServerLogic(createHandler)
 
-private def requestPublicationHandler(recipeId: RecipeId):
-  ZIO[AuthenticatedUser & PublishEnv,
-      InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending |
-      CannotPublishRecipeWithCustomIngredients | RecipeNotFound,
-      Unit] =
+private def createHandler(recipeId: RecipeId):
+  ZIO[
+    AuthenticatedUser & CreateEnv,
+    InternalServerError | RecipeAlreadyPublished | RecipeAlreadyPending
+    | CannotPublishRecipeWithPrivateIngredients | RecipeNotFound,
+    PublicationRequestId
+  ] =
   for
     recipe <- ZIO.serviceWithZIO[RecipesRepo](_
       .getRecipe(recipeId)
@@ -75,26 +74,25 @@ private def requestPublicationHandler(recipeId: RecipeId):
     dataSource <- ZIO.service[DataSource]
     alreadyPending <- run(
       RecipePublicationRequestsQueries
-        .pendingRequestsByIdQ(lift(recipeId)).nonEmpty
-    )
-      .provideDS(using dataSource)
+        .pendingRequestsByRecipeIdQ(lift(recipeId)).nonEmpty
+    ).provideDS(using dataSource)
       .orElseFail(InternalServerError())
     _ <- ZIO.fail(RecipeAlreadyPending(recipeId))
       .when(alreadyPending)
 
     userId <- ZIO.serviceWith[AuthenticatedUser](_.userId)
-    customIngredientIdsInRecipe <- run(
-      IngredientsQueries.customIngredientsQ(lift(userId))
+    privateIngredientIdsInRecipe <- run(
+      IngredientsQueries.privateIngredientsQ(lift(userId))
         .filter(i => liftQuery(recipe.ingredients).contains(i.id))
         .map(_.id)
     ).provideDS(using dataSource)
       .orElseFail(InternalServerError())
 
-    _ <- ZIO.fail(CannotPublishRecipeWithCustomIngredients(customIngredientIdsInRecipe))
-      .when(customIngredientIdsInRecipe.nonEmpty)
+    _ <- ZIO.fail(CannotPublishRecipeWithPrivateIngredients(privateIngredientIdsInRecipe))
+      .when(privateIngredientIdsInRecipe.nonEmpty)
 
-    _ <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
-      .requestPublication(recipeId)
+    reqId <- ZIO.serviceWithZIO[RecipePublicationRequestsRepo](_
+      .createPublicationRequest(recipeId)
       .orElseFail(InternalServerError())
     )
-  yield ()
+  yield reqId

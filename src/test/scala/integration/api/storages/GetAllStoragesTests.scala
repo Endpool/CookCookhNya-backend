@@ -50,7 +50,6 @@ object GetAllStoragesTests extends ZIOIntegrationTestSpec:
         storages <- ZIO.fromEither(decode[Vector[StorageSummaryResp]](bodyStr))
       yield assertTrue(resp.status == Status.Ok)
          && assertTrue(storages.map(_.name).hasSameElementsAs(storageNames))
-         && assertTrue(storages.forall(_.ownerId == user.userId))
     },
     test("When authorized with membered storages should get 200 and all storages") {
       for

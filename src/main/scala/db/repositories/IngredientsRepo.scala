@@ -30,7 +30,7 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
   override def addPublic(name: String): IO[DbError, DbIngredient] =
     run(
       ingredientsQ
-        .insert(_.name -> lift(name), _.isPublished -> false)
+        .insert(_.name -> lift(name), _.isPublished -> true)
         .returning(ingredient => ingredient)
     ).provideDS
 
@@ -86,23 +86,26 @@ private final case class IngredientsRepoLive(dataSource: DataSource) extends Ing
 
   def publish(ingredientId: IngredientId): IO[DbError, Unit] =
     run(getIngredientsQ(lift(ingredientId)).update(_.isPublished -> true)).unit.provideDS
-    
+
 object IngredientsQueries:
   inline def ingredientsQ: EntityQuery[DbIngredient] =
     query[DbIngredient]
-    
+
   inline def publishedIngredientsQ: EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.isPublished)
 
   inline def publicIngredientsQ: EntityQuery[DbIngredient] =
-    ingredientsQ.filter(_.ownerId.isEmpty)
+    ingredientsQ.filter(_.isPublished)
 
   inline def customIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
-    ingredientsQ.filter(_.ownerId == Some(userId))
+    ingredientsQ.filter(_.ownerId.contains(userId))
+
+  inline def privateIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
+    customIngredientsQ(userId).filter(!_.isPublished)
 
   inline def visibleIngredientsQ(inline userId: UserId): EntityQuery[DbIngredient] =
-    ingredientsQ.filter(i => i.ownerId == None || i.ownerId == Some(userId))
-    
+    ingredientsQ.filter(i => i.isPublished || i.ownerId.contains(userId))
+
   inline def getIngredientsQ(inline ingredientId: IngredientId): EntityQuery[DbIngredient] =
     ingredientsQ.filter(_.id == ingredientId)
 

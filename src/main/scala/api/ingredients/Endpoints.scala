@@ -3,6 +3,7 @@ package api.ingredients
 import sttp.tapir.Endpoint
 import sttp.tapir.ztapir.*
 
+import api.ingredients.admin.adminIngredientsEndpoints
 import api.ingredients.public.publicEndpoints
 import api.TapirExtensions.subTag
 
@@ -21,5 +22,7 @@ val ingredientsEndpoints = List(
   search.widen,
   searchForRecipe.widen,
   searchForStorage.widen,
+  searchForShoppingList.widen,
   requestPublication.widen
 ) ++ publicEndpoints.map(_.widen)
+  ++ adminIngredientsEndpoints.map(_.widen)

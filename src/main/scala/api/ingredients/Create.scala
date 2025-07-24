@@ -17,6 +17,7 @@ import sttp.tapir.ztapir.*
 import zio.ZIO
 
 private type CreateEnv = IngredientsRepo & DataSource
+
 private val create: ZServerEndpoint[CreateEnv, Any] =
   ingredientsEndpoint
     .post

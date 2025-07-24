@@ -46,11 +46,11 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
         for
           user <- registerUser
           storageId <- createStorage(user)
-          ingredientIds       <- createNIngredients(defaultIngredientAmount)
-          _extraIngredientIds <- createNIngredients(defaultIngredientAmount)
+          ingredientIds       <- createNPublicIngredients(defaultIngredientAmount)
+          _extraIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(storageId, ingredientIds)
 
-          recipeId <- createRecipe(user, ingredientIds)
+          recipeId <- createCustomRecipe(user, ingredientIds)
 
           resp <- getRecipe(user, recipeId)
 
@@ -67,20 +67,20 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           storage1Id <- createStorage(user)
           storage2Id <- createStorage(user)
 
-          storage1UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
-          storage2UsedIngredientIds <- createNIngredients(defaultIngredientAmount)
+          storage1UsedIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
+          storage2UsedIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           recipeIngredientsIds = storage1UsedIngredientIds
                               ++ storage2UsedIngredientIds
 
-          recipeId <- createRecipe(user, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user, recipeIngredientsIds)
 
           _ <- addIngredientsToStorage(storage1Id, storage1UsedIngredientIds)
           _ <- addIngredientsToStorage(storage2Id, storage2UsedIngredientIds)
 
           // create some extra ingredients that are not used in the recipe
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(storage1Id, _))
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(storage2Id, _))
 
           resp <- getRecipe(user, recipeId)
@@ -113,16 +113,16 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           user2StorageId  <- createStorage(user2)
 
           temp <- for
-            commonIngredientIds           <- createNIngredients(defaultIngredientAmount)
-            user1OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
-            user2OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+            commonIngredientIds           <- createNPublicIngredients(defaultIngredientAmount)
+            user1OnlyStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
+            user2OnlyStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           yield (user1OnlyStorageIngredientIds ++ commonIngredientIds,
                  user2OnlyStorageIngredientIds ++ commonIngredientIds)
           (user1StorageIngredientIds, user2StorageIngredientIds) = temp
           _ <- addIngredientsToStorage(user1StorageId, user1StorageIngredientIds)
           _ <- addIngredientsToStorage(user2StorageId, user2StorageIngredientIds)
 
-          sharedStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+          sharedStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(sharedStorageId, sharedStorageIngredientIds)
 
           recipeIngredientsIds =
@@ -130,15 +130,15 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
           _ <- ZIO.serviceWithZIO[RecipesRepo](_.publish(recipeId))
 
           // create some extra ingredients that are not used in the recipe
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(user1StorageId, _))
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(user2StorageId, _))
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(sharedStorageId, _))
 
           // case 1: sending request as a 1st user
@@ -199,16 +199,16 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
           user2StorageId  <- createStorage(user2)
 
           temp <- for
-            commonIngredientIds           <- createNIngredients(defaultIngredientAmount)
-            user1OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
-            user2OnlyStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+            commonIngredientIds           <- createNPublicIngredients(defaultIngredientAmount)
+            user1OnlyStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
+            user2OnlyStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           yield (user1OnlyStorageIngredientIds ++ commonIngredientIds,
                  user2OnlyStorageIngredientIds ++ commonIngredientIds)
           (user1StorageIngredientIds, user2StorageIngredientIds) = temp
           _ <- addIngredientsToStorage(user1StorageId, user1StorageIngredientIds)
           _ <- addIngredientsToStorage(user2StorageId, user2StorageIngredientIds)
 
-          sharedStorageIngredientIds <- createNIngredients(defaultIngredientAmount)
+          sharedStorageIngredientIds <- createNPublicIngredients(defaultIngredientAmount)
           _ <- addIngredientsToStorage(sharedStorageId, sharedStorageIngredientIds)
 
           recipeIngredientsIds =
@@ -216,14 +216,14 @@ object GetRecipeTests extends ZIOIntegrationTestSpec:
             ++ user2StorageIngredientIds
             ++ sharedStorageIngredientIds
             ).distinct
-          recipeId <- createRecipe(user1, recipeIngredientsIds)
+          recipeId <- createCustomRecipe(user1, recipeIngredientsIds)
 
           // create some extra ingredients that are not used in the recipe
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(user1StorageId, _))
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(user2StorageId, _))
-          _ <- createNIngredients(defaultIngredientAmount)
+          _ <- createNPublicIngredients(defaultIngredientAmount)
             .flatMap(addIngredientsToStorage(sharedStorageId, _))
 
           resp <- getRecipe(user2, recipeId)
